@@ -12,10 +12,8 @@ from utils import config_utils , hashutils
 import numpy as np
 # MLP for Pima Indians Dataset Serialize to JSON and HDF5
 from keras.models import Sequential
-from keras.layers import Dense , Dropout
+from keras.layers import Dense
 from keras.models import model_from_json
-from keras import optimizers , regularizers , constraints
-
 
 import argparse
 import glob
@@ -59,7 +57,7 @@ def calculate_x(row):
     ret2 = np.zeros(mat_x2.shape)
     diff = mat_x1 - mat_x2
     matsum = mat_x1 + mat_x2
-    ret1[np.where(diff != 0 ) ] = 1
+    ret1[np.where(diff != 0 ) ] = -1
     ret2[np.where(matsum == 2 ) ] = 1
     return list(np.hstack([ret1,ret2]))
 
@@ -128,7 +126,7 @@ if __name__ == '__main__':
         taxaIndex = pickle.loads( taxain.read() )
     # 3 events, diff and union of matrows
 
-    hogmat_size = 3 *  len(taxaIndex)
+    hogmat_size = 3 *2*  len(taxaIndex)
 
     if overwrite ==False & os.path.isfile(savedir + 'model.json') and  os.path.isfile(savedir + 'model.h5'):
         json_file = open(savedir + 'model.json', 'r')
@@ -139,18 +137,11 @@ if __name__ == '__main__':
         model.load_weights(savedir + "model.h5")
         print("Loaded model from disk")
     else:
-        print('new model')
         layers = []
-        #layers.append(Dense( 10,  , activation='relu' , use_bias=True))
-        layers.append(Dense( 1, input_dim= hogmat_size , activation='elu', use_bias=False, kernel_initializer='random_uniform', kernel_constraint= constraints.NonNeg() )     )
-        #layers.append( Dropout(.5 , noise_shape=None, seed=None))
+        layers.append(Dense( 10, input_dim= hogmat_size , activation='sigmoid' , use_bias=True))
+        layers.append(Dense( 1, activation='softmax' , use_bias=True ))
         model = Sequential(layers)
-
-    #sgd = optimizers.SGD(lr= .1, momentum=0.1, decay=0.01, nesterov=True)
-
-    sgd = optimizers.SGD(lr= .01, momentum=0.01, decay=0.01, nesterov=True)
-    rms = optimizers.RMSprop(lr=1, rho=0.9, epsilon=None, decay=0.0)
-    model.compile(loss='mean_squared_error', optimizer=sgd, metrics=['accuracy'])
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     """
 
@@ -185,30 +176,20 @@ if __name__ == '__main__':
         X_test = np.vstack(testdf.xtrain)
         y_test = testdf.truth
     """
-    epochs = 20
     tstart= t.time()
     gendata= p.retmat_mp(traindf, nworkers = 25, chunksize=50)
     #calculate testdf
-    xtotal = []
-    ytotal = []
     for X,y in gendata:
-
-        xtotal.append(X)
-        ytotal.append(y)
-        xtotalmat = np.vstack(xtotal)
-        ytotalmat = np.hstack(ytotal)
-
-        print( xtotalmat.shape)
-        print(ytotalmat.shape)
-        metrics = model.fit(x=xtotalmat  , y=ytotalmat, batch_size= 32 , epochs=1000, verbose=1 )
-        print(model.predict(X))
-
+        print(X.shape)
+        print(y.shape)
+        metrics = model.train_on_batch(X, y )
+        print(metrics)
         if t.time() - tstart > 200:
             # serialize model to
             model_json = model.to_json()
-            with open(savedir + "model_nobias.json", "w") as json_file:
+            with open(savedir + "model.json", "w") as json_file:
                 json_file.write(model_json)
             # serialize weights to HDF5
-            model.save_weights(savedir + "model_nobias.h5")
+            model.save_weights(savedir + "model.h5")
             print("Saved model to disk")
             tstart = t.time()
