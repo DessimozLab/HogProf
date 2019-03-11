@@ -1,92 +1,122 @@
 from tables import *
 import functools
-import gc
 import multiprocessing as mp
 import pandas as pd
 import time as t
 import pickle
-from datasketch import MinHashLSH,   MinHashLSHForest
+from datasketch import MinHashLSH,   MinHashLSHForest , WeightedMinHashGenerator
 from scipy import sparse
 from datetime import datetime
 import h5py
-import redis
+import json
 import ete3
 import gc
-
-
-from pyoma.browser import db
-
 from utils import files_utils, config_utils, pyhamutils, hashutils
-from datasketch import WeightedMinHashGenerator
-
 import numpy as np
 import random
 
 np.random.seed(0)
 random.seed(0)
+
 class LSHBuilder:
     """
     This class contains the stuff you need to make a phylogenetic profiling database with input orthxml files and a taxonomic tree
 
-    The input can be an OMA HDF5 for now...
+    You must either input an OMA hdf5 file or provide a function to generate orthoxml files for each orthologous groupself.
+
+    You can provide a species tree or use the ncbi taxonomy with a list of taxonomic codes for all the species in your db
+
 
     """
-    def __init__(self, h5_oma, saving_folder , saving_name=None , masterTree = None,  numperm = 128,  treeweights= None , taxfilter = None, taxmask= None , lambdadict= None, start= None, verbose = False):
-        self.h5OMA = h5_oma
-        self.db_obj = db.Database(h5_oma)
-        self.oma_id_obj = db.OmaIdMapper(self.db_obj)
+    def __init__(self, tarfile_ortho = None,  h5_oma = None, taxa = None, masterTree = None, saving_name=None , masterTree = None,  numperm = 128,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
+
+        if h5h5_oma:
+            from pyoma.browser import db
+            self.h5OMA = h5_oma
+            self.db_obj = db.Database(h5_oma)
+            self.oma_id_obj = db.OmaIdMapper(self.db_obj)
+        elif tarfile_ortho:
+            import tarfile
+            self.tar = tarfile.open(tarfile_ortho , "r:gz")
+            self.h5OMA = None
+            self.db_obj = None
+            self.oma_id_obj = None
+        else:
+            raise Exception( 'please specify input data. Either a tarfile of orthxml files or OMA hdf5 ' )
         self.tax_filter = taxfilter
         self.tax_mask = taxmask
         self.verbose = verbose
-
-        self.tree_string , self.tree_ete3 = files_utils.get_tree(oma=self.h5OMA)
-        self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
-
-        with open( config_utils.datadir + 'taxaIndex.pkl', 'wb') as taxout:
-            taxout.write( pickle.dumps(self.taxaIndex))
-
-        self.numperm = numperm
-
-        if treeweights is None:
-            self.treeweights = hashutils.generate_treeweights(self.tree_ete3  , self.taxaIndex , taxfilter, taxmask , lambdadict, start)
-        else:
-            self.treeweights = treeweights
-
         self.saving_folder = saving_folder
         self.datetime = datetime
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
         self.saving_name= saving_name
+
         if saving_name:
-            self.saving_path =self.saving_folder + saving_name
+            self.saving_path =config_utils.datadir + saving_name
         else:
-            self.saving_path = self.saving_folder + self.date_string
+            self.saving_path = config_utils.datadir + self.date_string
+
+        if masterTree is None:
+            if h5h5_oma:
+                genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
+                genomes = [ str(g) for g in genomes]
+                taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
+                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa , savename =saving_name )
+            elif taxa:
+                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa , savename =saving_name )
+            elif mastertree:
+                with open( masterTree , 'wb') as pklin:
+                    self.tree_ete3 = pickle.loads(pklin.read())
+                    self.tree_string = self.tree_ete3.write(format=1)
+
+        self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
+
+        with open( config_utils.datadir + 'taxaIndex.pkl', 'wb') as taxout:
+            taxout.write( pickle.dumps(self.taxaIndex))
+        self.numperm = numperm
+        if treeweights is None:
+            #generate all ones
+            self.treeweights = hashutils.generate_treeweights(self.tree_ete3  , self.taxaIndex , taxfilter, taxmask)
+        else:
+            self.treeweights = treeweights
 
         wmg = WeightedMinHashGenerator(3*len(self.taxaIndex), sample_size=numperm, seed=1)
         with open( config_utils.datadir +saving_name + 'wmg.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
 
         self.wmg = wmg
-
         self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
         self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=wmg )
-        self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml, db_obj=self.db_obj)
+        if h5_oma:
+            self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
+        else:
+            self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml, tarfile=self.tar)
+
         self.hashes_path = self.saving_path + 'hashes.h5'
         self.lshpath = self.saving_path + 'newlsh.pkl'
         self.lshforestpath = self.saving_path + 'newlshforest.pkl'
         self.mat_path = self.saving_path+ 'hogmat.h5'
+
+        if self.h5OMA:
+            self.groups  = self.h5OMA.root.OrthoXML.Index
+        elif self.tar:
+            self.groups = tar.getmembers()
         self.columns = len(self.taxaIndex)
-        self.rows = len(self.h5OMA.root.OrthoXML.Index)
+        self.rows = len(self.groups)
 
     def load_one(self, fam):
+        #test function to try out the pipeline on one orthoxml
+
         ortho_fam = self.READ_ORTHO(fam)
         pyham_tree = self.HAM_PIPELINE([fam, ortho_fam])
         hog_matrix,weighted_hash = hashutils.hash_tree(pyham_tree , self.taxaIndex , self.treeweights , self.wmg)
+
         return ortho_fam , pyham_tree, weighted_hash,hog_matrix
 
     def generates_dataframes(self, size=100, minhog_size=3, maxhog_size=None ):
         families = {}
         start = -1
-        for i, row in enumerate(self.h5OMA.root.OrthoXML.Index):
+        for i, row in enumerate(self.groups):
             if i > start:
                 fam = row[0]
                 ## TODO: add further quality check here for hog_size / hogspread
@@ -107,7 +137,7 @@ class LSHBuilder:
 
     def universe_saver(self, i, q, retq, matq,univerq, l):
         #only useful to save all prots within a taxonomic range as db is being compiled
-        allowed = set( [n.name for n in self.tree_ete3.get_leaves()] )
+        allowed = set( [ n.name for n in self.tree_ete3.get_leaves() ] )
         with open(self.saving_path+'universe.txt') as universeout:
             while True:
                 prots = univerq.get()
@@ -157,7 +187,7 @@ class LSHBuilder:
                     if self.verbose == True:
                         print('creating dataset')
                         print(dataset_name)
-                        print('filtered at taxonomic level:'+taxstr)
+                        print('filtered at taxonomic level: '+taxstr)
                     h5hashes.create_dataset(dataset_name+'_'+taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
                     datasets[dataset_name] = h5hashes[dataset_name+'_'+taxstr]
                     if self.verbose == True:
@@ -186,23 +216,20 @@ class LSHBuilder:
                                 save_start = t.time()
                                 with open(self.lshforestpath , 'wb') as forestout:
                                     forestout.write(pickle.dumps(forest, -1))
-
                                 if self.verbose == True:
                                     print('save done at' + str(t.time() - global_time))
                         else:
                             print(this_dataframe)
-
                     else:
                         if self.verbose == True:
                             print('wrap it up')
-
                         with open(self.lshforestpath , 'wb') as forestout:
                             forestout.write(pickle.dumps(forest, -1))
                         h5flush()
-
                         if self.verbose == True:
                             print('DONE SAVER' + str(i))
                         break
+
 
     def matrix_updater(self, iprocess , q, retq, matq, l):
         save_start = t.time()
@@ -302,41 +329,94 @@ class LSHBuilder:
         print('DONE!')
 
 
-if __name__ == '__main__':
+parser=argparse.ArgumentParser()
 
-    # hyper params
-    #compile default db with weights at 1
-    startdict={'presence':1, 'loss':1, 'dup':1}
-    lambdadict={'presence':0, 'loss':0, 'dup':0}
+parser.add_argument('--taxweights', help='load weights from keras model',type = str)
+parser.add_argument('--taxmask', help='consider only one branch',type = str)
+parser.add_argument('--taxfilter', help='remove these taxa' , type = str)
+parser.add_argument('--name', help='name of the db', type = str)
+parser.add_argument('--dbtype', help='preconfigured dbs' , type = str)
+
+parser.add_argument('--tarfile', help='tarfile with orthoxmls' , type = str)
+parser.add_argument('--omafile', help='OMA hdf5 file' , type = str)
+
+parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = str)
+
+
+if __name__ == '__main__':
 
     dbdict = {
     'all': { 'taxfilter': None , 'taxmask': None },
-    #'plants': { 'taxfilter': None , 'taxmask': 33090 },
-    #'archaea':{ 'taxfilter': None , 'taxmask': 2157 },
-    #'bacteria':{ 'taxfilter': None , 'taxmask': 2 },
-    #'eukarya':{ 'taxfilter': None , 'taxmask': 2759 },
-    #'protists':{ 'taxfilter': [2 , 2157 , 33090 , 4751, 33208] , 'taxmask':None },
-    #'fungi':{ 'taxfilter': None , 'taxmask': 4751 },
-    #'metazoa':{ 'taxfilter': None , 'taxmask': 33208 }
+    'plants': { 'taxfilter': None , 'taxmask': 33090 },
+    'archaea':{ 'taxfilter': None , 'taxmask': 2157 },
+    'bacteria':{ 'taxfilter': None , 'taxmask': 2 },
+    'eukarya':{ 'taxfilter': None , 'taxmask': 2759 },
+    'protists':{ 'taxfilter': [2 , 2157 , 33090 , 4751, 33208] , 'taxmask':None },
+    'fungi':{ 'taxfilter': None , 'taxmask': 4751 },
+    'metazoa':{ 'taxfilter': None , 'taxmask': 33208 },
+    'vertebrates':{ 'taxfilter': None , 'taxmask': 7742 },
+
     }
 
-    from keras.models import model_from_json
-    json_file = open( './model_nobias.json', 'r')
-    loaded_model_json = json_file.read()
-    json_file.close()
-    model = model_from_json(loaded_model_json)
-    # load weights into new model
-    model.load_weights( "model_nobias.h5")
-    print("Loaded model from disk")
-    weights = model.get_weights()[0]
-    #weight are non zero
+    taxfilter = None
+    taxmask = None
 
-    weights += 10 ** -10
-    for dbname in dbdict:
-        print('compiling' + dbname)
-        taxmask = dbdict[dbname]['taxmask']
-        taxfilter = dbdict[dbname]['taxfilter']
-        with open_file(config_utils.omadir + 'OmaServer.h5', mode="r") as h5_oma:
-            lsh_builder = LSHBuilder(h5_oma, saving_folder= config_utils.datadir , saving_name=dbname, numperm = 256 ,
-            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , lambdadict= lambdadict, start= startdict)
-            lsh_builder.run_pipeline()
+    args = vars(parser.parse_args(sys.argv[1:]))
+
+    if 'name' in args:
+        dbname = args['name']
+    else:
+        raise Exception(' please give your profile db a name ')
+
+    if 'dbtype' in args:
+        taxfilter = dbdict[args['dbtype']]['taxfilter']
+        taxmask = dbdict[args['dbtype']]['taxmask']
+    if 'taxmask' in args:
+        taxfilter = json.loads ( args['taxmask'] )
+    if 'taxfilter' in args:
+        taxmask = args['taxfilter']
+
+    if 'nperm' in args:
+        nperm = args['nperm']
+    else:
+        nperm = 256
+
+    if 'omafile' in args:
+        h5_oma = args['omafile']
+    elif 'tarfile' in args:
+        tarfile = args['tarfile']
+    else:
+        raise Exception(' please specify input data ')
+
+    if 'taxweights' in args:
+        from keras.models import model_from_json
+        json_file = open(  args['taxweights']+ '.json', 'r')
+        loaded_model_json = json_file.read()
+        json_file.close()
+        model = model_from_json(loaded_model_json)
+        # load weights into new model
+        model.load_weights(  args['taxweights']+".h5")
+        print("Loaded model from disk")
+        weights = model.get_weights()[0]
+        #weight are non zero
+        #add small epsilon
+        weights += 10 ** -10
+
+    print('compiling' + dbname)
+
+    if omafile:
+        if omafile == True:
+            with open_file(config_utils.omadir + 'OmaServer.h5', mode="r") as h5_oma:
+                lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname, numperm = nperm ,
+                treeweights= weights , taxfilter = taxfilter, taxmask=taxmask )
+                lsh_builder.run_pipeline()
+        else:
+            with open_file( omafile , mode="r") as h5_oma:
+                lsh_builder = LSHBuilder(h5_oma = h5h5_oma ,  saving_name=dbname, numperm = nperm ,
+                treeweights= weights , taxfilter = taxfilter, taxmask=taxmask )
+                lsh_builder.run_pipeline()
+    else:
+        lsh_builder = LSHBuilder( tarfile_ortho = tarfile ,  saving_name=dbname, numperm = perm ,
+        treeweights= weights , taxfilter = taxfilter, taxmask=taxmask )
+        lsh_builder.run_pipeline()
+    print('DONE')

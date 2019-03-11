@@ -2,7 +2,7 @@
 from goatools import semantic
 from goatools.obo_parser import GODag
 
-import ujson as json
+import json
 from utils import hashutils
 from utils import config_utils
 import pickle
@@ -47,20 +47,16 @@ def run_GOEA_onresults(results, db_obj, goeaobj, outname = None):
         grabs all member protein of all hogs in result
         returns goe results and HOG composition
     '''
-
     #print(db_obj.member_of_hog_id(int(results[0])))
     hogids =[ "HOG:" + (7-len(fam_id)) * '0' + fam_id for fam_id in results ]
     #print( db_obj.member_of_hog_id(hogids[0]) )
     HOGS={}
     print('compiling hogs')
     prots = []
-
     for i,result in enumerate(hogids):
         if i %10 ==0:
             print(i)
-
         HOGS[result]=[]
-
         for member in db_obj.iter_members_of_hog_id(result):
             HOGS[result].append(member.omaid)
             prots.append(member.omaid)
@@ -76,6 +72,42 @@ def run_GOEA_onresults(results, db_obj, goeaobj, outname = None):
     goeaobj.wr_txt(config_utils.datadir+ str(outname)+"enrichment.txt", goea_results_all)
     print('DONE!')
     return goea_results_all, HOGS
+
+
+def run_GOEA_onresults_tar(results, tar, goeaobj, outname = None):
+    '''
+        Perform enrichment analysis on returned results
+        grabs all member protein of all hogs in result
+        returns goe results and HOG composition
+    '''
+    ## TODO: finish this function with tar hog to list of prot IDS
+    #print(db_obj.member_of_hog_id(int(results[0])))
+    #hogids =[ "HOG:" + (7-len(fam_id)) * '0' + fam_id for fam_id in results ]
+    #print( db_obj.member_of_hog_id(hogids[0]) )
+
+
+    HOGS={}
+    print('compiling hogs')
+    prots = []
+    for i,result in enumerate(hogids):
+        if i %10 ==0:
+            print(i)
+        HOGS[result]=[]
+        for member in db_obj.iter_members_of_hog_id(result):
+            HOGS[result].append(member.omaid)
+            prots.append(member.omaid)
+    print('done')
+    print('running GO enrichment study')
+
+    goea_results_all = goeaobj.run_study(prots )
+    print('done')
+    with open( config_utils.datadir + outname + 'Hogs2Prots.pkl' , 'wb' ) as save:
+       save.write(pickle.dumps(HOGS,2))
+
+    goeaobj.wr_txt(config_utils.datadir+ str(outname)+"enrichment.txt", goea_results_all)
+    print('DONE!')
+    return goea_results_all, HOGS
+
 
 ######################resnik semsim ###################################################
 

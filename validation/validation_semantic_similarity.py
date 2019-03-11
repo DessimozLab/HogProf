@@ -4,7 +4,6 @@ import numpy as np
 #sys.path.append('../')
 
 from tables import *
-from pyoma.browser import db
 from utils import goatools_utils
 from goatools.semantic import TermCounts
 from goatools import obo_parser
@@ -21,12 +20,20 @@ import multiprocessing as mp
 
 class Validation_semantic_similarity(object):
 
-    def __init__(self, go_file, go_terms , gaf, omadb , TermCountsFile = None):
+    def __init__(self, go_file, go_terms , gaf, omadb= None, tarfile_ortho = None , TermCountsFile = None):
         self.go_file = go_file
-        print('open oma db obj')
-        h5_oma = open_file(omadb, mode="r")
-        self.db_obj = db.Database(h5_oma)
-        print('done')
+
+        if omadb :
+            print('open oma db obj')
+            from pyoma.browser import db
+            h5_oma = open_file(omadb, mode="r")
+            self.db_obj = db.Database(h5_oma)
+            print('done')
+        elif tarfile_ortho:
+            #retrieve hog members from tarfile_ortho
+             self.tar = tarfile.open(tarfile_ortho , "r:gz")
+        else:
+            raise Exception('please provide input dataset')
 
         #go_terms_hdf5 = h5py.File(go_terms, mode='r')
         #self.goterms2parents = go_terms_hdf5['goterms2parents']

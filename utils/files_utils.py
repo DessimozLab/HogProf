@@ -1,88 +1,62 @@
 import ete3
 import pandas as pd
 from Bio import Entrez
-import pyoma
 import copy
 import pickle
-
 import os
+from utils import config_utils
 
 
-def get_tree(oma=None, saveTree=True, overwrite = False):
+def get_tree(taxa , savename = None):
     """
-    Generates a working species tree for all OMA
+    Generates a taxonomic tree using the ncbi taxonomy and
     :param oma:  a pyoma db object
     :param saveTree: Bool for whether or not to save a mastertree newick file
     :return: tree_string: a newick string tree: an ete3 object
+    
     """
-    if not os.path.isfile('./mastertree.pkl') or overwrite == True:
+    ncbi = ete3.NCBITaxa()
+    tax = set(tax)
+    genomes = set(genomes)
+    tax.remove(0)
+    print(len(tax))
 
-        ncbi = ete3.NCBITaxa()
+    tree = ete3.PhyloTree( name = '')
+    tree.add_child(name ='131567')
 
-        genomes = pd.DataFrame(oma.root.Genome.read())["NCBITaxonId"].tolist()
-        genomes = [ str(g) for g in genomes]
-        tax = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(oma.root.Taxonomy[:]) ]
-        #add luca
-        #tree_string = pyoma.browser.db.Taxonomy(oma.root.Taxonomy[:]).newick()
-        #with open( './pyoma.nwk' , 'w') as nwkout:
-        #    nwkout.write(tree_string)
-        #print(tree_string)
-        #tree_string = ete3.Tree( tree_string , format=1 )
-        #ncbi.update_taxonomy_database()
-
-        tax = set(tax)
-        genomes = set(genomes)
-
-        tax.remove(0)
-        print(len(tax))
-
-        tree = ete3.PhyloTree( name = '')
-        tree.add_child(name ='131567')
-
-        topo = ncbi.get_topology(tax , collapse_subspecies=False)
-        tax = set([ str(taxid) for taxid in tax])
-
-
-        tree.add_child(topo)
-
-        orphans = list(genomes - set([x.name for x in tree.get_leaves()]))
-
-        print('missing taxa:')
-        print(len(orphans))
-
-        Entrez.email = "clement.train@gmail.com"
-        orphans_info1 = {}
-        orphans_info2 = {}
-
-        for x in orphans:
-            search_handle = Entrez.efetch('taxonomy', id=str(x), retmode='xml')
-            record = next(Entrez.parse(search_handle))
-            print(record)
-            orphans_info1[ record['ParentTaxId']] = x
-            orphans_info2[x] = [x['TaxId'] for x in record['LineageEx']]
-
-        for n in tree.traverse():
-            if n.name in orphans_info1:
-                n.add_sister(name = orphans_info1[n.name])
-                print(n)
-
-
-        orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
-        print(orphans)
-        tree = add_orphans(orphans_info2, tree, genomes)
-        orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
-        print(orphans)
-        tree_string = tree.write(format=1)
-
-        if saveTree == True:
-            with open( './mastertree.nwk' , 'w') as nwkout:
-                nwkout.write(tree_string)
-            with open( './mastertree.pkl', 'wb') as pklout:
-                pklout.write(pickle.dumps(tree))
-
+    topo = ncbi.get_topology(tax , collapse_subspecies=False)
+    tax = set([ str(taxid) for taxid in tax])
+    tree.add_child(topo)
+    orphans = list(genomes - set([x.name for x in tree.get_leaves()]))
+    print('missing taxa:')
+    print(len(orphans))
+    Entrez.email = config_utils.email
+    orphans_info1 = {}
+    orphans_info2 = {}
+    for x in orphans:
+        search_handle = Entrez.efetch('taxonomy', id=str(x), retmode='xml')
+        record = next(Entrez.parse(search_handle))
+        print(record)
+        orphans_info1[ record['ParentTaxId']] = x
+        orphans_info2[x] = [x['TaxId'] for x in record['LineageEx']]
+    for n in tree.traverse():
+        if n.name in orphans_info1:
+            n.add_sister(name = orphans_info1[n.name])
+            print(n)
+    orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
+    tree = add_orphans(orphans_info2, tree, genomes)
+    orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
+    tree_string = tree.write(format=1)
+    if savename is None:
+        with open( config_utils.datadir +'mastertree.nwk' , 'w') as nwkout:
+            nwkout.write(tree_string)
+        with open( config_utils.datadir +'mastertree.pkl' , 'wb') as pklout:
+            pklout.write(pickle.dumps(tree))
     else:
-        tree = pickle.loads(open('./mastertree.pkl', 'rb').read())
-        tree_string = tree.write(format=1)
+        with open( config_utils.datadir + savename +'.nwk' , 'w') as nwkout:
+            nwkout.write(tree_string)
+        with open( config_utils.datadir + savename + '.pkl' , 'wb') as pklout:
+            pklout.write(pickle.dumps(tree))
     return tree_string, tree
 
 
@@ -104,7 +78,6 @@ def generate_taxa_index(tree , taxfilter, taxmask):
             if n.name in taxfilter:
                 #set weight for descendants of n to 0
                 n.delete()
-
     taxa_index = {}
     taxa_index_reverse = {}
     for i, n in enumerate(tree.traverse()):
