@@ -15,6 +15,7 @@ from utils import files_utils, config_utils, pyhamutils, hashutils
 import numpy as np
 import random
 
+
 np.random.seed(0)
 random.seed(0)
 
@@ -36,8 +37,8 @@ class LSHBuilder:
             self.db_obj = db.Database(h5_oma)
             self.oma_id_obj = db.OmaIdMapper(self.db_obj)
         elif tarfile_ortho:
-            import tarfile
-            self.tar = tarfile.open(tarfile_ortho , "r:gz")
+
+            self.tar = tarfile_ortho
             self.h5OMA = None
             self.db_obj = None
             self.oma_id_obj = None
@@ -62,12 +63,16 @@ class LSHBuilder:
                 genomes = [ str(g) for g in genomes]
                 taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
                 self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa , savename =saving_name )
-            elif taxa:
-                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa , savename =saving_name )
             elif mastertree:
                 with open( masterTree , 'wb') as pklin:
                     self.tree_ete3 = pickle.loads(pklin.read())
                     self.tree_string = self.tree_ete3.write(format=1)
+            elif taxa:
+                with open(taxa, 'r') as taxin:
+                    taxlist = [ int(line) for line in taxin ]
+                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist , savename =saving_name )
+            else:
+                raise Exception( 'please specify either a list of taxa or a tree' )
 
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
 
@@ -87,22 +92,15 @@ class LSHBuilder:
         self.wmg = wmg
         self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
         self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=wmg )
-        if h5_oma:
+        if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
-        else:
-            self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml, tarfile=self.tar)
-
+        elif self.tar:
+            self.READ_ORTHO = pyhamutils.get_orthoxml
         self.hashes_path = self.saving_path + 'hashes.h5'
         self.lshpath = self.saving_path + 'newlsh.pkl'
         self.lshforestpath = self.saving_path + 'newlshforest.pkl'
         self.mat_path = self.saving_path+ 'hogmat.h5'
-
-        if self.h5OMA:
-            self.groups  = self.h5OMA.root.OrthoXML.Index
-        elif self.tar:
-            self.groups = tar.getmembers()
         self.columns = len(self.taxaIndex)
-        self.rows = len(self.groups)
 
     def load_one(self, fam):
         #test function to try out the pipeline on one orthoxml
@@ -110,17 +108,29 @@ class LSHBuilder:
         ortho_fam = self.READ_ORTHO(fam)
         pyham_tree = self.HAM_PIPELINE([fam, ortho_fam])
         hog_matrix,weighted_hash = hashutils.hash_tree(pyham_tree , self.taxaIndex , self.treeweights , self.wmg)
-
         return ortho_fam , pyham_tree, weighted_hash,hog_matrix
 
     def generates_dataframes(self, size=100, minhog_size=3, maxhog_size=None ):
         families = {}
         start = -1
+        if self.h5OMA:
+            self.groups  = self.h5OMA.root.OrthoXML.Index
+        elif self.tar:
+            groupfiles=glob.glob(self.tar)
+            groups = []
+            for tarfile in groupfiles:
+                with tarfile.open(tarfile, "r:gz") as tar:
+                    groups += [(member,tarfile) for member in tar.getmembers()]
+
+        self.rows = len(self.groups)
         for i, row in enumerate(self.groups):
             if i > start:
-                fam = row[0]
-                ## TODO: add further quality check here for hog_size / hogspread
-                ortho_fam = self.READ_ORTHO(fam)
+                if self.h5OMA:
+                    fam = row[0]
+                    ortho_fam = self.READ_ORTHO(fam)
+                elif self.tar:
+                    fam , tarfile = row
+                    ortho_fam = self.READ_ORTHO(fam , tarfile)
                 hog_size = ortho_fam.count('<species name=')
                 if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
                     families[fam] = {'ortho': ortho_fam}
@@ -324,26 +334,23 @@ class LSHBuilder:
             if joinval == False:
                 for process in work_processes[key]:
                     process.join()
-
         gc.collect()
         print('DONE!')
 
 
-parser=argparse.ArgumentParser()
-
-parser.add_argument('--taxweights', help='load weights from keras model',type = str)
-parser.add_argument('--taxmask', help='consider only one branch',type = str)
-parser.add_argument('--taxfilter', help='remove these taxa' , type = str)
-parser.add_argument('--name', help='name of the db', type = str)
-parser.add_argument('--dbtype', help='preconfigured dbs' , type = str)
-
-parser.add_argument('--tarfile', help='tarfile with orthoxmls' , type = str)
-parser.add_argument('--omafile', help='OMA hdf5 file' , type = str)
-
-parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = str)
-
 
 if __name__ == '__main__':
+
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
+    parser.add_argument('--taxmask', help='consider only one branch',type = str)
+    parser.add_argument('--taxfilter', help='remove these taxa' , type = str)
+    parser.add_argument('--name', help='name of the db', type = str)
+    parser.add_argument('--dbtype', help='preconfigured taxonomic ranges' , type = str)
+    parser.add_argument('--OMA', help='use oma data ' , type = str)
+    parser.add_argument('--tarfile', help='use tarfile with orthoxml data ' , type = str)
+    parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = str)
+    parser.add_argument('--masterTree', help='number of hash functions to use when constructing profiles' , type = str)
 
     dbdict = {
     'all': { 'taxfilter': None , 'taxmask': None },
@@ -367,7 +374,6 @@ if __name__ == '__main__':
         dbname = args['name']
     else:
         raise Exception(' please give your profile db a name ')
-
     if 'dbtype' in args:
         taxfilter = dbdict[args['dbtype']]['taxfilter']
         taxmask = dbdict[args['dbtype']]['taxmask']
@@ -401,18 +407,12 @@ if __name__ == '__main__':
         #weight are non zero
         #add small epsilon
         weights += 10 ** -10
-
     print('compiling' + dbname)
 
     if omafile:
         if omafile == True:
             with open_file(config_utils.omadir + 'OmaServer.h5', mode="r") as h5_oma:
                 lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname, numperm = nperm ,
-                treeweights= weights , taxfilter = taxfilter, taxmask=taxmask )
-                lsh_builder.run_pipeline()
-        else:
-            with open_file( omafile , mode="r") as h5_oma:
-                lsh_builder = LSHBuilder(h5_oma = h5h5_oma ,  saving_name=dbname, numperm = nperm ,
                 treeweights= weights , taxfilter = taxfilter, taxmask=taxmask )
                 lsh_builder.run_pipeline()
     else:

@@ -24,7 +24,6 @@ def get_species_from_orthoxml(orthoxml):
             NCBI_taxid2name[child.attrib['NCBITaxId']] = child.attrib['name']
     return NCBI_taxid2name
 
-
 def switch_name_ncbi_id(orthoxml , mapdict = None):
     #swap ncbi taxid for species name to avoid ambiguity
     #mapdict should be a mapping from species name to taxid if the info isnt in the orthoxmls

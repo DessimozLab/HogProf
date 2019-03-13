@@ -1,7 +1,11 @@
-working_dir = "./"
+import json
+import os
 
-datadir = '/scratch/cluster/monthly/dmoi/profiling/'
-
-omadir = '/scratch/ul/projects/cdessimo/oma-browser/All.Jun2018/data/'
-
-email = "clement.train@gmail.com"
+with open( './config.json' , 'r') as configin:
+    config = json.loads(configin.read())
+datadir = config['dir']['datadir']
+omadir = config['dir']['omadir']
+email = config['email']
+for dir in config['dir'].values():
+    if not os.path.isdir(dir):
+        os.mkdir(path=dir)
