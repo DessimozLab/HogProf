@@ -4,12 +4,10 @@ from matplotlib import pyplot as plt
 import glob
 from pyoma.browser import db
 import pickle
+from utils import config_utils
 
-
-
-omadir = '/scratch/ul/projects/cdessimo/oma-browser/All.Jun2018/data'
+omadir = config_utils.omadir
 db = db.Database(omadir + '/OmaServer.h5')
-
 
 print('loading mapping')
 experiments = ' fusion coexpression experiments textmining'
@@ -50,11 +48,8 @@ for file in networks:
         if col+'_transferred' in nxdf.columns:
             nxdf[col]=nxdf[col].add( nxdf[col+'_transferred'] )
     nxdf['experimental'] = 0
-
     for data in experiments.split():
         nxdf['experimental']=nxdf['experimental'].add( nxdf[data.strip()])
-
-
 
     nxdf['uni1'] = nxdf.merge( unidf , how='left', left_on='prot1cut' , right_on='string_id' )['uniprot_code']
     nxdf['uni2'] = nxdf.merge( unidf , how='left', left_on='prot2cut' , right_on='string_id' )['uniprot_code']

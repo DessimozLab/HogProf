@@ -1,7 +1,7 @@
 import json
 import os
 
-with open( './config.json' , 'r') as configin:
+with open( '../config.json' , 'r') as configin:
     config = json.loads(configin.read())
 datadir = config['dir']['datadir']
 omadir = config['dir']['omadir']

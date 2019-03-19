@@ -24,7 +24,6 @@ import sys
 import gc
 import logging
 
-
 class Profiler:
 
 	"""
@@ -208,7 +207,7 @@ class Profiler:
 		"""
 		function used to create dataframe containing binary profiles
 		and trees of fams
-		 
+
 		"""
 		retq= mp.Queue(-1)
 		inq= mp.Queue(-1)

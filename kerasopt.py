@@ -2,17 +2,16 @@
 import profiler
 import os
 import sys
-
 from validation import validation_semantic_similarity
-
 from keras.models import Sequential ,model_from_json
 from keras.layers import Dense, Activation , Dropout
 from keras import optimizers , regularizers , constraints
 
+
+
 import pandas as pd
 from utils import config_utils , hashutils
 import numpy as np
-
 import argparse
 import glob
 import time as t
@@ -189,7 +188,7 @@ if __name__ == '__main__':
 
         print('generate data for training')
         for i in range(int(args['ntrain'] / chunksize ) ):
-            X,y next(gendata)
+            X,y = next(gendata)
             xtotal.append(X)
             ytotal.append(y)
             xtotalmat = np.vstack(xtotal)
@@ -200,7 +199,7 @@ if __name__ == '__main__':
 
         gendata= p.retmat_mp(testdf, nworkers = 25, chunksize=50)
         for i in range(int(args['ntest'] / chunksize ) ):
-            X,y next(gendata)
+            X,y  = next(gendata)
             xtotal.append(X)
             ytotal.append(y)
             xtesttotalmat = np.vstack(xtotal)
@@ -216,7 +215,7 @@ if __name__ == '__main__':
         print('loading dataset')
         with open( traintest , 'rb') as traintestin:
             xtotalmat, ytotalmat, xtesttotalmat, ytesttotalmat  =  pickle.loads( traintestin.read() )
-`       print( 'done')
+        print( 'done')
 
     print('training')
     metrics = model.train(x=xtotalmat  , y=ytotalmat, batch_size= 32 , epochs=1000, verbose=1 )

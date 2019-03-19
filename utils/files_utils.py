@@ -13,7 +13,7 @@ def get_tree(taxa , savename = None):
     :param oma:  a pyoma db object
     :param saveTree: Bool for whether or not to save a mastertree newick file
     :return: tree_string: a newick string tree: an ete3 object
-    
+
     """
     ncbi = ete3.NCBITaxa()
     tax = set(tax)
@@ -53,9 +53,9 @@ def get_tree(taxa , savename = None):
         with open( config_utils.datadir +'mastertree.pkl' , 'wb') as pklout:
             pklout.write(pickle.dumps(tree))
     else:
-        with open( config_utils.datadir + savename +'.nwk' , 'w') as nwkout:
+        with open( config_utils.datadir + savename +'_master_tree.nwk' , 'w') as nwkout:
             nwkout.write(tree_string)
-        with open( config_utils.datadir + savename + '.pkl' , 'wb') as pklout:
+        with open( config_utils.datadir + savename + '_master_tree.pkl' , 'wb') as pklout:
             pklout.write(pickle.dumps(tree))
     return tree_string, tree
 

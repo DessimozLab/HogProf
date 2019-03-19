@@ -11,13 +11,17 @@ import h5py
 import json
 import ete3
 import gc
+
+
+
 from utils import files_utils, config_utils, pyhamutils, hashutils
 import numpy as np
 import random
 
 
-np.random.seed(0)
 random.seed(0)
+np.random.seed(0)
+
 
 class LSHBuilder:
     """
@@ -27,17 +31,14 @@ class LSHBuilder:
 
     You can provide a species tree or use the ncbi taxonomy with a list of taxonomic codes for all the species in your db
 
-
     """
-    def __init__(self, tarfile_ortho = None,  h5_oma = None, taxa = None, masterTree = None, saving_name=None , masterTree = None,  numperm = 128,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
-
+    def __init__(self, tarfile_ortho = None,  h5_oma = None, taxa = None, masterTree = None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
         if h5h5_oma:
             from pyoma.browser import db
             self.h5OMA = h5_oma
             self.db_obj = db.Database(h5_oma)
             self.oma_id_obj = db.OmaIdMapper(self.db_obj)
         elif tarfile_ortho:
-
             self.tar = tarfile_ortho
             self.h5OMA = None
             self.db_obj = None
@@ -51,7 +52,6 @@ class LSHBuilder:
         self.datetime = datetime
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
         self.saving_name= saving_name
-
         if saving_name:
             self.saving_path =config_utils.datadir + saving_name
         else:
@@ -305,9 +305,7 @@ class LSHBuilder:
         for key in work_processes:
             for process in work_processes[key]:
                 process.start()
-
         count = 0
-
         for data in data_generator:
             q.put(data)
         print('done spooling data')
