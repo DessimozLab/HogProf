@@ -5,13 +5,12 @@ import pandas as pd
 import time as t
 import pickle
 from datasketch import MinHashLSH,   MinHashLSHForest , WeightedMinHashGenerator
-from scipy import sparse
 from datetime import datetime
 import h5py
 import json
 import ete3
 import gc
-from utils import files_utils, config_utils, pyhamutils, hashutils
+from utils import  config_utils, pyhamutils, hashutils , files_utils
 import numpy as np
 import random
 
@@ -22,7 +21,7 @@ class LSHBuilder:
     """
     This class contains the stuff you need to make a phylogenetic profiling database with input orthxml files and a taxonomic tree
 
-    You must either input an OMA hdf5 file or provide a function to generate orthoxml files for each orthologous groupself.
+    You must either input an OMA hdf5 file or an ensembl tarfile containing orthoxml file with orthologous groups.
 
     You can provide a species tree or use the ncbi taxonomy with a list of taxonomic codes for all the species in your db
 
@@ -344,6 +343,8 @@ if __name__ == '__main__':
     parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = str)
     parser.add_argument('--masterTree', help='number of hash functions to use when constructing profiles' , type = str)
 
+    parser.add_argument('--masterTree', help='number of hash functions to use when constructing profiles' , type = str)
+
     dbdict = {
     'all': { 'taxfilter': None , 'taxmask': None },
     'plants': { 'taxfilter': None , 'taxmask': 33090 },
@@ -396,11 +397,9 @@ if __name__ == '__main__':
         model.load_weights(  args['taxweights']+".h5")
         print("Loaded model from disk")
         weights = model.get_weights()[0]
-        #weight are non zero
-        #add small epsilon
         weights += 10 ** -10
-    print('compiling' + dbname)
 
+    print('compiling' + dbname)
     if 'masterTree' in args:
         mastertree = args['masterTree']
     else:

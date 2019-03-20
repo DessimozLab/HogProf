@@ -2,6 +2,7 @@
 import profiler
 import os
 import sys
+
 from validation import validation_semantic_similarity
 from keras.models import Sequential ,model_from_json
 from keras.layers import Dense, Activation , Dropout
@@ -20,7 +21,6 @@ from utils import hashutils
 np.random.seed(0)
 random.seed(0)
 import gc
-###return profiler and validation obj
 
 
 """
