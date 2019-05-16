@@ -60,12 +60,11 @@ class Profiler:
 			self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
 			self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma	, db_obj=self.db_obj)
 		elif tar:
+			## TODO: finish tar function
 			self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_tar, db_obj=self.db_obj)
 		if oma or tar:
 			self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
-
 			self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )
-
 
 	def return_profile_OTF(self, fam):
 		"""
@@ -87,8 +86,6 @@ class Profiler:
 				hogindex = np.asarray(indices[event])+i*len(self.taxaIndex)
 				hog_matrix_raw[:,hogindex] = 1
 		return {fam:{ 'mat':hog_matrix_raw, 'tree':tp} }
-
-
 
 	def return_profile_OTF_DCA(self, fam, lock = None):
 		"""
@@ -209,6 +206,9 @@ class Profiler:
 		and trees of fams
 
 		"""
+
+		fams = [ f for f in fams if f]
+
 		retq= mp.Queue(-1)
 		inq= mp.Queue(-1)
 		processes = {}
@@ -275,25 +275,8 @@ class Profiler:
 
 		return hogdict
 
-	def hog_query_OMA(self,hog_id=None, fam_id=None , k = 100 ):
-		#construct a profile on the fly
-		#rand seed values need to be identical between the construction of the lsh DB and the use of this function
-		"""
-		Untested, Given a hog_id or a fam_id as a query, returns a dictionary containing the results of the LSH.
-		Generates the tree profile and hashes on the fly
-		:param hog_id: query hog id
-		:param fam_id: query fam id
-		:return: list containing the results of the LSH for the given query
-		"""
-		if hog_id is not None:
-			fam_id = hashutils.hogid2fam(hog_id)
-		ortho = self.lshobj.READ_ORTHO(fam)
-		tp = self.lshobj.HAM_PIPELINE((fam, ortho))
-		hash = self.lshobj.HASH_PIPELINE((fam, tp))
-		results = self.lshobj.query(query_hash, k)
-		return results
-
 	def pull_hashes(self , hoglist):
+
 		"""
 		Given a list of hog_ids , returns a dictionary containing their hashes.
 		This uses the hdf5 file to get the hashvalues
@@ -301,6 +284,7 @@ class Profiler:
 		:param fam_id: query fam id
 		:return: a dict containing the hash values of the hogs in hoglist
 		"""
+
 		return { hog: hashutils.fam2hash_hdf5( hashutils.hogid2fam(hog), self.hashes_h5 , nsamples=  self.nsamples) for hog in hoglist}
 
 	def pull_matrows(self,fams):

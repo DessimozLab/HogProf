@@ -5,7 +5,7 @@ import os
 config = {
     "dir":{
     "datadir": "./profileDBs/",
-    "omadir": "/scratch/ul/projects/cdessimo/oma-browser/All.Jun2018/data/"
+    "omadir": "/scratch/cluster/monthly/dmoi/oma/june/"
     },
     "orthoxmltar":"",
     "email": "dmoi@unil.ch"

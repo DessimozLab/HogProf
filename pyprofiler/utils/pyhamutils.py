@@ -37,30 +37,20 @@ def switch_name_ncbi_id(orthoxml , mapdict = None):
     return orthoxml
 
 
-def get_ham_treemap_from_fam(fam, tree, db_obj):
-    orthoxml = get_orthoxml(fam, db_obj)
-    orthoxml = switch_name_ncbi_id(orthoxml)
 
-    try:
-        ham_obj = pyham.Ham(tree, orthoxml.encode(), type_hog_file="orthoxml", use_internal_name=False,
-                            orthoXML_as_string=True)
-        tp = ham_obj.create_tree_profile(ham, hog=ham_obj.get_list_top_level_hogs()[0])
-        #tp = ham_obj.create_tree_profile(hog=hog)
-        return tp.treemap
-    except TypeError as err:
-        print('Pyham error:', err)
-        return None
-
-
-def get_ham_treemap_from_row(row, tree):
-
+def get_ham_treemap_from_row(row, tree , level = None):
     fam, orthoxml = row
     orthoxml = switch_name_ncbi_id(orthoxml)
-
     try:
-        ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml", use_internal_name=True, orthoXML_as_string=True)
-        tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
-        return tp.treemap
+        if level is None:
+            ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml", use_internal_name=True, orthoXML_as_string=True)
+            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
+            return tp.treemap
+        else:
+            ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml", use_internal_name=True, orthoXML_as_string=True)
+            #return subHOGs at level
+            slice = ham_obj.get_ancestral_genome_by_name(level)
+            treeprofiles = [  ham_obj.create_tree_profile(hog=h) for h in ham_obj.get_list_top_level_hogs()[0].get_at_level(slice) ]
 
     except TypeError as err:
         print('Type error:', err)

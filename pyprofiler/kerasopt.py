@@ -28,7 +28,7 @@ import gc
 use this script in conjuction with a labelled protein interaction datasets (string, corum, mips etc).
 
 You can optimize the profile weights at diff taxonomic levels to give a
-better prediction of protein interaction with the jaccard score.
+better prediction of protein interaction with the weighted jaccard score.
 
 A positive and negative dataset need to be generated. This dataset can be from one
 organism or several different organisms as long as the truth values are known.
@@ -54,8 +54,6 @@ def calculate_x(row):
 
 if __name__ == '__main__':
 
-
-
     parser = argparse.ArgumentParser()
     parser.add_argument("-hognetcsv", help="csv for training", type =str)
     parser.add_argument("-epochs", help="number of epochs to train", type=int)
@@ -68,8 +66,9 @@ if __name__ == '__main__':
     parser.add_argument("-ntest", help="n profiles to test on ", type=str)
 
     args = vars(parser.parse_args(sys.argv[1:]))
+
     try:
-        saving_path  = self.config_utils + args['name']
+        saving_path  = self.config_utils.datadir + args['name']
     except:
         raise Exception('please specidfy db name')
 
@@ -127,24 +126,15 @@ if __name__ == '__main__':
     #shuffle
     df['HogFamA'] = df.HogA.map(hashutils.hogid2fam)
     df['HogFamB'] = df.HogB.map(hashutils.hogid2fam)
-
     df = df.sample(frac =1)
-
     msk = np.random.rand(len(df)) < 0.90
-
-
-
     #split
     traindf = df.iloc[:ntrain,:]
     testdf = df.iloc[ntrain:ntest,:]
     validation = df.iloc[ntest:,:]
-
-
-    ## TODO: save the validation dataset to test the final jaccard hash on
-
-
     print( traindf)
     print( testdf)
+
 
     with open( config_utils.datadir + 'taxaIndex.pkl', 'rb')as taxain:
         taxaIndex = pickle.loads( taxain.read() )
@@ -172,6 +162,7 @@ if __name__ == '__main__':
     sgd = optimizers.SGD(lr= .01, momentum=0.01, decay=0.01, nesterov=True)
     #rms = optimizers.RMSprop(lr=1, rho=0.9, epsilon=None, decay=0.0)
     model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
+
     tstart = t.time()
     X_test = np.vstack(testdf.xtrain)
     y_test = testdf.truth

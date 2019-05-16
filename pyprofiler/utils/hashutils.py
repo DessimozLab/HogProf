@@ -136,15 +136,20 @@ def hogid2fam(hog_id):
     Get fam given hog id
     :param hog_id: hog id
     :return: fam
+
     """
+
+    if not hog_id:
+        return hog_id
+    if type(hog_id) is int:
+        return hog_id
+
     if ':' in hog_id:
         hog_id = hog_id.split(':')[1]
         if '.' in hog_id:
             hog_id = hog_id.split('.')[0]
         hog_id = hog_id.replace("'",'')
         fam = int(hog_id)
-
-
     else:
         fam = int(hog_id)
     return fam

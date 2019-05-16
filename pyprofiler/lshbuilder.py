@@ -19,6 +19,8 @@ np.random.seed(0)
 
 class LSHBuilder:
     """
+
+
     This class contains the stuff you need to make a phylogenetic profiling database with input orthxml files and a taxonomic tree
 
     You must either input an OMA hdf5 file or an ensembl tarfile containing orthoxml file with orthologous groups.
@@ -47,9 +49,13 @@ class LSHBuilder:
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
         self.saving_name= saving_name
         if saving_name:
-            self.saving_path =config_utils.datadir + saving_name
+            self.saving_path =config_utils.datadir + saving_name +'/'
+            if not os.path.isdir(self.saving_path):
+                os.mkdir(path=self.saving_path)
         else:
-            self.saving_path = config_utils.datadir + self.date_string
+            self.saving_path = config_utils.datadir + self.date_string +'/'
+            if not os.path.isdir(self.saving_path):
+                os.mkdir(path=self.saving_path)
 
         if masterTree is None:
             if h5h5_oma:
@@ -57,21 +63,22 @@ class LSHBuilder:
                 genomes = [ str(g) for g in genomes]
                 taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
                 self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa , savename =saving_name )
-            elif mastertree:
-                with open( masterTree , 'wb') as pklin:
-                    self.tree_ete3 = pickle.loads(pklin.read())
-                    self.tree_string = self.tree_ete3.write(format=1)
             elif taxa:
                 with open(taxa, 'r') as taxin:
                     taxlist = [ int(line) for line in taxin ]
                 self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist , savename =saving_name )
             else:
                 raise Exception( 'please specify either a list of taxa or a tree' )
+        elif mastertree:
+            with open( masterTree , 'wb') as pklin:
+                self.tree_ete3 = pickle.loads(pklin.read())
+                self.tree_string = self.tree_ete3.write(format=1)
 
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
 
-        with open( config_utils.datadir + 'taxaIndex.pkl', 'wb') as taxout:
+        with open( config_utils.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
+
         self.numperm = numperm
         if treeweights is None:
             #generate all ones
@@ -80,7 +87,7 @@ class LSHBuilder:
             self.treeweights = treeweights
 
         wmg = WeightedMinHashGenerator(3*len(self.taxaIndex), sample_size=numperm, seed=1)
-        with open( config_utils.datadir +saving_name + 'wmg.pkl', 'wb') as taxout:
+        with open( self.saving_path +saving_name + 'wmg.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
 
         self.wmg = wmg
@@ -108,35 +115,41 @@ class LSHBuilder:
         start = -1
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
+            self.rows = len(self.groups)
+            for i, row in enumerate(self.groups):
+                if i > start:
+                    fam = row[0]
+                    ortho_fam = self.READ_ORTHO(fam)
+                    hog_size = ortho_fam.count('<species name=')
+                    if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
+                        families[fam] = {'ortho': ortho_fam}
+                    if len(families) > size:
+                        pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
+                        pd_dataframe['Fam'] = pd_dataframe.index
+                        yield pd_dataframe
+                        families = {}
+            pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
+            pd_dataframe['Fam'] = pd_dataframe.index
+            yield pd_dataframe
+            print('last dataframe sent')
+            families = {}
+
+
         elif self.tar:
             groupfiles=glob.glob(self.tar)
             groups = []
             for tarfile in groupfiles:
                 with tarfile.open(tarfile, "r:gz") as tar:
-                    groups += [(member,tarfile) for member in tar.getmembers()]
+                    for member in tar.getmembers():
+                        f=tar.extractfile(member)
+                        oxml = ET.parse(f)
+                        for input in oxml.iter():
+                            ortho_fam = ET.tostring( next(oxml.iter()), encoding='utf8', method='xml' ).decode() )
+                            hog_size = ortho_fam.count('<species name=')
+                            if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
+                                families[member] = {'ortho': ortho_fam}
+                    tar.close()
 
-        self.rows = len(self.groups)
-        for i, row in enumerate(self.groups):
-            if i > start:
-                if self.h5OMA:
-                    fam = row[0]
-                    ortho_fam = self.READ_ORTHO(fam)
-                elif self.tar:
-                    fam , tarfile = row
-                    ortho_fam = self.READ_ORTHO(fam , tarfile)
-                hog_size = ortho_fam.count('<species name=')
-                if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
-                    families[fam] = {'ortho': ortho_fam}
-                if len(families) > size:
-                    pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                    pd_dataframe['Fam'] = pd_dataframe.index
-                    yield pd_dataframe
-                    families = {}
-        pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-        pd_dataframe['Fam'] = pd_dataframe.index
-        yield pd_dataframe
-        print('last dataframe sent')
-        families = {}
 
     def universe_saver(self, i, q, retq, matq,univerq, l):
         #only useful to save all prots within a taxonomic range as db is being compiled
@@ -381,9 +394,17 @@ if __name__ == '__main__':
         nperm = 256
 
     if 'omafile' in args:
-        h5_oma = args['omafile']
+        omafile = args['omafile']
+        tarfile = None
     elif 'tarfile' in args:
         tarfile = args['tarfile']
+        omafile = None
+    elif config_utils.omadir:
+        omafile = config_utils.omadir + 'OmaServer.h5'
+        tarfile = None
+    elif config_utils.tarfile:
+        tarfile = config_utils.tarfile
+        omafile = None
     else:
         raise Exception(' please specify input data ')
 
@@ -405,14 +426,25 @@ if __name__ == '__main__':
     else:
         mastertree=None
 
+
+    import resource
+
+    start = time.time()
     if omafile:
-        if omafile == True:
-            with open_file(config_utils.omadir + 'OmaServer.h5', mode="r") as h5_oma:
-                lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname, numperm = nperm ,
-                treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
-                lsh_builder.run_pipeline()
+
+        with open_file( omafile , mode="r") as h5_oma:
+            lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname, numperm = nperm ,
+            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
+            lsh_builder.run_pipeline()
     else:
         lsh_builder = LSHBuilder( tarfile_ortho = tarfile ,  saving_name=dbname, numperm = perm ,
         treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
         lsh_builder.run_pipeline()
+
+    r = resource.getrusage(resource.RUSAGE_BOTH).ru_maxrss
+    print('maxmem')
+    print(r)
+    print('time')
+    print(time.time() - start)
+
     print('DONE')
