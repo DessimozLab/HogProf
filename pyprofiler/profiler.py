@@ -1,9 +1,10 @@
+from pyoma.browser import db
 
 import _pickle as pickle
 import pandas as pd
 import h5py
 import itertools
-import ujson as json
+import json
 import random
 from scipy.sparse import csr_matrix
 from tables import *
