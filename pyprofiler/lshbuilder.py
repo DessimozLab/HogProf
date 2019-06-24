@@ -84,6 +84,7 @@ class LSHBuilder:
             #generate all ones
             self.treeweights = hashutils.generate_treeweights(self.tree_ete3  , self.taxaIndex , taxfilter, taxmask)
         else:
+            #load machine learning weights
             self.treeweights = treeweights
 
         wmg = WeightedMinHashGenerator(3*len(self.taxaIndex), sample_size=numperm, seed=1)
@@ -354,9 +355,7 @@ if __name__ == '__main__':
     parser.add_argument('--OMA', help='use oma data ' , type = str)
     parser.add_argument('--tarfile', help='use tarfile with orthoxml data ' , type = str)
     parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = str)
-    parser.add_argument('--masterTree', help='number of hash functions to use when constructing profiles' , type = str)
-
-    parser.add_argument('--masterTree', help='number of hash functions to use when constructing profiles' , type = str)
+    parser.add_argument('--masterTree', help='master taxonomic tree. should use ncbi taxonomic id numbers as leaf names' , type = str)
 
     dbdict = {
     'all': { 'taxfilter': None , 'taxmask': None },
@@ -368,7 +367,6 @@ if __name__ == '__main__':
     'fungi':{ 'taxfilter': None , 'taxmask': 4751 },
     'metazoa':{ 'taxfilter': None , 'taxmask': 33208 },
     'vertebrates':{ 'taxfilter': None , 'taxmask': 7742 },
-
     }
 
     taxfilter = None
@@ -408,6 +406,7 @@ if __name__ == '__main__':
     else:
         raise Exception(' please specify input data ')
 
+    weights = None
     if 'taxweights' in args:
         from keras.models import model_from_json
         json_file = open(  args['taxweights']+ '.json', 'r')
@@ -426,12 +425,9 @@ if __name__ == '__main__':
     else:
         mastertree=None
 
-
     import resource
-
     start = time.time()
     if omafile:
-
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname, numperm = nperm ,
             treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
