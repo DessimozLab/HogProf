@@ -1,6 +1,6 @@
 from pyoma.browser import db
 
-import _pickle as pickle
+import pickle
 import pandas as pd
 import h5py
 import itertools
@@ -24,6 +24,9 @@ import time
 import sys
 import gc
 import logging
+
+
+
 
 class Profiler:
 
@@ -149,7 +152,7 @@ class Profiler:
 			ret2 = np.zeros(mat_x2.shape)
 			#diff = mat_x1 - mat_x2
 			matsum = mat_x1 + mat_x2
-			ret1[np.where(diff != 0 ) ] = -1
+			#ret1[np.where(diff != 0 ) ] = -1
 			ret2[ np.where(matsum == 2 ) ] = 1
 			return list(ret2)
 		retq= mp.Queue(-1)

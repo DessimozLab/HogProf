@@ -82,16 +82,32 @@ if __name__ == '__main__':
 
     #load hogs dataset from paper
     #hog names need to be mapped to interactors
+    if args['savedir']:
+        savedir = args['savedir']
+        if not os.path.exists(savedir):
+            os.makedirs(savedir)
+    else:
+        savedir = './'
+        # load json and create model
+
     with open( config_utils.datadir + 'taxaIndex.pkl', 'rb')as taxain:
         taxaIndex = pickle.loads( taxain.read() )
     hogmat_size = 3 *  len(taxaIndex)
 
     if args['hognetcsv']:
+        if args['ntrain']:
+            ntrain = int(args['ntrain'])
+        else:
+            ntrain = 3000
+        if args['ntest']:
+            ntest = int(args['ntest'])
+        else:
+            ntest = 1000
+
+
         csvs = glob.glob(args['hognetcsv'] )
         print(csvs)
         df = pd.concat ( [ pd.read_csv(csv) for csv in csvs] )
-
-
         csvs = glob.glob(args['hognetcsv'] )
         print(csvs)
         df = pd.concat ( [ pd.read_csv(csv) for csv in csvs] )
@@ -102,9 +118,12 @@ if __name__ == '__main__':
         df = df.sample(frac =1)
         msk = np.random.rand(len(df)) < 0.90
         #split
+        print(df)
+
         traindf = df.iloc[:ntrain,:]
         testdf = df.iloc[ntrain:ntest,:]
         validation = df.iloc[ntest:,:]
+        validation.to_csv( savedir + 'validationset.csv')
         print( traindf)
         print( testdf)
         traintest = None
@@ -113,35 +132,31 @@ if __name__ == '__main__':
         else:
             p = profiler.Profiler( lshforestpath, hashes_path ,  oma = True)
 
-            X_test = np.vstack(testdf.xtrain)
-            y_test = testdf.truth
-            epochs = 20
-            tstart= t.time()
-            if train_test is None:
-                gendata= p.retmat_mp(traindf, nworkers = 25, chunksize=50)
-                xtotal = []
-                ytotal = []
-                print('generate data for training')
-                for i in range(int(args['ntrain'] / chunksize ) ):
-                    X,y = next(gendata)
-                    xtotal.append(X)
-                    ytotal.append(y)
-                    xtotalmat = np.vstack(xtotal)
-                    ytotalmat = np.hstack(ytotal)
+        chunksize = 25
+        tstart= t.time()
+        gendata= p.retmat_mp(traindf, nworkers = 2, chunksize=50)
+        xtotal = []
+        ytotal = []
+        print('generate data for training')
+        for i in range(int(ntrain/ chunksize ) ):
+            X,y = next(gendata)
+            xtotal.append(X)
+            ytotal.append(y)
+        xtotalmat = np.vstack(xtotal)
+        ytotalmat = np.hstack(ytotal)
+        xtotal = []
+        ytotal = []
+        gendata= p.retmat_mp(testdf, nworkers = 25, chunksize=50)
+        print('generate data for testing')
+        for i in range(int(ntest/ chunksize ) ):
+            X,y  = next(gendata)
+            xtotal.append(X)
+            ytotal.append(y)
+        xtesttotalmat = np.vstack(xtotal)
+        ytesttotalmat = np.hstack(ytotal)
 
-                xtotal = []
-                ytotal = []
-
-                gendata= p.retmat_mp(testdf, nworkers = 25, chunksize=50)
-                for i in range(int(args['ntest'] / chunksize ) ):
-                    X,y  = next(gendata)
-                    xtotal.append(X)
-                    ytotal.append(y)
-                    xtesttotalmat = np.vstack(xtotal)
-                    ytesttotalmat = np.hstack(ytotal)
-
-                with open( savedir + 'traintest.pkl', 'wb') as traintestout:
-                    traintestout.write( pickle.dumps( [xtotalmat, ytotalmat, xtesttotalmat, ytesttotalmat ] ) )
+        with open( savedir + 'traintest.pkl', 'wb') as traintestout:
+            traintestout.write( pickle.dumps( [xtotalmat, ytotalmat, xtesttotalmat, ytesttotalmat ] ) )
 
     elif args['traintest']:
         #load precomputed profiles to avoid calculating the again
@@ -159,13 +174,7 @@ if __name__ == '__main__':
         overwrite = False
 
 
-    if args['savedir']:
-        savedir = args['savedir']
-        if not os.path.exists(savedir):
-            os.makedirs(savedir)
-    else:
-        savedir = './'
-        # load json and create model
+
     if args['chunksize']:
         chunksize = args['chunksize']
     else:
@@ -184,15 +193,17 @@ if __name__ == '__main__':
     else:
         print('new model')
         layers = []
-        #layers.append(Dense( 10,  , activation='relu' , use_bias=True))
-        layers.append(Dense(hogmat_size , input_dim= hogmat_size , activation='elu', use_bias=False, kernel_initializer='random_uniform', kernel_constraint= constraints.NonNeg() )     )
-        layers.append(Dense( 1, activation='softmax', use_bias=False, kernel_initializer='random_uniform' )     )
+        layers.append(Dense( 1, input_dim= hogmat_size  , activation='relu' , use_bias=True))
+        layers.append(Dense(1  , activation='sigmoid',  kernel_initializer='random_uniform' )     )
+
+        #layers.append(Dense( 1, activation='softmax' )     )
         #layers.append( Dropout(.5 , noise_shape=None, seed=None))
         model = Sequential(layers)
 
-    #sgd = optimizers.SGD(lr= .1, momentum=0.1, decay=0.01, nesterov=True)
-    sgd = optimizers.SGD(lr= .01, momentum=0.01, decay=0.01, nesterov=True)
-    #rms = optimizers.RMSprop(lr=1, rho=0.9, epsilon=None, decay=0.0)
+    #sgd = optimizers.SGD(lr= 1, momentum=0.1, decay=0.01, nesterov=False)
+    #sgd = optimizers.Adagrad(lr=0.01, epsilon=.01, decay=0.01)
+    sgd = optimizers.Adadelta(lr=.10, rho=0.095, epsilon=None, decay=0.0)
+    #sgd = optimizers.RMSprop(lr=1, rho=0.9, epsilon=None, decay=0.0)
     model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
     tstart = t.time()
 
@@ -201,10 +212,11 @@ if __name__ == '__main__':
         xtotalmat, ytotalmat, xtesttotalmat, ytesttotalmat  =  pickle.loads( traintestin.read() )
     print( 'done')
     print('training')
-    metrics = model.fit(x=xtotalmat  , y=ytotalmat, batch_size= 32 , epochs=1000, verbose=1 )
+    metrics = model.fit(x=xtotalmat  , y=ytotalmat, batch_size= 500 , epochs=2000, verbose=1 )
     print('done')
     print('testing')
-    model.evaluate(x = xtotalmat , y = ytotalmat)
+    metrics = model.evaluate(x = xtotalmat , y = ytotalmat)
+    print(metrics)
     print('done')
     print('saving')
     model_json = model.to_json()
