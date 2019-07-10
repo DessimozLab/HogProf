@@ -55,6 +55,7 @@ class Profiler:
 			self.tree_string = self.tree.write(format = 1)
 			with open( config_utils.datadir + 'taxaIndex.pkl', 'rb') as taxain:
 				self.taxaIndex = pickle.loads(taxain.read())
+				print(self.taxaIndex)
 			h5_oma = open_file(config_utils.omadir + 'OmaServer.h5', mode="r")
 			self.db_obj = db.Database(h5_oma)
 			#open up master tree

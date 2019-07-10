@@ -68,7 +68,10 @@ if __name__ == '__main__':
     args = vars(parser.parse_args(sys.argv[1:]))
 
     try:
-        saving_path  = self.config_utils.datadir + args['name']
+        saving_path  = config_utils.datadir + args['name']
+
+        print(saving_path)
+
     except:
         raise Exception('please specidfy db name')
 
@@ -79,17 +82,72 @@ if __name__ == '__main__':
 
     #load hogs dataset from paper
     #hog names need to be mapped to interactors
+    with open( config_utils.datadir + 'taxaIndex.pkl', 'rb')as taxain:
+        taxaIndex = pickle.loads( taxain.read() )
+    hogmat_size = 3 *  len(taxaIndex)
+
     if args['hognetcsv']:
         csvs = glob.glob(args['hognetcsv'] )
         print(csvs)
         df = pd.concat ( [ pd.read_csv(csv) for csv in csvs] )
 
-    if args['train_test_data']:
-        #load precomputed profiles to avoid calculating the again
+
         csvs = glob.glob(args['hognetcsv'] )
         print(csvs)
         df = pd.concat ( [ pd.read_csv(csv) for csv in csvs] )
 
+        #shuffle
+        df['HogFamA'] = df.HogA.map(hashutils.hogid2fam)
+        df['HogFamB'] = df.HogB.map(hashutils.hogid2fam)
+        df = df.sample(frac =1)
+        msk = np.random.rand(len(df)) < 0.90
+        #split
+        traindf = df.iloc[:ntrain,:]
+        testdf = df.iloc[ntrain:ntest,:]
+        validation = df.iloc[ntest:,:]
+        print( traindf)
+        print( testdf)
+        traintest = None
+        if 'forest' in args and 'hashes' in args:
+            p = profiler.Profiler( hashes = args['hashes'], forest = args['forest'] , oma = True)
+        else:
+            p = profiler.Profiler( lshforestpath, hashes_path ,  oma = True)
+
+            X_test = np.vstack(testdf.xtrain)
+            y_test = testdf.truth
+            epochs = 20
+            tstart= t.time()
+            if train_test is None:
+                gendata= p.retmat_mp(traindf, nworkers = 25, chunksize=50)
+                xtotal = []
+                ytotal = []
+                print('generate data for training')
+                for i in range(int(args['ntrain'] / chunksize ) ):
+                    X,y = next(gendata)
+                    xtotal.append(X)
+                    ytotal.append(y)
+                    xtotalmat = np.vstack(xtotal)
+                    ytotalmat = np.hstack(ytotal)
+
+                xtotal = []
+                ytotal = []
+
+                gendata= p.retmat_mp(testdf, nworkers = 25, chunksize=50)
+                for i in range(int(args['ntest'] / chunksize ) ):
+                    X,y  = next(gendata)
+                    xtotal.append(X)
+                    ytotal.append(y)
+                    xtesttotalmat = np.vstack(xtotal)
+                    ytesttotalmat = np.hstack(ytotal)
+
+                with open( savedir + 'traintest.pkl', 'wb') as traintestout:
+                    traintestout.write( pickle.dumps( [xtotalmat, ytotalmat, xtesttotalmat, ytesttotalmat ] ) )
+
+    elif args['traintest']:
+        #load precomputed profiles to avoid calculating the again
+        traintest = args['traintest']
+    else:
+        raise Exception('please specify input data')
 
     if args['epochs']:
         eps =  args['epochs']
@@ -113,34 +171,8 @@ if __name__ == '__main__':
     else:
         chunksize = 25
 
-    if args['forest'] and args['hashes']:
-        p = profiler.Profiler( hashes = args['hashes'], forest = args['forest'] , oma = True)
-    else:
-        p = profiler.Profiler( lshforestpath, hashes_path ,  oma = True)
-
-    if args['traintest']:
-        traintest = args['traintest']
-    else:
-        traintest = None
-
-    #shuffle
-    df['HogFamA'] = df.HogA.map(hashutils.hogid2fam)
-    df['HogFamB'] = df.HogB.map(hashutils.hogid2fam)
-    df = df.sample(frac =1)
-    msk = np.random.rand(len(df)) < 0.90
-    #split
-    traindf = df.iloc[:ntrain,:]
-    testdf = df.iloc[ntrain:ntest,:]
-    validation = df.iloc[ntest:,:]
-    print( traindf)
-    print( testdf)
-
-
-    with open( config_utils.datadir + 'taxaIndex.pkl', 'rb')as taxain:
-        taxaIndex = pickle.loads( taxain.read() )
 
     # 3 events, diff and union of matrows
-    hogmat_size = 3 *  len(taxaIndex)
     if overwrite ==False & os.path.isfile(savedir + 'model.json') and  os.path.isfile(savedir + 'model.h5'):
         json_file = open(savedir + 'model.json', 'r')
         loaded_model_json = json_file.read()
@@ -153,67 +185,27 @@ if __name__ == '__main__':
         print('new model')
         layers = []
         #layers.append(Dense( 10,  , activation='relu' , use_bias=True))
-        layers.append(Dense( 1, input_dim= hogmat_size , activation='elu', use_bias=False, kernel_initializer='random_uniform', kernel_constraint= constraints.NonNeg() )     )
+        layers.append(Dense(hogmat_size , input_dim= hogmat_size , activation='elu', use_bias=False, kernel_initializer='random_uniform', kernel_constraint= constraints.NonNeg() )     )
+        layers.append(Dense( 1, activation='softmax', use_bias=False, kernel_initializer='random_uniform' )     )
         #layers.append( Dropout(.5 , noise_shape=None, seed=None))
         model = Sequential(layers)
 
     #sgd = optimizers.SGD(lr= .1, momentum=0.1, decay=0.01, nesterov=True)
-
     sgd = optimizers.SGD(lr= .01, momentum=0.01, decay=0.01, nesterov=True)
     #rms = optimizers.RMSprop(lr=1, rho=0.9, epsilon=None, decay=0.0)
     model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
-
     tstart = t.time()
-    X_test = np.vstack(testdf.xtrain)
-    y_test = testdf.truth
-    epochs = 20
-    tstart= t.time()
 
-    if train_test is None:
-        gendata= p.retmat_mp(traindf, nworkers = 25, chunksize=50)
-
-        xtotal = []
-        ytotal = []
-
-        print('generate data for training')
-        for i in range(int(args['ntrain'] / chunksize ) ):
-            X,y = next(gendata)
-            xtotal.append(X)
-            ytotal.append(y)
-            xtotalmat = np.vstack(xtotal)
-            ytotalmat = np.hstack(ytotal)
-
-        xtotal = []
-        ytotal = []
-
-        gendata= p.retmat_mp(testdf, nworkers = 25, chunksize=50)
-        for i in range(int(args['ntest'] / chunksize ) ):
-            X,y  = next(gendata)
-            xtotal.append(X)
-            ytotal.append(y)
-            xtesttotalmat = np.vstack(xtotal)
-            ytesttotalmat = np.hstack(ytotal)
-
-        with open( savedir + 'traintest.pkl', 'wb') as traintestout:
-            traintestout.write( pickle.dumps( [xtotalmat, ytotalmat, xtesttotalmat, ytesttotalmat ] ) )
-
-
-
-
-    else:
-        print('loading dataset')
-        with open( traintest , 'rb') as traintestin:
-            xtotalmat, ytotalmat, xtesttotalmat, ytesttotalmat  =  pickle.loads( traintestin.read() )
-        print( 'done')
-
+    print('loading dataset')
+    with open( traintest , 'rb') as traintestin:
+        xtotalmat, ytotalmat, xtesttotalmat, ytesttotalmat  =  pickle.loads( traintestin.read() )
+    print( 'done')
     print('training')
-    metrics = model.train(x=xtotalmat  , y=ytotalmat, batch_size= 32 , epochs=1000, verbose=1 )
+    metrics = model.fit(x=xtotalmat  , y=ytotalmat, batch_size= 32 , epochs=1000, verbose=1 )
     print('done')
     print('testing')
     model.evaluate(x = xtotalmat , y = ytotalmat)
     print('done')
-
-
     print('saving')
     model_json = model.to_json()
     with open(savedir + "model_nobias.json", "w") as json_file:

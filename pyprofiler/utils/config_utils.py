@@ -4,8 +4,8 @@ import os
 
 config = {
     "dir":{
-    "datadir": "./profileDBs/",
-    "omadir": "/scratch/cluster/monthly/dmoi/oma/june/"
+    "datadir": "/home/cactuskid13/mntpt/unil_backup/profilingbackup/",
+    "omadir": "/home/cactuskid13/mntpt/OMA/jun/"
     },
     "orthoxmltar":"",
     "email": "dmoi@unil.ch"
