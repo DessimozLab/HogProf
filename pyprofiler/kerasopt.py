@@ -33,6 +33,9 @@ better prediction of protein interaction with the weighted jaccard score.
 A positive and negative dataset need to be generated. This dataset can be from one
 organism or several different organisms as long as the truth values are known.
 
+This code is still experimental and optimization of the profile weights for the recovery of
+biological signal will be covered in future publications.
+
 
 """
 
@@ -116,10 +119,6 @@ if __name__ == '__main__':
         df['HogFamA'] = df.HogA.map(hashutils.hogid2fam)
         df['HogFamB'] = df.HogB.map(hashutils.hogid2fam)
         df = df.sample(frac =1)
-        msk = np.random.rand(len(df)) < 0.90
-        #split
-        print(df)
-
         traindf = df.iloc[:ntrain,:]
         testdf = df.iloc[ntrain:ntest,:]
         validation = df.iloc[ntest:,:]
@@ -134,29 +133,24 @@ if __name__ == '__main__':
 
         chunksize = 25
         tstart= t.time()
-        gendata= p.retmat_mp(traindf, nworkers = 2, chunksize=50)
+        gendata= p.retmat_mp(traindf, nworkers = 8, chunksize=25)
         xtotal = []
         ytotal = []
         print('generate data for training')
-        for i in range(int(ntrain/ chunksize ) ):
-            X,y = next(gendata)
-            xtotal.append(X)
-            ytotal.append(y)
+        for i in range(int(ntrain + ntest / chunksize ) ):
+            try:
+                X,y = next(gendata)
+                xtotal.append(X)
+                ytotal.append(y)
+            except:
+                break
+
         xtotalmat = np.vstack(xtotal)
         ytotalmat = np.hstack(ytotal)
-        xtotal = []
-        ytotal = []
-        gendata= p.retmat_mp(testdf, nworkers = 25, chunksize=50)
-        print('generate data for testing')
-        for i in range(int(ntest/ chunksize ) ):
-            X,y  = next(gendata)
-            xtotal.append(X)
-            ytotal.append(y)
-        xtesttotalmat = np.vstack(xtotal)
-        ytesttotalmat = np.hstack(ytotal)
+        ntrain = int(xtotalmat.shape[0]*ntrain/(ntrain+ntest))
 
         with open( savedir + 'traintest.pkl', 'wb') as traintestout:
-            traintestout.write( pickle.dumps( [xtotalmat, ytotalmat, xtesttotalmat, ytesttotalmat ] ) )
+            traintestout.write( pickle.dumps( [xtotalmat[0:ntrain,:], ytotalmat[0:ntrain], xtotalmat[ntrain:,:], ytotalmat[ntrain:] ] ) )
 
     elif args['traintest']:
         #load precomputed profiles to avoid calculating the again
@@ -215,7 +209,7 @@ if __name__ == '__main__':
     metrics = model.fit(x=xtotalmat  , y=ytotalmat, batch_size= 500 , epochs=2000, verbose=1 )
     print('done')
     print('testing')
-    metrics = model.evaluate(x = xtotalmat , y = ytotalmat)
+    metrics = model.evaluate(x = xtesttotalmat , y = ytesttotalmat)
     print(metrics)
     print('done')
     print('saving')
