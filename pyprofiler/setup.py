@@ -9,6 +9,7 @@ setuptools.setup(
     author="Laurent K, David M",
     author_email="dmoi@unil.ch",
     description="Phylogenetic profiling package",
+    package_dir={'':'.'},
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",

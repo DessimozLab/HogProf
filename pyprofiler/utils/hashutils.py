@@ -144,14 +144,17 @@ def hogid2fam(hog_id):
     if type(hog_id) is int:
         return hog_id
 
-    if ':' in hog_id:
-        hog_id = hog_id.split(':')[1]
+    if ':' in str(hog_id):
+        hog_id = str(hog_id).split(':')[1]
         if '.' in hog_id:
             hog_id = hog_id.split('.')[0]
         hog_id = hog_id.replace("'",'')
         fam = int(hog_id)
     else:
-        fam = int(hog_id)
+        try:
+            fam = int(hog_id)
+        except:
+            return None
     return fam
 
 

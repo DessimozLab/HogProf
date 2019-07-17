@@ -10,12 +10,15 @@ from goatools.go_enrichment import GOEnrichmentStudy
 
 ##############enrichment##############################################
 
-def return_enrichment_study_obj(gaf_taxfiltered):
+def return_enrichment_study_obj(gaf_taxfiltered, obo = None):
     '''
     Generate go enrichment study object with a background dataset.
     '''
+    if obo is None:
+        obodag = GODag(config_utils.datadir+"/GOData/go-basic.obo")
+    else:
+        obodag = GODag(obo)
 
-    obodag = GODag(config_utils.datadir+"/GOData/go-basic.obo")
     goeaobj = GOEnrichmentStudy(
         gaf_taxfiltered.keys(), #
         gaf_taxfiltered, # geneid/GO associations possible with tree used for DB
@@ -47,9 +50,7 @@ def run_GOEA_onresults(results, db_obj, goeaobj, outname = None):
         grabs all member protein of all hogs in result
         returns goe results and HOG composition
     '''
-    #print(db_obj.member_of_hog_id(int(results[0])))
-    hogids =[ "HOG:" + (7-len(fam_id)) * '0' + fam_id for fam_id in results ]
-    #print( db_obj.member_of_hog_id(hogids[0]) )
+    hogids =[ "HOG:" + (7-len(str(fam_id))) * '0' + str(fam_id) for fam_id in results ]
     HOGS={}
     print('compiling hogs')
     prots = []
@@ -62,14 +63,12 @@ def run_GOEA_onresults(results, db_obj, goeaobj, outname = None):
             prots.append(member.omaid)
     print('done')
     print('running GO enrichment study')
-
-
     goea_results_all = goeaobj.run_study(prots )
     print('done')
-    with open( config_utils.datadir + outname + 'Hogs2Prots.pkl' , 'wb' ) as save:
-       save.write(pickle.dumps(HOGS,2))
-
-    goeaobj.wr_txt(config_utils.datadir+ str(outname)+"enrichment.txt", goea_results_all)
+    if outname:
+        with open( config_utils.datadir + outname + 'Hogs2Prots.pkl' , 'wb' ) as save:
+            save.write(pickle.dumps(HOGS,2))
+        goeaobj.wr_txt(config_utils.datadir+ str(outname)+"enrichment.txt", goea_results_all)
     print('DONE!')
     return goea_results_all, HOGS
 

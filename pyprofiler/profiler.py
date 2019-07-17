@@ -1,4 +1,6 @@
-from pyoma.browser import db
+
+
+from pyprofiler.pyoma.browser import db
 
 import pickle
 import pandas as pd
@@ -53,12 +55,11 @@ class Profiler:
 			pass
 		if oma:
 			from pyoma.browser import db
-			with open( './mastertree.pkl', 'rb') as treein:
+			with open( config_utils.datadir + 'mastertree.pkl', 'rb') as treein:
 				self.tree = pickle.loads(treein.read())
 			self.tree_string = self.tree.write(format = 1)
 			with open( config_utils.datadir + 'taxaIndex.pkl', 'rb') as taxain:
 				self.taxaIndex = pickle.loads(taxain.read())
-				print(self.taxaIndex)
 			h5_oma = open_file(config_utils.omadir + 'OmaServer.h5', mode="r")
 			self.db_obj = db.Database(h5_oma)
 			#open up master tree
@@ -254,10 +255,11 @@ class Profiler:
 		:param fam_id: query fam id
 		:return: list containing the results of the LSH for the given query
 		"""
+
 		if hog_id is not None:
 			fam_id = hashutils.hogid2fam(hog_id)
 		query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5 , nsamples=  self.nsamples )
-		print(query_hash.hashvalues)
+		#print(query_hash.hashvalues)
 		results = self.lshobj.query(query_hash, k)
 		return results
 
@@ -290,7 +292,7 @@ class Profiler:
 		:return: a dict containing the hash values of the hogs in hoglist
 		"""
 
-		return { hog: hashutils.fam2hash_hdf5( hashutils.hogid2fam(hog), self.hashes_h5 , nsamples=  self.nsamples) for hog in hoglist}
+		return { hog: hashutils.fam2hash_hdf5( hashutils.hogid2fam(str(hog)), self.hashes_h5 , nsamples=  self.nsamples) for hog in hoglist}
 
 	def pull_matrows(self,fams):
 		"""

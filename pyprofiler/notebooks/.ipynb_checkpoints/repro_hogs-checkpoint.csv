@@ -1,0 +1,108 @@
+,0,1,2,3,4,path,OMAID,HOG
+0,S000001692,YKL209C,S. cerevisiae,STE6,STErile,./yeastmating/results_signal_strength.tsv,6844990,HOG:0259166
+1,S000002248,YDL090C,S. cerevisiae,RAM1,RAS protein and A-factor Maturation,./yeastmating/results_signal_strength.tsv,6842368,HOG:0405589.7a
+2,S000006326,YPR122W,S. cerevisiae,AXL1,AXiaL budding,./yeastmating/results_signal_strength.tsv,6847757,HOG:0219055
+0,S000000951,YER149C,S. cerevisiae,PEA2,PEAnut shmoo mutant,./yeastmating/results_polarisome.tsv,6843538,HOG:0217913
+1,S000003944,YLL021W,S. cerevisiae,SPA2,Spindle Pole Antigen,./yeastmating/results_polarisome.tsv,6845359,HOG:0220110
+2,S000005215,YNL271C,S. cerevisiae,BNI1,Bud Neck Involved,./yeastmating/results_polarisome.tsv,6846426,HOG:0260593.1c
+0,S000000818,YER016W,S. cerevisiae,BIM1,BInding to Microtubules,./yeastmating/results_polarization.tsv,6843379,HOG:0408681.3d
+1,S000004715,YMR109W,S. cerevisiae,MYO5,MYOsin,./yeastmating/results_polarization.tsv,6846120,HOG:0422600.10fey.2574b.1738a
+2,S000004811,YMR198W,S. cerevisiae,CIK1,Chromosome Instability and Karyogamy,./yeastmating/results_polarization.tsv,6846221,HOG:0218435.1
+3,S000005900,YOR373W,S. cerevisiae,NUD1,,./yeastmating/results_polarization.tsv,6847331,HOG:0218021
+4,S000006190,YPL269W,S. cerevisiae,KAR9,KARyogamy,./yeastmating/results_polarization.tsv,6847365,HOG:0218343
+5,S000006345,YPR141C,S. cerevisiae,KAR3,KARyogamy,./yeastmating/results_polarization.tsv,6847777,HOG:0422600.10jry
+0,S000000534,YCL029C,S. cerevisiae,BIK1,BIlateral Karyogamy defect,./yeastmating/resultskar.tsv,6842075,HOG:0219830
+1,S000000560,YCL055W,S. cerevisiae,KAR4,KARyogamy,./yeastmating/resultskar.tsv,6842049,HOG:0408350.2
+2,S000001115,YHR073W,S. cerevisiae,OSH3,OxySterol binding protein Homolog,./yeastmating/resultskar.tsv,6844425,HOG:0259916
+3,S000001299,YIL037C,S. cerevisiae,PRM2,Pheromone-Regulated Membrane protein,./yeastmating/resultskar.tsv,6843159,HOG:0218591
+4,S000003556,YJL019W,S. cerevisiae,MPS3,MonoPolar Spindle,./yeastmating/resultskar.tsv,6844793,HOG:0217984
+5,S000003571,YJL034W,S. cerevisiae,KAR2,KARyogamy,./yeastmating/resultskar.tsv,6844781,HOG:0404837.10ab.59d
+6,S000003609,YJL073W,S. cerevisiae,JEM1,DnaJ-like protein of the ER Membrane,./yeastmating/resultskar.tsv,6844742,HOG:0398864
+7,S000004669,YMR065W,S. cerevisiae,KAR5,KARyogamy,./yeastmating/resultskar.tsv,6846074,HOG:0219280
+8,S000004811,YMR198W,S. cerevisiae,CIK1,Chromosome Instability and Karyogamy,./yeastmating/resultskar.tsv,6846221,HOG:0218435.1
+9,S000004845,YMR232W,S. cerevisiae,FUS2,cell FUSion,./yeastmating/resultskar.tsv,6846256,HOG:0218583
+10,S000005132,YNL188W,S. cerevisiae,KAR1,KARyogamy,./yeastmating/resultskar.tsv,6846507,HOG:0218691
+11,S000006113,YPL192C,S. cerevisiae,PRM3,Pheromone-Regulated Membrane protein,./yeastmating/resultskar.tsv,6847443,HOG:0217526
+12,S000006190,YPL269W,S. cerevisiae,KAR9,KARyogamy,./yeastmating/resultskar.tsv,6847365,HOG:0218343
+13,S000006345,YPR141C,S. cerevisiae,KAR3,KARyogamy,./yeastmating/resultskar.tsv,6847777,HOG:0422600.10jry
+0,S000000045,YAL047C,S. cerevisiae,SPC72,Spindle Pole Component,./yeastmating/results_cell_sensing.tsv,6841520,HOG:0218807
+1,S000000112,YBL016W,S. cerevisiae,FUS3,cell FUSion,./yeastmating/results_cell_sensing.tsv,6841703,HOG:0401069.3r.26a
+2,S000000999,YHL007C,S. cerevisiae,STE20,STErile,./yeastmating/results_cell_sensing.tsv,6844332,HOG:0219392
+3,S000001661,YKL178C,S. cerevisiae,STE3,STErile,./yeastmating/results_cell_sensing.tsv,6845020,HOG:0256520
+4,S000002318,YDL159W,S. cerevisiae,STE7,STErile,./yeastmating/results_cell_sensing.tsv,6842297,HOG:0217590.1
+5,S000002510,YDR103W,S. cerevisiae,STE5,STErile,./yeastmating/results_cell_sensing.tsv,6842564,HOG:0218765
+6,S000004354,YLR362W,S. cerevisiae,STE11,STErile,./yeastmating/results_cell_sensing.tsv,6845752,HOG:0401246
+7,S000005132,YNL188W,S. cerevisiae,KAR1,KARyogamy,./yeastmating/results_cell_sensing.tsv,6846507,HOG:0218691
+0,S000000818,YER016W,S. cerevisiae,BIM1,BInding to Microtubules,./yeastmating/nuclear_congression.tsv,6843379,HOG:0408681.3d
+1,S000005853,YOR326W,S. cerevisiae,MYO2,MYOsin,./yeastmating/nuclear_congression.tsv,6847283,HOG:0401396.1a
+2,S000006345,YPR141C,S. cerevisiae,KAR3,KARyogamy,./yeastmating/nuclear_congression.tsv,6847777,HOG:0422600.10jry
+0,S000000039,YAL041W,S. cerevisiae,CDC24,Cell Division Cycle,./yeastmating/results_polarity.tsv,6841527,HOG:0259374.1
+1,S000003384,YGR152C,S. cerevisiae,RSR1,RaS-Related,./yeastmating/results_polarity.tsv,6844137,HOG:0410251.10m.164e
+2,S000003693,YJL157C,S. cerevisiae,FAR1,Factor ARrest,./yeastmating/results_polarity.tsv,6844653,HOG:0218693
+3,S000004219,YLR229C,S. cerevisiae,CDC42,Cell Division Cycle,./yeastmating/results_polarity.tsv,6845616,HOG:0410251.10dc.226
+0,S000000375,YBR171W,S. cerevisiae,SEC66,SECretory,./yeastmating/results_nuclearfusion.tsv,6841895,HOG:0256980
+1,S000002284,YDL126C,S. cerevisiae,CDC48,Cell Division Cycle,./yeastmating/results_nuclearfusion.tsv,6842331,HOG:0419289.10c
+2,S000003571,YJL034W,S. cerevisiae,KAR2,KARyogamy,./yeastmating/results_nuclearfusion.tsv,6844781,HOG:0404837.10ab.59d
+3,S000005601,YOR075W,S. cerevisiae,UFE1,Unknown Function Essential,./yeastmating/results_nuclearfusion.tsv,6847033,HOG:0259186.1
+4,S000005780,YOR254C,S. cerevisiae,SEC63,SECretory,./yeastmating/results_nuclearfusion.tsv,6847208,HOG:0421997
+0,S000001047,YHR005C,S. cerevisiae,GPA1,G Protein Alpha subunit,./yeastmating/results_signaling.tsv,6844345,HOG:0409582.6u.29h
+1,S000001126,YHR084W,S. cerevisiae,STE12,STErile,./yeastmating/results_signaling.tsv,6844437,HOG:0218493
+2,S000001661,YKL178C,S. cerevisiae,STE3,STErile,./yeastmating/results_signaling.tsv,6845020,HOG:0256520
+3,S000003693,YJL157C,S. cerevisiae,FAR1,Factor ARrest,./yeastmating/results_signaling.tsv,6844653,HOG:0218693
+4,S000003846,YJR086W,S. cerevisiae,STE18,STErile,./yeastmating/results_signaling.tsv,6844893,HOG:0219743
+5,S000005215,YNL271C,S. cerevisiae,BNI1,Bud Neck Involved,./yeastmating/results_signaling.tsv,6846426,HOG:0260593.1c
+6,S000005738,YOR212W,S. cerevisiae,STE4,STErile,./yeastmating/results_signaling.tsv,6847169,HOG:0422600.10bsi.2070
+0,S000000007,YAL009W,S. cerevisiae,SPO7,SPOrulation,./yeastmating/resultsSPO.tsv,6841567,HOG:0256513
+1,S000000016,YAL018C,S. cerevisiae,LDS1,Lipid Droplets in Sporulation,./yeastmating/resultsSPO.tsv,6841556,HOG:0220154.1
+2,S000000154,YBL058W,S. cerevisiae,SHP1,Suppressor of High-copy PP1,./yeastmating/resultsSPO.tsv,6841660,HOG:0408836.3a
+3,S000000454,YBR250W,S. cerevisiae,SPO23,SPOrulation,./yeastmating/resultsSPO.tsv,6841982,HOG:0218418
+4,S000000553,YCL048W,S. cerevisiae,SPS22,SPorulation Specific 2 too (2),./yeastmating/resultsSPO.tsv,6842056,HOG:0219845.1
+5,S000000595,YCR002C,S. cerevisiae,CDC10,Cell Division Cycle,./yeastmating/resultsSPO.tsv,6842103,HOG:0402263.3a.20a
+6,S000000848,YER046W,S. cerevisiae,SPO73,SPOrulation,./yeastmating/resultsSPO.tsv,6843412,HOG:0220108
+7,S000000898,YER096W,S. cerevisiae,SHC1,Sporulation-specific Homolog of CSD4,./yeastmating/resultsSPO.tsv,6843479,HOG:0217418
+8,S000000917,YER115C,S. cerevisiae,SPR6,SPorulation Regulated,./yeastmating/resultsSPO.tsv,6843498,
+9,S000000934,YER132C,S. cerevisiae,PMD1,Paralog of MDS3,./yeastmating/resultsSPO.tsv,6843516,HOG:0219467.1
+10,S000000982,YER180C,S. cerevisiae,ISC10,message Induced in Sporogenesis in S. Cervisiae,./yeastmating/resultsSPO.tsv,6843573,HOG:0217924
+11,S000001014,YHL022C,S. cerevisiae,SPO11,SPOrulation,./yeastmating/resultsSPO.tsv,6844315,HOG:0257047
+12,S000001056,YHR014W,S. cerevisiae,SPO13,SPOrulation,./yeastmating/resultsSPO.tsv,6844356,HOG:0217386
+13,S000001181,YHR139C,S. cerevisiae,SPS100,SPorulation Specific,./yeastmating/resultsSPO.tsv,6844495,HOG:0218320.2a
+14,S000001195,YHR152W,S. cerevisiae,SPO12,SPOrulation,./yeastmating/resultsSPO.tsv,6844509,HOG:0217297
+15,S000001196,YHR153C,S. cerevisiae,SPO16,SPOrulation,./yeastmating/resultsSPO.tsv,6844510,HOG:0218019
+16,S000001227,YHR184W,S. cerevisiae,SSP1,,./yeastmating/resultsSPO.tsv,6844543,HOG:0218317
+17,S000001228,YHR185C,S. cerevisiae,PFS1,Prospore Formation at Spindles,./yeastmating/resultsSPO.tsv,6844544,HOG:0217344
+18,S000001335,YIL073C,S. cerevisiae,SPO22,SPOrulation,./yeastmating/resultsSPO.tsv,6843120,HOG:0261044
+19,S000001739,YKR031C,S. cerevisiae,SPO14,SPOrulation,./yeastmating/resultsSPO.tsv,6845238,HOG:0401414
+20,S000002511,YDR104C,S. cerevisiae,SPO71,SPOrulation,./yeastmating/resultsSPO.tsv,6842565,HOG:0217730
+21,S000002626,YDR218C,S. cerevisiae,SPR28,SPorulation Regulated,./yeastmating/resultsSPO.tsv,6842687,HOG:0402263.3a.20d.17b.18
+22,S000002920,YDR512C,S. cerevisiae,EMI1,Early Meiotic Induction,./yeastmating/resultsSPO.tsv,6842986,
+23,S000002924,YDR516C,S. cerevisiae,EMI2,Early Meiotic Induction,./yeastmating/resultsSPO.tsv,6842990,HOG:0607083.3e.8c.32a
+24,S000002930,YDR522C,S. cerevisiae,SPS2,SPorulation Specific,./yeastmating/resultsSPO.tsv,6842996,HOG:0219845.1a
+25,S000002931,YDR523C,S. cerevisiae,SPS1,SPorulation Specific,./yeastmating/resultsSPO.tsv,6842997,HOG:0217915
+26,S000003138,YGL170C,S. cerevisiae,SPO74,SPOrulation,./yeastmating/resultsSPO.tsv,6843815,HOG:0217394
+27,S000003288,YGR056W,S. cerevisiae,RSC1,Remodel the Structure of Chromatin,./yeastmating/resultsSPO.tsv,6844040,HOG:0219321.2
+28,S000003291,YGR059W,S. cerevisiae,SPR3,SPorulation Regulated,./yeastmating/resultsSPO.tsv,6844043,HOG:0219538
+29,S000003457,YGR225W,S. cerevisiae,AMA1,Activator of Meiotic APC/C,./yeastmating/resultsSPO.tsv,6844215,HOG:0219014
+30,S000003928,YLL005C,S. cerevisiae,SPO75,SPOrulation,./yeastmating/resultsSPO.tsv,6845375,HOG:0219677
+31,S000004333,YLR341W,S. cerevisiae,SPO77,SPOrulation,./yeastmating/resultsSPO.tsv,6845730,HOG:0217505
+32,S000004619,YMR017W,S. cerevisiae,SPO20,SPOrulation,./yeastmating/resultsSPO.tsv,6846025,HOG:0217573
+33,S000004837,YMR224C,S. cerevisiae,MRE11,Meiotic REcombination,./yeastmating/resultsSPO.tsv,6846247,HOG:0408036.5a
+34,S000004957,YNL012W,S. cerevisiae,SPO1,SPOrulation,./yeastmating/resultsSPO.tsv,6846686,HOG:0218375
+35,S000005146,YNL202W,S. cerevisiae,SPS19,SPorulation-Specific,./yeastmating/resultsSPO.tsv,6846493,HOG:0402357.3br
+36,S000005148,YNL204C,S. cerevisiae,SPS18,SPorulation-Specific,./yeastmating/resultsSPO.tsv,6846491,HOG:0217577
+37,S000005251,YNL307C,S. cerevisiae,MCK1,Meiosis and Centromere regulatory Kinase,./yeastmating/resultsSPO.tsv,6846391,HOG:0422600.10dwk.2399
+38,S000005451,YOL091W,S. cerevisiae,SPO21,SPOrulation,./yeastmating/resultsSPO.tsv,6846857,HOG:0217281
+39,S000005703,YOR177C,S. cerevisiae,MPC54,Meiotic Plaque Component,./yeastmating/resultsSPO.tsv,6847132,HOG:0218194
+40,S000005716,YOR190W,S. cerevisiae,SPR1,SPorulation Regulated,./yeastmating/resultsSPO.tsv,6847145,HOG:0403826.4b.5b.12
+41,S000005768,YOR242C,S. cerevisiae,SSP2,Sporulation SPecific,./yeastmating/resultsSPO.tsv,6847197,HOG:0218424
+42,S000005824,YOR298W,S. cerevisiae,MUM3,MUddled Meiosis,./yeastmating/resultsSPO.tsv,6847252,HOG:0218797
+43,S000005840,YOR313C,S. cerevisiae,SPS4,SPorulation Specific trancript,./yeastmating/resultsSPO.tsv,6847269,HOG:0219017
+44,S000006051,YPL130W,S. cerevisiae,SPO19,SPOrulation,./yeastmating/resultsSPO.tsv,6847507,HOG:0217403
+45,S000028425,YPR036W-A,S. cerevisiae,SPO24,SPOrulation,./yeastmating/resultsSPO.tsv,6847676,HOG:0218505
+0,S000003000,YGL032C,S. cerevisiae,AGA2,a-AGglutinin,./yeastmating/results_agglutination.tsv,6843950,HOG:0217847
+1,S000003764,YJR004C,S. cerevisiae,SAG1,Sexual AGglutination,./yeastmating/results_agglutination.tsv,6844813,HOG:0218063.3m
+2,S000005327,YNR044W,S. cerevisiae,AGA1,a-AGglutinin,./yeastmating/results_agglutination.tsv,6846743,HOG:0218063.3h
+0,S000000244,YBR040W,S. cerevisiae,FIG1,Factor-Induced Gene,./yeastmating/results_fusion.tsv,6841759,HOG:0219823
+1,S000000532,YCL027W,S. cerevisiae,FUS1,cell FUSion,./yeastmating/results_fusion.tsv,6842077,HOG:0218522
+2,S000004467,YML008C,S. cerevisiae,ERG6,ERGosterol biosynthesis,./yeastmating/results_fusion.tsv,6845998,HOG:0419362.4a.12a.14
+3,S000004845,YMR232W,S. cerevisiae,FUS2,cell FUSion,./yeastmating/results_fusion.tsv,6846256,HOG:0218583
+4,S000005223,YNL279W,S. cerevisiae,PRM1,Pheromone-Regulated Membrane protein,./yeastmating/results_fusion.tsv,6846418,HOG:0260600
