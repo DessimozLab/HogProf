@@ -7,7 +7,7 @@ import os
 from utils import config_utils
 
 
-def get_tree(taxa , savename = None):
+def get_tree(taxa , genomes ,  savename = None):
     """
     Generates a taxonomic tree using the ncbi taxonomy and
     :param oma:  a pyoma db object
@@ -16,15 +16,14 @@ def get_tree(taxa , savename = None):
 
     """
     ncbi = ete3.NCBITaxa()
-    tax = set(tax)
+    tax = set(taxa)
     genomes = set(genomes)
     tax.remove(0)
     print(len(tax))
 
     tree = ete3.PhyloTree( name = '')
     tree.add_child(name ='131567')
-
-    topo = ncbi.get_topology(tax , collapse_subspecies=False)
+    topo = ncbi.get_topology(genomes , collapse_subspecies=False)
     tax = set([ str(taxid) for taxid in tax])
     tree.add_child(topo)
     orphans = list(genomes - set([x.name for x in tree.get_leaves()]))

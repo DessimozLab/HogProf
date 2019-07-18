@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 
-def generate_treeweights( mastertree, taxaIndex , taxfilter, taxmask ):
+def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
     #weighing function for tax level, masking levels etc. sets all weights to 1
     """
     Generate the weights of each taxonomic level to be applied during the
@@ -21,7 +21,7 @@ def generate_treeweights( mastertree, taxaIndex , taxfilter, taxmask ):
     :return: weights: a vector of weights for each tax level
     """
 
-    weights = { type: np.zeros((len(taxaIndex),1)) for type in ['presence', 'loss', 'dup']}
+    weights = np.zeros((3*len(taxaIndex),1))
     print(len(taxaIndex))
     newtree = mastertree
     for event in weights:
@@ -33,9 +33,9 @@ def generate_treeweights( mastertree, taxaIndex , taxfilter, taxmask ):
             if taxfilter:
                 if n.name in taxfilter:
                     n.delete()
-    for event in weights:
+    for i in range(3):
         for n in newtree.traverse():
-            weights[event][taxaIndex[n.name]] = 1
+            weights[len(taxaIndex)*i + taxaIndex[n.name] ] = 1
     return weights
 
 def hash_tree(tp , taxaIndex , treeweights , wmg):
@@ -61,10 +61,9 @@ def hash_tree(tp , taxaIndex , treeweights , wmg):
         if len(indices[event])>0:
             taxindex = np.asarray(indices[event])
             hogindex = np.asarray(indices[event])+i*len(taxaIndex)
-            hog_matrix_weighted[:,hogindex] = treeweights[hogindex].ravel()
+            hog_matrix_weighted[:,hogindex] = treeweights[hogindex,:].ravel()
             hog_matrix_binary[:,hogindex] = 1
     weighted_hash = wmg.minhash(list(hog_matrix_weighted.flatten()))
-
     return  hog_matrix_binary , weighted_hash
 
 def tree2str_DCA(tp , taxaIndex ):
@@ -111,7 +110,7 @@ def row2hash(row , taxaIndex , treeweights , wmg):
     #convert a dataframe row to a weighted minhash
     fam, treemap = row.tolist()
     hog_matrix,weighted_hash = hash_tree(treemap , taxaIndex , treeweights , wmg)
-    return [weighted_hash,hog_matrix]
+    return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows']) 
 
 
 def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):
