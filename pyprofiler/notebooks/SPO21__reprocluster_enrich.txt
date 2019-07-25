@@ -1,0 +1,3 @@
+GO:0032120 BP 2.58e-08    2/12 164/8270255 D05 ascospore-type prospore membrane assembly YEAST05363, YEASV02850 
+GO:0035974 CC 1.26e-08    2/12 115/8270255 D07 meiotic spindle pole body                YEAST05363, YEASV02850 
+GO:0005628 CC 1.70e-07    2/12 420/8270255 D02 prospore membrane                        YEAST05363, YEASV02850 

@@ -77,8 +77,6 @@ def tree2str_DCA(tp , taxaIndex ):
     :return dcaMat: a weighted minhash of a HOG
     """
     #convert a tree profile to a weighted minhash
-
-
     losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
     dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
     presence = [ taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in taxaIndex ]
@@ -110,7 +108,7 @@ def row2hash(row , taxaIndex , treeweights , wmg):
     #convert a dataframe row to a weighted minhash
     fam, treemap = row.tolist()
     hog_matrix,weighted_hash = hash_tree(treemap , taxaIndex , treeweights , wmg)
-    return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows']) 
+    return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows'])
 
 
 def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):

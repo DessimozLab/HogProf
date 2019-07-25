@@ -1,0 +1,31 @@
+GO:0030437 BP 7.44e-25    7/23 505/8270255 D06 ascospore formation                      KAZNA01878, YEASO02317, YEAST01985, YEAST02321, YEAST04236, YEAST06182, YEASV01281 
+GO:0030435 BP 1.28e-17    7/23 5437/8270255 D04 sporulation resulting in formation of a cellular spore YEAST01985, YEAST02321, YEAST03015, YEAST04236, YEAST04531, YEAST05363, YEAST06182 
+GO:0032120 BP 1.36e-11    3/23 164/8270255 D05 ascospore-type prospore membrane assembly YEAST04236, YEAST05363, YEASV02850 
+GO:0007124 BP 9.87e-11    3/23 317/8270255 D05 pseudohyphal growth                      VANPO00931, YEAST00803, YEAST02943 
+GO:0001403 BP 1.80e-10    3/23 387/8270255 D06 invasive growth in response to glucose limitation VANPO00931, YEAST00803, YEAST02943 
+GO:0000752 BP 4.88e-10    2/23  12/8270255 D06 agglutination involved in conjugation with cellular fusion VANPO03842, YEAST02456 
+GO:0046020 BP 7.00e-09    2/23  44/8270255 D12 negative regulation of transcription from RNA polymerase II promoter by pheromones VANPO00931, YEAST02943 
+GO:0031321 BP 1.02e-08    2/23  53/8270255 D05 ascospore-type prospore assembly         YEASA01427, YEAST04531 
+GO:0007329 BP 2.46e-08    2/23  82/8270255 D13 positive regulation of transcription from RNA polymerase II promoter by pheromones VANPO00931, YEAST02943 
+GO:0033262 BP 5.82e-08    2/23 126/8270255 D09 regulation of nuclear cell cycle DNA replication YEASO01909, YEAST00863 
+GO:2000104 BP 8.83e-08    2/23 155/8270255 D09 negative regulation of DNA-dependent DNA replication YEASO01909, YEAST00863 
+GO:0000747 BP 1.98e-07    2/23 232/8270255 D04 conjugation with cellular fusion         VANPO00931, YEAST02943 
+GO:0031573 BP 1.25e-06    2/23 581/8270255 D10 intra-S DNA damage checkpoint            YEASO01909, YEAST00863 
+GO:2001020 BP 1.37e-06    2/23 609/8270255 D06 regulation of response to DNA damage stimulus YEASO01909, YEAST00863 
+GO:0006031 BP 1.44e-06    2/23 625/8270255 D07 chitin biosynthetic process              YEAST01985, YEASV01281 
+GO:0048288 BP 5.56e-06    1/23   2/8270255 D07 nuclear membrane fusion involved in karyogamy YEAST05949 
+GO:0019236 BP 2.03e-05    2/23 2345/8270255 D04 response to pheromone                    YEAST00803, YEAST02943 
+GO:0007346 BP 5.10e-05    2/23 3727/8270255 D05 regulation of mitotic cell cycle         YEASO01909, YEAST00863 
+GO:0005628 CC 2.03e-29    8/23 420/8270255 D02 prospore membrane                        KAZNA01878, YEASA01427, YEAST01985, YEAST04531, YEAST05363, YEAST06182, YEASV01281, YEASV02850 
+GO:0035974 CC 3.14e-16    4/23 115/8270255 D07 meiotic spindle pole body                YEASO02317, YEAST02321, YEAST05363, YEASV02850 
+GO:1990526 CC 1.11e-10    2/23   6/8270255 D02 Ste12p-Dig1p-Dig2p complex               VANPO00931, YEAST02943 
+GO:1990527 CC 1.11e-10    2/23   6/8270255 D02 Tec1p-Ste12p-Dig1p complex               VANPO00931, YEAST02943 
+GO:0031316 CC 2.78e-06    1/23   1/8270255 D06 extrinsic component of nuclear outer membrane YEAST05949 
+GO:0009277 CC 2.86e-06    2/23 881/8270255 D04 fungal-type cell wall                    VANPO03842, YEAST02456 
+GO:0005816 CC 3.55e-06    2/23 981/8270255 D06 spindle pole body                        YEAST02321, YEAST05949 
+GO:0031201 CC 4.78e-05    2/23 3608/8270255 D04 SNARE complex                            YEASA01427, YEAST04531 
+GO:0070300 MF 2.87e-06    2/23 882/8270255 D05 phosphatidic acid binding                YEASA01427, YEAST04531 
+GO:0005198 MF 2.93e-06    4/23 35855/8270255 D01 structural molecule activity             YEASO02317, YEAST02321, YEAST05363, YEASV02850 
+GO:0050839 MF 9.39e-06    2/23 1596/8270255 D03 cell adhesion molecule binding           VANPO03842, YEAST02456 
+GO:0005546 MF 1.74e-05    2/23 2176/8270255 D08 phosphatidylinositol-4,5-bisphosphate binding YEASA01427, YEAST04531 
+GO:0003674 MF 2.00e-05    4/23 58561/8270255 D00 molecular_function                       YEAST03015, YEAST04236, YEAST05949, YEAST06182 

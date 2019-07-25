@@ -1,0 +1,2 @@
+GO:0048288 BP 7.25e-07     1/3   2/8270255 D07 nuclear membrane fusion involved in karyogamy YEAST05949 
+GO:0031316 CC 3.63e-07     1/3   1/8270255 D06 extrinsic component of nuclear outer membrane YEAST05949 

@@ -120,7 +120,7 @@ class LSHBuilder:
         hog_matrix,weighted_hash = hashutils.hash_tree(pyham_tree , self.taxaIndex , self.treeweights , self.wmg)
         return ortho_fam , pyham_tree, weighted_hash,hog_matrix
 
-    def generates_dataframes(self, size=100, minhog_size=3, maxhog_size=None ):
+    def generates_dataframes(self, size=100, minhog_size=None, maxhog_size=None ):
         families = {}
         start = -1
         if self.h5OMA:
@@ -227,7 +227,7 @@ class LSHBuilder:
                             hashes = this_dataframe['hash'].to_dict()
                             print(str(this_dataframe.Fam.max())+ 'fam num')
                             print(str(count) + ' done')
-                            hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
+                            hashes = {fam:hashes[fam] if hashes[fam] else print(fam) for fam in hashes }
                             [ forest.add(str(fam),hashes[fam]) for fam in hashes]
                             for fam in hashes:
                                 if len(datasets[dataset_name]) < fam + 10:
@@ -363,7 +363,7 @@ if __name__ == '__main__':
     parser.add_argument('--dbtype', help='preconfigured taxonomic ranges' , type = str)
     parser.add_argument('--OMA', help='use oma data ' , type = str)
     parser.add_argument('--tarfile', help='use tarfile with orthoxml data ' , type = str)
-    parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = str)
+    parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = int)
     parser.add_argument('--mastertree', help='master taxonomic tree. should use ncbi taxonomic id numbers as leaf names' , type = str)
     parser.add_argument('--nthreads', help='nthreads for multiprocessing speedup of treebuilding' , type = int)
 
@@ -397,7 +397,7 @@ if __name__ == '__main__':
         taxmask = args['taxmask']
 
     if args['nperm']:
-        nperm = args['nperm']
+        nperm = int(args['nperm'])
     else:
         nperm = 256
 

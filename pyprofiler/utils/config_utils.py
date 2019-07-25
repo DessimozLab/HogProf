@@ -1,11 +1,12 @@
 import json
 import os
 
+#don't forget the trailing slash on all dirs
 
 config = {
     "dir":{
 #    "datadir": "/home/cactuskid13/mntpt/unil_backup/profilingbackup/",
-    "datadir": ".",
+    "datadir": "/home/cactuskid13/pyprofiler/pyprofiler/all/",
 
     "omadir": "/home/cactuskid13/mntpt/OMA/jun/"
     },
