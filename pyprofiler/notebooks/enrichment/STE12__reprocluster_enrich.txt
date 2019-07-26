@@ -1,0 +1,7 @@
+GO:0046020 BP 2.77e-11     2/2  44/8270255 D12 negative regulation of transcription from RNA polymerase II promoter by pheromones VANPO00931, YEAST02943 
+GO:0007329 BP 9.71e-11     2/2  82/8270255 D13 positive regulation of transcription from RNA polymerase II promoter by pheromones VANPO00931, YEAST02943 
+GO:0000747 BP 7.84e-10     2/2 232/8270255 D04 conjugation with cellular fusion         VANPO00931, YEAST02943 
+GO:0007124 BP 1.46e-09     2/2 317/8270255 D05 pseudohyphal growth                      VANPO00931, YEAST02943 
+GO:0001403 BP 2.18e-09     2/2 387/8270255 D06 invasive growth in response to glucose limitation VANPO00931, YEAST02943 
+GO:1990526 CC 4.39e-13     2/2   6/8270255 D02 Ste12p-Dig1p-Dig2p complex               VANPO00931, YEAST02943 
+GO:1990527 CC 4.39e-13     2/2   6/8270255 D02 Tec1p-Ste12p-Dig1p complex               VANPO00931, YEAST02943 
