@@ -1,1 +1,0 @@
-GO:0000775 CC 3.66e-07     2/2 5007/8270255 D06 chromosome, centromeric region           BOVIN05446, HUMAN02146 

@@ -1,2 +1,0 @@
-GO:0030437 BP 3.72e-09     2/2 505/8270255 D06 ascospore formation                      KAZNA01878, YEAST06182 
-GO:0005628 CC 2.57e-09     2/2 420/8270255 D02 prospore membrane                        KAZNA01878, YEAST06182 
