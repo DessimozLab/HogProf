@@ -2,10 +2,12 @@
 from goatools import semantic
 from goatools.obo_parser import GODag
 
+
 import json
-from utils import hashutils
-from utils import config_utils
+from . import hashutils
+from . import config_utils
 import pickle
+
 from goatools.go_enrichment import GOEnrichmentStudy
 
 ##############enrichment##############################################

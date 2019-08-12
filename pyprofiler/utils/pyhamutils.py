@@ -1,11 +1,16 @@
 import pyham
 import xml.etree.cElementTree as ET
 import pickle
-from utils import config_utils
+from . import config_utils
 
 def get_orthoxml_oma(fam, db_obj):
-    orthoxml = db_obj.get_orthoxml(fam).decode()
-    return orthoxml
+    try:
+        orthoxml = db_obj.get_orthoxml(fam).decode()
+        return orthoxml
+    except:
+        print('err fam' + str(fam))
+        return None
+
 
 def get_orthoxml_tar(fam, tar):
     f = tar.extractfile(fam)

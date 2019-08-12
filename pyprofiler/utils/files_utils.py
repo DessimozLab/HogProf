@@ -4,7 +4,7 @@ from Bio import Entrez
 import copy
 import pickle
 import os
-from utils import config_utils
+from . import config_utils
 
 
 def get_tree(taxa , genomes ,  savename = None):
