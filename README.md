@@ -1,19 +1,19 @@
-# Pyrprofiler
+# PyProfiler
 
-  - Pyprofiler is an extensible and tunable approach to phylogenetic profiling using orthology data. It is powered by minhash based datastructures and computationally efficient.
-  - Still under major development and may change 
+  - PyProfiler is an extensible and tunable approach to phylogenetic profiling using orthology data. It is powered by minhash based datastructures and computationally efficient.
+  - Still under major development and may change
   - Magic
 
 # Features
 
-  - Using orthoxoml files and a taxonomy calculated enhanced phylogenies of each family 
+  - Using orthoxoml files and a taxonomy calculated enhanced phylogenies of each family
   - These are transformed into minhash signatures and a locally sensitive hashing forest object for search and comparison of profiles
   - Taxonomic levels and evolutionary event types ( presence, loss, duplication ) can have custom weight in profile construction
   - Optimization of weights using machine learning
 
-If you run into any problems feel free to contact me at [dmoi@unil.ch](dmoi@unil.ch) 
+If you run into any problems feel free to contact me at [dmoi@unil.ch](dmoi@unil.ch)
 
-# Quickstart 
+# Quickstart
 
 ```
 $ git clone https://github.com/DessimozLab/pyprofiler.git
@@ -63,8 +63,6 @@ dbtypes available on the command line are : all , plants , archaea, bacteria , e
 $python lshbuilder.py --name YOURDBNAME --dbtype all                     
 ```
 
-This should build a taxonomic tree for the genomes contained in the release and then calculate enhanced phylogenies for all HOGs in OMA. 
+This should build a taxonomic tree for the genomes contained in the release and then calculate enhanced phylogenies for all HOGs in OMA.
 
 Once the database is completed it can be interogated using a profiler object. Construction and usage of this object is shown in the example notebook searchenrich.ipynb found in the notebooks folder. It contains analysis related to a known and poorly described protein network. Please feel free to modify it to suit the needs of your own research.
-
-
