@@ -60,7 +60,7 @@ Ok. We're ready! Now let's compile a database containing all HOGs and our desire
 dbtypes available on the command line are : all , plants , archaea, bacteria , eukarya , protists , fungi , metazoa and vertebrates.
 
 ```
-$python lshbuilder.py --name YOURDBNAME --dbtype all --                    
+$python lshbuilder.py --name YOURDBNAME --dbtype all                     
 ```
 
 This should build a taxonomic tree for the genomes contained in the release and then calculate enhanced phylogenies for all HOGs in OMA. 
