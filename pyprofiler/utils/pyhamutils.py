@@ -4,13 +4,8 @@ import pickle
 from . import config_utils
 
 def get_orthoxml_oma(fam, db_obj):
-    try:
-        orthoxml = db_obj.get_orthoxml(fam).decode()
-        return orthoxml
-    except:
-        print('err fam' + str(fam))
-        return None
-
+    orthoxml = db_obj.get_orthoxml(fam).decode()
+    return orthoxml
 
 def get_orthoxml_tar(fam, tar):
     f = tar.extractfile(fam)

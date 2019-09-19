@@ -45,7 +45,6 @@ class Profiler:
 			self.lshobj.index()
 		self.hashes_h5 = h5py.File(hashes_h5, mode='r')
 		self.nsamples = nsamples
-		print('DONE')
 
 		if mat_path:
 			## TODO: change this to read hdf5
@@ -54,12 +53,12 @@ class Profiler:
 			#self.profile_matrix = profile_matrix_unpickled.load()
 			pass
 		if oma:
-			from pyoma.browser import db
+			from pyprofiler.pyoma.browser import db
 			with open( config_utils.datadir + 'mastertree.pkl', 'rb') as treein:
 				self.tree = pickle.loads(treein.read())
+
 			self.tree_string = self.tree.write(format = 1)
-			with open( config_utils.datadir + 'taxaIndex.pkl', 'rb') as taxain:
-				self.taxaIndex = pickle.loads(taxain.read())
+			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
 			h5_oma = open_file(config_utils.omadir + 'OmaServer.h5', mode="r")
 			self.db_obj = db.Database(h5_oma)
 			#open up master tree
@@ -71,6 +70,9 @@ class Profiler:
 		if oma or tar:
 			self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
 			self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )
+
+		print('DONE')
+
 
 	def return_profile_OTF(self, fam):
 		"""
@@ -84,6 +86,7 @@ class Profiler:
 		losses = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in self.taxaIndex  ]
 		dupl = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in self.taxaIndex  ]
 		presence = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in self.taxaIndex  ]
+
 		indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
 		hog_matrix_raw = np.zeros((1, 3*len(self.taxaIndex)))
 		for i,event in enumerate(indices):
@@ -122,22 +125,19 @@ class Profiler:
 			if input is None:
 				break
 			else:
-				try:
-					fam,ortho_fam = input
-					tp = self.HAM_PIPELINE([fam, ortho_fam])
-					losses = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in self.taxaIndex  ]
-					dupl = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in self.taxaIndex  ]
-					presence = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in self.taxaIndex  ]
-					indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
-					hog_matrix_raw = np.zeros((1, 3*len(self.taxaIndex)))
-					for i,event in enumerate(indices):
-						if len(indices[event])>0:
-							taxindex = np.asarray(indices[event])
-							hogindex = np.asarray(indices[event])+i*len(self.taxaIndex)
-							hog_matrix_raw[:,hogindex] = 1
-					retq.put({fam:{ 'mat':hog_matrix_raw, 'tree':tp} })
-				except:
-					retq.put({fam:{ 'mat':None, 'tree':None} })
+				fam,ortho_fam = input
+				tp = self.HAM_PIPELINE([fam, ortho_fam])
+				losses = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in self.taxaIndex  ]
+				dupl = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in self.taxaIndex  ]
+				presence = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in self.taxaIndex  ]
+				indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
+				hog_matrix_raw = np.zeros((1, 3*len(self.taxaIndex)))
+				for i,event in enumerate(indices):
+					if len(indices[event])>0:
+						taxindex = np.asarray(indices[event])
+						hogindex = np.asarray(indices[event])+i*len(self.taxaIndex)
+						hog_matrix_raw[:,hogindex] = 1
+				retq.put({fam:{ 'mat':hog_matrix_raw, 'tree':tp} })
 
 
 	def retmat_mp(self, traindf , nworkers = 25, chunksize=50  ):

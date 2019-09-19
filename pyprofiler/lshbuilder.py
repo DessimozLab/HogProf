@@ -227,7 +227,7 @@ class LSHBuilder:
                             hashes = this_dataframe['hash'].to_dict()
                             print(str(this_dataframe.Fam.max())+ 'fam num')
                             print(str(count) + ' done')
-                            hashes = {fam:hashes[fam] if hashes[fam] else print(fam) for fam in hashes }
+                            hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
                             [ forest.add(str(fam),hashes[fam]) for fam in hashes]
                             for fam in hashes:
                                 if len(datasets[dataset_name]) < fam + 10:
@@ -407,12 +407,7 @@ if __name__ == '__main__':
     elif 'tarfile' in args:
         tarfile = args['tarfile']
         omafile = None
-    elif config_utils.omadir:
-        omafile = config_utils.omadir + 'OmaServer.h5'
-        tarfile = None
-    elif config_utils.tarfile:
-        tarfile = config_utils.tarfile
-        omafile = None
+
     else:
         raise Exception(' please specify input data ')
 
@@ -443,7 +438,6 @@ if __name__ == '__main__':
 
     import resource
     start = time.time()
-
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname, numperm = nperm ,

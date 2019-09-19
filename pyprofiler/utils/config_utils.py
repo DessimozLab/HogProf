@@ -6,7 +6,7 @@ import os
 config = {
     "dir":{
 #    "datadir": "/home/cactuskid13/mntpt/unil_backup/profilingbackup/",
-    "datadir": "/home/cactuskid13/pyprofiler/pyprofiler/all/",
+    "datadir": "/home/cactuskid13/pyprofiler/pyprofiler/all/all512/",
 
     "omadir": "/home/cactuskid13/mntpt/OMA/jun/"
     },

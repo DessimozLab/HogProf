@@ -60,7 +60,7 @@ def get_tree(taxa , genomes ,  savename = None):
 
 
 
-def generate_taxa_index(tree , taxfilter, taxmask):
+def generate_taxa_index(tree , taxfilter= None, taxmask=None):
     """
     Generates an index for the global taxonomic tree for all OMA
     :param tree: ete3 tree
