@@ -1,4 +1,4 @@
-# PyProfiler
+# HogProf
 
   - PyProfiler is an extensible and tunable approach to phylogenetic profiling using orthology data. It is powered by minhash based datastructures and computationally efficient.
   - Still under major development and may change
