@@ -36,7 +36,7 @@ class Profiler:
 	A profiler object allows the user to query the LSH with HOGs and get a list of result HOGs back
 
 	"""
-	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False, tar= None , nsamples = 256):
+	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False, tar= None , nsamples = 256 , mastertree = None ):
 		#use the lsh forest or the lsh
 		print('loading lsh')
 		with open(lshforestpath, 'rb') as lshpickle:
@@ -54,7 +54,9 @@ class Profiler:
 			pass
 		if oma:
 			from pyprofiler.pyoma.browser import db
-			with open( config_utils.datadir + 'mastertree.pkl', 'rb') as treein:
+			if mastertree is None:
+				mastertree = config_utils.datadir + 'mastertree.pkl'
+			with open(mastertree , 'rb') as treein:
 				self.tree = pickle.loads(treein.read())
 
 			self.tree_string = self.tree.write(format = 1)
