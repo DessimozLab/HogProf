@@ -1,6 +1,6 @@
-# PyProfiler
+# HogProf
 
-  - PyProfiler is an extensible and tunable approach to phylogenetic profiling using orthology data. It is powered by minhash based datastructures and computationally efficient.
+  - HogProf is an extensible and tunable approach to phylogenetic profiling using orthology data. It is powered by minhash based datastructures and computationally efficient.
   - Still under major development and may change
   - Magic
 
@@ -16,8 +16,8 @@ If you run into any problems feel free to contact me at [dmoi@unil.ch](dmoi@unil
 # Quickstart
 
 ```
-$ git clone https://github.com/DessimozLab/pyprofiler.git
-$ cd pyprofiler/pyprofiler
+$ git clone https://github.com/DessimozLab/HogProf.git
+$ cd hogprof/pyprofiler
 $ pip install -r req.txt .
 ```
 lets get a current version of the OMA hdf5 file and GAF. This will alow us to use the HOGs and study the functional enrichment of our search results.
