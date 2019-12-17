@@ -1,0 +1,217 @@
+ddir := getenv('DARWIN_BROWSERDATA_PATH');
+ReadProgram(ddir.'/Summaries.drw'):
+GS := GenomeSummaries:
+NS := length(genomes):
+Goff := CreateArray(1..NS+1):
+for i to NS do Goff[i+1] := Goff[i]+GS[genomes[i],TotEntries] od:
+err := traperror(ReadProgram(ddir.'/SubGenome.drw'));
+if err=lasterror then
+    warning('no SubGenome data found.');
+    SubGenome := table(0);
+fi:
+
+
+# code from PhylogeneticTree (LINEAGE) augmented to store the internal
+# node names.
+SpeciesTreeR := proc( l, lev, parent )
+    global _parents;
+#    print('',l);
+#    lprint(lev,parent, length(l), min( seq(length(r[1]), r=l )));
+    if length(l)=0 then error('null tree')
+    elif length(l)=1 then 
+        tax := parse(GS[l[1,2],TAXONID]);
+        _parents := append(_parents, [tax, parent, GS[l[1,2],'SCINAME']]);
+        #Leaf(l[1,2],length(l[1,1])+1)
+    elif lev > min( seq(length(r[1]), r=l )) then
+        tax := parse(GS[l[1,2], TAXONID]);
+        if tax<>parent then
+            _parents := append(_parents, 
+                [tax, parent, TaxonomyEntry(tax)['SciName']]);
+        else
+            warning('tax '.string(tax).' is already recorded.');
+        fi:
+        procname(l[2..-1], lev, parent);
+        #Tree( Leaf(l[1,2],length(l[1,1])+1), lev, procname( l[2..-1], lev ))
+    else 
+        card := { seq( r[1,lev], r=l ) };
+        tax := getTaxid(l[1,1,lev]);
+        _parents := append(_parents, [tax, parent, l[1,1,lev]]);
+        if length(card)=1 then 
+            return( procname(l, lev+1, tax) );
+        fi;
+        for hi from 2 while l[1,1,lev] = l[hi,1,lev] do od;
+        procname( l[1..hi-1], lev+1, tax );
+        procname( l[hi..-1], lev, parent );
+    fi:
+end:
+
+getTaxid := proc(lin)
+    global _next_new_taxid;
+    tax := traperror(TaxonomyEntry(lin)['id']);
+    if tax=lasterror then
+        tax := _next_new_taxid;
+        _next_new_taxid := _next_new_taxid-1;
+    fi:
+    return(tax);
+end:
+
+GetGenomeData := proc()
+    global _parents, _next_new_taxid;
+    gs := [];
+    for gNr to NS do 
+        g := genomes[gNr];
+        gs := append(gs, [parse(GS[g,TAXONID]), g, GS[g,TotEntries], 
+            GS[g,TotAA], Goff[gNr],
+            GS[g,SCINAME], GS[g,COMMONNAME], GS[g, SYNNAME],
+            GS[g,DBRELEASE], GS[g,URL], GS[g,SOURCE], GS[g,DATE], SubGenome[g]<>0]);
+    od:
+    
+    _parents := []: _next_new_taxid := -1:
+    linData := sort([seq([GS[g,Lineage], g], g=genomes)]):
+    SpeciesTreeR(linData, 1, 0);
+    
+    tab := table():
+    tab['GS'] := gs:
+    tab['Tax'] := _parents:
+    StoreResults(json(tab));
+end:
+
+RefinedMatches := proc(ms)
+    global __matches;
+    if __reverse=false then  i1 := 1; i2 := 2;  else i1 := 2; i2 := 1; fi:
+    for m in ms do
+        if member([m[i1],m[i2]], __keep) then
+            sum_len := m[5,2]-m[5,1]+1 + m[6,2]-m[6,1]+1;
+            overlap := min(1, sum_len/(2*max(__lens1[m[i1]], __lens2[m[i2]])));
+            rel := __matches[ [m[i1],m[i2]] ]:
+            rel[4] := m[3];
+            rel[5] := m[4];
+            rel[6] := overlap;
+        fi;
+    od;
+end:
+
+GetVPsForGenome := proc(g)
+    global DB, __matches, __keep, __reverse, __lens1, __lens2;
+    aadir := getenv('DARWIN_ALLALL_PATH');
+    ReadDb(ddir.'/ServerVPs.db');
+    gNr := SearchArray(g,genomes);
+    vps := [seq(table(), NS)];
+    for i from Goff[gNr]+1 to Goff[gNr+1] do
+        for vp in parse(SearchTag('VP',Entry(i))) do
+            gNr2 := SearchOrderedArray(vp-1, Goff);
+            vps[gNr2, [i-Goff[gNr], vp-Goff[gNr2]]] := [i,vp,'n/a', -1, -1, -1];
+            #vptab := append(vptab, [i, vp, 'n/a', -1, -1, -1])
+        od:
+    od:
+    for gNr2 to NS do
+        g1 := g: g2 := genomes[gNr2]:
+        __keep := Indices(vps[gNr2]);
+        __matches := vps[gNr2];
+        __lens1 := GS[g1,EntryLengths]: __lens2 := GS[g2,EntryLengths]:
+        if GS[g1,TotEntries] < GS[g2,TotEntries] or (GS[g1,TotEntries] = GS[g2,TotEntries] and g1<g2) then
+            __reverse := false:
+        else
+            t := g1; g1 := g2; g2 := t:
+            __reverse := true;
+        fi:
+        ReadProgram(aadir.'/'.g1.'/'.g2);
+    od:
+    vptab := []:
+    for gNr2 to NS do for key in Indices(vps[gNr2]) do
+        vptab := append(vptab, vps[gNr2, key]);
+    od od:
+    vptab := sort(vptab);
+    StoreResults(json(vptab)):
+end:
+
+GetSameSpeciesRelations := proc(g)
+    global DB, __matches;
+    ReadDb(ddir.'/ServerVPs.db');
+    gNr := SearchArray(g, genomes);
+    ssTab :=  []:
+    for i from Goff[gNr]+1 to Goff[gNr+1] do
+        e := Entry(i);
+        for cp in parse(SearchTag('CP', e)) do
+            ssTab := append(ssTab, [i, cp, 'close paralog', -1, -1, -1, -1]);
+        od:
+        hpTag := SearchTag('HP', e);
+        if hpTag<>'' then for hp in parse(hpTag) do
+            ssTab := append(ssTab, [i, hp[1], 'homeolog', -1, hp[2], -1, -1, -1]);
+        od fi:
+    od:
+    StoreResults(json(ssTab));
+end:
+
+GetProteinsForGenome := proc(g)
+    global DB, Splicings;
+    if not type(Splicings, table) then ReadProgram(ddir.'/Splicings.drw'); fi:
+    SeqDb := ReadDb(ddir.'/ServerSeqs.db');
+    DnaDb := ReadDb(ddir.'/ServerDNA.db');
+    tab:= table():
+    gNr := SearchArray(g, genomes);
+    DB := SeqDb;
+    tab['seqs'] := [seq(Sequence(Entry(Goff[gNr]+i)),i=1..GS[g,TotEntries])]:
+    DB := DnaDb;
+    tab['cdna'] := [seq(Sequence(Entry(Goff[gNr]+i)), i=1..GS[g,TotEntries])]:
+    tab['off'] := Goff[gNr]:
+    IndDb := ReadDb(ddir.'/ServerIndexed.db');
+    tab['ogs'] := [seq(parse(SearchTag('OG',Entry(Goff[gNr]+i))), i=1..GS[g,TotEntries])]:
+    tab['chrs'] := [seq(SearchTag('CHR',Entry(Goff[gNr]+i)), i=1..GS[g,TotEntries])];
+    tab['locs'] := [seq(SearchTag('LOC',Entry(Goff[gNr]+i)), i=1..GS[g,TotEntries])];
+    if SubGenome[g]<>0 then
+        tab['subgenome'] := [seq(SubGenome[g,i], i=1..GS[g,TotEntries])]
+    else
+        tab['subgenome'] := [seq('', GS[g,TotEntries])]
+    fi:
+    sp := Splicings[g]:
+    alt := CreateArray(1..GS[g,TotEntries]):
+    if sp<>0 then 
+        VPsDB := ReadDb(ddir.'/ServerVPs.db');
+        hasO := [seq(evalb(SearchTag('VP',Entry(Goff[gNr]+i))<>'[]'),
+                     i=1..GS[g,TotEntries])]:
+        for i to GS[g,TotEntries] do 
+            if alt[i]=0 and length(sp[i])>0 then 
+                vari := [op({op(sp[i]),i})];
+                varHasO := [seq(hasO[i],i=vari)];
+                main := SearchAllArray(true, varHasO);
+                if length(main)=0 then
+                    main := vari[1]+Goff[gNr];
+                else
+                    if length(main)>1 then 
+                        warning('more than one main variant for '.g.string(vari));
+                    fi:
+                    main := vari[main[1]]+Goff[gNr];
+                fi;
+                for k to length(vari) do 
+                    alt[vari[k]] := main;
+                od:
+            fi:
+        od: 
+    fi:
+
+    tab['alts'] := alt;
+    StoreResults(json(tab)):
+end:
+
+GetGroupData := proc()
+    global KeywordT, GroupIDs:
+    KeywordT := GroupIDs := []:
+    ReadProgram(ddir.'/Keywords.drw');
+    ReadProgram(ddir.'/Fingerprints');
+    if KeywordT = [] or GroupIDs = [] then
+        error('cannot load GroupData');
+    fi:
+    tab := table():
+    tab['Keywords'] := KeywordT:
+    tab['Fingerprints'] := Fingerprints;
+    StoreResults(json(tab));
+end:
+
+
+StoreResults := proc(res)
+    OpenWriting(outfn);
+    prints(res);
+    OpenWriting(previous);
+end:
+
