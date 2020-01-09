@@ -120,7 +120,7 @@ class LSHBuilder:
         hog_matrix,weighted_hash = hashutils.hash_tree(pyham_tree , self.taxaIndex , self.treeweights , self.wmg)
         return ortho_fam , pyham_tree, weighted_hash,hog_matrix
 
-    def generates_dataframes(self, size=100, minhog_size=None, maxhog_size=None ):
+    def generates_dataframes(self, size=100, minhog_size=10, maxhog_size=None ):
         families = {}
         start = -1
         if self.h5OMA:
@@ -256,7 +256,40 @@ class LSHBuilder:
                             print('DONE SAVER' + str(i))
                         break
 
+    '''    def hamsaver(self, i, q, retq, matq, l)
+            #use sqlit to save ham objects on the fly
+            #possible speedup with multiple savers?
 
+            sqliteConnection = sqlite3.connect('SQLite_Python.db')
+            cursor = sqliteConnection.cursor()
+            print("Connected to SQLite")
+
+            sqlite_insert_blob_query = """ INSERT INTO new_employee
+                                      (id, name, photo, resume) VALUES (?, ?, ?, ?)"""
+
+            while True:
+                if this_dataframe is not None:
+                    if not this_dataframe.empty:
+                        hamdict = this_dataframe['ham'].to_dict()
+                        [cursor.execute(sqlite_insert_blob_query, (fam, hamdict[fam] ) for fam in hamdict )
+                        sqliteConnection.commit()
+
+                else:
+                    if self.verbose == True:
+                        print('wrap it up')
+                        print('hamsaver')
+                        print(i)
+
+                    break
+
+            data_tuple = (fam, pickle.dumps(ham))
+            cursor.execute(sqlite_insert_blob_query, data_tuple)
+
+            sqliteConnection.commit()
+            print("Image and file inserted successfully as a BLOB into a table")
+            cursor.close()
+
+    '''
     def matrix_updater(self, iprocess , q, retq, matq, l):
         save_start = t.time()
         chunk_size = 100
@@ -335,14 +368,12 @@ class LSHBuilder:
             if joinval == True:
                 for process in work_processes[key]:
                     process.join()
-
         for key in work_processes:
             worker_function, number_workers, joinval = functypes[key]
             if joinval == False:
                 for _ in work_processes[key]:
                     retq.put(None)
                     matq.put(None)
-
         for key in work_processes:
             worker_function, number_workers , joinval = functypes[key]
             if joinval == False:

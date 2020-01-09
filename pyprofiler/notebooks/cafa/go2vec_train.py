@@ -3,13 +3,10 @@ from keras.models import *
 from keras.optimizers import *
 from keras.layers import *
 from keras.metrics import *
-
 from keras.regularizers import *
-
 from keras.callbacks import *
 import tensorflow as tf
 import pickle
-
 import collections
 import itertools
 from scipy.stats import bernoulli
@@ -25,7 +22,7 @@ import gzip
 
 
 gaf =  '/home/cactuskid13/mntpt/unil_backup/profilingbackup/gaf/oma-go.txt'
-obo = '/home/cactuskid13/mntpt/unil_backup/profilingbackup/gaf/go.obo'
+obo = './go.obo'
 unigaf = './goa_no_untrusted_iea.gaf.gz'
 
 go = OBO(obo, store_as_int=True)
@@ -177,7 +174,6 @@ def yeild_annotations_uni(gaf, verbose = False):
     with gzip.open(gaf,'rt') as gafin:
         for l in gafin:
             if l[0] != '!':
-
                 #todo: yeild ancestors of terms
                 #for term in retgoterms(l.split()[1]):
                 #yield term
@@ -187,7 +183,6 @@ def yeild_annotations_uni(gaf, verbose = False):
                         yield t
                 except:
                     print(l)
-
 
 def makesamples( gaf , sampling, count ,  index , Yancestors = False , uni = True):
     #generator function to loop through gaf generating samples...
@@ -269,8 +264,6 @@ if Yancestors == False:
     with open('../models/gafobects_noancestors.pkl' , 'rb' ) as gafstats:
         nterms , c , index , reverse_index , sampling = pickle.loads(gafstats.read())
     modelfile = '../models/GO2vec_noancestors'+stamp+'.h5'
-
-
 print('train on n annot = ')
 
 config = tf.ConfigProto()
@@ -284,7 +277,6 @@ nterms = len(index)
 if retrain == False:
     #dimensionality of GO space
     vector_dim = 5
-
     #word2vec model to be trained
     input_target = Input((1,) , name='target_in')
     input_context = Input((1,) , name='context_in')
@@ -312,15 +304,12 @@ if retrain == False:
     # create the primary training model
     #o = Adagrad(lr=0.001)
 
-    o = RMSprop(lr=0.0005, rho=0.9)
+    o = RMSprop(lr=0.005, rho=0.9)
     #o = Adagrad(lr=0.000075)
 
     model = Model(inputs=[input_target,input_context], outputs=[output])
     model.compile(loss='binary_crossentropy', optimizer=o , metrics = [ 'binary_accuracy'])
-
     embedder = Model( inputs=[input_target], output=target )
-
-
     validation_model = Model(input=[input_target, input_context], output=similarity)
 
     class SimilarityCallback:

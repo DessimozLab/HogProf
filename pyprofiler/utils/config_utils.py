@@ -8,7 +8,7 @@ config = {
 #    "datadir": "/home/cactuskid13/mntpt/unil_backup/profilingbackup/",
     "datadir": "/home/cactuskid13/pyprofiler/pyprofiler/all/all/",
 
-    "omadir": "/home/cactuskid13/mntpt/OMA/dec/"
+    "omadir": "/home/cactuskid13/mntpt/OMA/latest/"
     },
     "orthoxmltar":"",
     "email": "dmoi@unil.ch"
