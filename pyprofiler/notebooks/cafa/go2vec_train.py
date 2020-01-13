@@ -63,6 +63,42 @@ def yeildBags(gaf, Yancestors= False):
                     dat['EVI']+=[evi]
                 lastID = omaID
 
+
+def get_ancestors( term , obo,  levels = 4 ):
+    try:
+        numterm = int(term.split(':')[1])
+    except :
+        numterm = term
+    ancestors = []
+
+    for l in range( levels):
+        if l == 0 :
+            a = [ obo[p.id].id for g in golist for p in obo[g].parents ]
+        else:
+            a = [ obo[p.id].id for g in a for p in obo[g].parents ]
+        ancestors += a
+
+    ancestors += [term]
+
+    return [goa.goterm2id(goterm) for goterm in set(ancestors)]
+
+def get_ancestors_all( golist , obo):
+    ancestors = []
+    lastlen = -1
+    l = 0
+    while len(ancestors)>lastlen:
+        if l == 0 :
+            a = [ obo[p.id].id for g in golist for p in obo[g].parents ]
+
+        else:
+            a = [ obo[p.id].id for g in a for p in obo[g].parents ]
+        lastlen = len(ancestors)
+        ancestors += a
+        l+=1
+
+    ancestors += golist
+    return [goa.goterm2id(goterm) for goterm in set(ancestors)]
+
 def ancestors(term,verbose = True):
     try:
         numterm = int(term.split(':')[1])
