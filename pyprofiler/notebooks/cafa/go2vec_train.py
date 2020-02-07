@@ -16,17 +16,20 @@ import random
 import pandas as pd
 import numpy as np
 from qtlsearch.OBOParser import OBO
+from goatools import obo_parser
 
 import datetime
 import gzip
 
 
-gaf =  '/home/cactuskid13/mntpt/unil_backup/profilingbackup/gaf/oma-go.txt'
+omagaf =  '/home/cactuskid13/mntpt/OMA/latest/oma-go.txt'
 obo = './go.obo'
 unigaf = './goa_no_untrusted_iea.gaf.gz'
 
-go = OBO(obo, store_as_int=True)
-
+obofile = './go.obo'
+obo = obo_parser.GODag(obofile)
+qtl_go = OBO(obofile, store_as_int=True)
+#redo only on OMA data w full ancestor nterms
 
 def yeildBags(gaf, Yancestors= False):
     with open(gaf , 'r') as gafin:
@@ -63,41 +66,39 @@ def yeildBags(gaf, Yancestors= False):
                     dat['EVI']+=[evi]
                 lastID = omaID
 
+def id2GO(intID):
+    return 'GO:{:07d}'.format(intID)
 
-def get_ancestors( term , obo,  levels = 4 ):
+def go2id(strID):
+
+    if type( strID) is int:
+        return strID
     try:
-        numterm = int(term.split(':')[1])
-    except :
-        numterm = term
+        return int(strID.split(':')[1])
+    except:
+        return int(strID)
+
+
+def get_ancestors( golist , obo,  levels = 1 , verbose = True):
+    #grab 4 levels up
     ancestors = []
 
     for l in range( levels):
-        if l == 0 :
-            a = [ obo[p.id].id for g in golist for p in obo[g].parents ]
-        else:
-            a = [ obo[p.id].id for g in a for p in obo[g].parents ]
-        ancestors += a
-
-    ancestors += [term]
-
-    return [goa.goterm2id(goterm) for goterm in set(ancestors)]
-
-def get_ancestors_all( golist , obo):
-    ancestors = []
-    lastlen = -1
-    l = 0
-    while len(ancestors)>lastlen:
-        if l == 0 :
-            a = [ obo[p.id].id for g in golist for p in obo[g].parents ]
-
-        else:
-            a = [ obo[p.id].id for g in a for p in obo[g].parents ]
-        lastlen = len(ancestors)
-        ancestors += a
-        l+=1
-
+        try:
+            if l == 0 :
+                a = [ obo[p.id].id for g in golist for p in obo[g].parents if g in obo and p.id in obo ]
+            else:
+                a = [ obo[p.id].id for g in a for p in obo[g].parents if g in obo and p.id in obo ]
+            ancestors += a
+        except:
+            pass
     ancestors += golist
-    return [goa.goterm2id(goterm) for goterm in set(ancestors)]
+    return [ go2id(goterm) for goterm in set(ancestors) ]
+
+
+def yeildBags_omagaf(gaf, obo, Yancestors= False):
+    for omaid in gaf:
+        yield { 'ID': omaid , 'GO':  get_ancestors(gaf[omaid] , obo ) }
 
 def ancestors(term,verbose = True):
     try:
@@ -110,33 +111,41 @@ def ancestors(term,verbose = True):
     except:
         return set([numterm])
 
+def buildGAF(gaf_file , universe= None):
+    gaf_filtered = {}
+    with open(gaf_file, mode='r') as gafin:
 
-def yeild_annotations(gaf, verbose = True , Yancestors= False ):
-     with open(gaf , 'r') as gafin:
-        for l in gafin:
-            if l[0] != '#':
+        for line in gafin:
+            if line[0]!='#':
+                words = line.split()
+                if words[0] not in gaf_filtered:
+                    gaf_filtered[words[0]]=set([words[1]])
+                else:
+                    gaf_filtered[words[0]].add(words[1])
+    return gaf_filtered
 
-                #todo: yeild ancestors of terms
-                #for term in retgoterms(l.split()[1]):
-                #yield term
-                try:
-                    if Yancestors == True:
-                        for t in ancestors(l.split()[1]):
-                            yield t
-                    else:
-                        term =  l.split()[1]
-                        yield int(term.split(':')[1])
-                except:
-                    if verbose == True:
-                        print(l)
+def yeild_annotations_v2(gaf , obo):
+    for prot in gaf:
+        for a in set( get_ancestors( gaf[prot] , obo ) ):
+            yield  a
 
-def makeGOdict(gaf , sampling_factor= 1e-05 , Yancestors= False , uni = True):
+def yeild_annotations(gaf, obo, verbose = True , Yancestors= False ):
+     for entry in gaf:
+        if Yancestors:
+             for a in  get_ancestors( gaf[entry] , obo):
+                 yield a
+        else:
+            for a in gaf[entry]:
+                yield a
+
+def makeGOdict(gaf , obo, sampling_factor= 1e-05 , Yancestors= True , uni = False):
     #return some descriptors of the dataset to be
     #used for embedding NN
     if uni == False:
-        c = collections.Counter(yeild_annotations(gaf, Yancestors=Yancestors))
+        c = collections.Counter(yeild_annotations_v2(gaf, obo ))
     else:
         c = collections.Counter(yeild_annotations_uni(gaf))
+
 
     #count all the go terms in the OMA corpus
     nannot = sum(c.values())
@@ -154,15 +163,11 @@ def prunesamples(samples , sampling , verbose = False):
     #remove samples in probabilistic way
     #select underepresented go terms in positive sampling
     #thin out pairs with overrepresented go terms in them
-
     if verbose == True:
         print([ sampling[ s[0] ] for s in samples ] )
         print( [ sampling[ s[1] ] for s in samples ] )
-
     ar1 = np.array([ random.uniform(0, 1) <= p  for p in [ sampling[ s[0] ] for s in samples ] ] , dtype = np.bool_ )
     ar2 = np.array([ random.uniform(0, 1) <= p  for p in [ sampling[ s[1] ] for s in samples ] ] , dtype = np.bool_ )
-
-
     select = np.bitwise_and(ar1,ar2)
     if np.sum(select)>0:
         samples = np.array(samples)[select,:]
@@ -200,11 +205,7 @@ def yeildBags_uni(gaf, yeildancestors = True):
                         pass
                 else:
                     dat = { 'ID': ID , 'GO': ancestors(GO) }
-
                 lastID = ID
-
-
-
 
 def yeild_annotations_uni(gaf, verbose = False):
     with gzip.open(gaf,'rt') as gafin:
@@ -220,12 +221,12 @@ def yeild_annotations_uni(gaf, verbose = False):
                 except:
                     print(l)
 
-def makesamples( gaf , sampling, count ,  index , Yancestors = False , uni = True):
+def makesamples( gaf , obo , sampling, count ,  index , Yancestors = False , uni = False):
     #generator function to loop through gaf generating samples...
     if uni ==False:
-        gafreader = yeildBags(gaf, Yancestors)
+        gafreader = yeildBags_omagaf(gaf, obo, Yancestors)
     else:
-        gafreader = yeildBags_uni(gaf, Yancestors)
+        gafreader = yeildBags_uni(gaf,   Yancestors)
     terms = list(index.keys())
     negatives = []
     print(sum(c.values()))
@@ -233,13 +234,13 @@ def makesamples( gaf , sampling, count ,  index , Yancestors = False , uni = Tru
 
     while len(negatives)< 10000000:
         neg1 = [ random.choice(terms) for i in range(100000) ]
-        neg1 = [ n for n in neg1 if count[n]>0 and random.uniform(0, 1) < sampling[index[n]]**pow ]
+        neg1 = [ n for n in neg1 if count[n]>0 and random.uniform(0, 1) < sampling[index[n]]**pow and count[n] > 50 ]
         negatives +=neg1
-
     #at least 100 annot in corpus
     thresh = 1
 
     infinite_gaf = itertools.cycle(gafreader)
+
     for i,dat in enumerate(infinite_gaf):
         try:
             #if i == 0:
@@ -247,12 +248,10 @@ def makesamples( gaf , sampling, count ,  index , Yancestors = False , uni = Tru
             if len(dat['GO'])>1 and i > 0:
                 samples = []
                 maxiter = 100
-
                 i = 0
-
                 while len(samples) <1 and i < maxiter:
                     #favor less common words
-                    samples =  [  index[s] for s in dat['GO'] if s in index and sampling[index[s]] > random.uniform(0,1)  ]
+                    samples =  [  index[s] for s in dat['GO'] if s in index and sampling[index[s]] > random.uniform(0,1)  and  count[s] > 20  ]
                     i += 1
                 if i == maxiter:
                     samples =  [  index[s] for s in dat['GO'] if s in index ]
@@ -273,14 +272,16 @@ def makesamples( gaf , sampling, count ,  index , Yancestors = False , uni = Tru
 
 Yancestors = True
 readGAF = False
+
 retrain = False
 stamp = datetime.datetime.now().strftime('%m_%d_%Y_%H_%M_%S_%f')
-
 min_annot= 50
+gaf = buildGAF(omagaf)
+
 
 if readGAF == True:
     #read the gaf to get term frequences
-    nterms , c , index , reverse_index , sampling = makeGOdict( unigaf , sampling_factor= 1e-05 , Yancestors= Yancestors)
+    nterms , c , index , reverse_index , sampling = makeGOdict( gaf , obo, sampling_factor= 1e-05 , Yancestors= Yancestors)
     print('done reading GAF')
     print('n terms:' + str(nterms))
 
@@ -324,14 +325,9 @@ if retrain == False:
     target = Reshape((vector_dim, 1), name='target')(target)
     context = embedding(input_context)
     context = Reshape((vector_dim, 1) , name='context' )(context)
-
-
     similarity = dot([target, context], axes=0 , normalize = True )
-
     # now perform the dot product operation to get a similarity measure
-
     dot_product = dot([target, context] , axes=1)
-
     dot_product = Reshape((1,))(dot_product)
 
     # add the sigmoid output layer
@@ -339,8 +335,11 @@ if retrain == False:
 
     # create the primary training model
     #o = Adagrad(lr=0.001)
+    #o = Adadelta(lr=1.0, rho=0.95)
 
-    o = RMSprop(lr=0.005, rho=0.9)
+    o = RMSprop(lr=0.025, rho=0.9)
+
+
     #o = Adagrad(lr=0.000075)
 
     model = Model(inputs=[input_target,input_context], outputs=[output])
@@ -382,14 +381,16 @@ if retrain == True:
     model = print('Load the model..')
     model = load_model(modelfile)
     #o = RMSprop(lr=0.0001, rho=0.9)
-
-    o = Adagrad(lr=0.001)
+    o = Adadelta(lr=0.0001)
     #o = Nadam(lr=0.002, beta_1=0.9, beta_2=0.999)
     model.compile(loss='binary_crossentropy', optimizer=o , metrics = [ 'binary_accuracy'])
 
 mc = ModelCheckpoint(modelfile, monitor = 'loss', mode = 'min', verbose = 1, save_best_only = False)
-history = model.fit_generator(makesamples( unigaf ,sampling , c, index , Yancestors ), steps_per_epoch=10000, epochs=100000, verbose=1,
-callbacks=[ mc ], max_queue_size=10, workers=1, use_multiprocessing=False, shuffle=True, initial_epoch=0)
+lr = ReduceLROnPlateau(monitor='loss', factor=0.5, patience= 20 , min_lr=0.000001 , verbose = 1)
+tb = TensorBoard(log_dir='./logs', histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=False, embeddings_freq=0, embeddings_layer_names=None, embeddings_metadata=None, embeddings_data=None, update_freq='epoch')
+
+history = model.fit_generator(makesamples( gaf, obo ,sampling , c, index , Yancestors ), steps_per_epoch=10000, epochs=10000, verbose=1,
+callbacks=[ mc , lr , tb  ], max_queue_size=10, workers=1, use_multiprocessing=False, shuffle=True, initial_epoch=0)
 
 model.save(modelfile)
 embedder.save(modelfile+'embedder')
