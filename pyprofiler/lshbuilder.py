@@ -56,7 +56,6 @@ class LSHBuilder:
         #original_umask = os.umask(0)
 
         if saving_name:
-
             self.saving_path =config_utils.datadir + saving_name +'/'
             if not os.path.isdir(self.saving_path):
                 os.mkdir(path=self.saving_path)
@@ -396,7 +395,7 @@ if __name__ == '__main__':
     parser.add_argument('--tarfile', help='use tarfile with orthoxml data ' , type = str)
     parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = int)
     parser.add_argument('--mastertree', help='master taxonomic tree. should use ncbi taxonomic id numbers as leaf names' , type = str)
-    parser.add_argument('--nthreads', help='nthreads for multiprocessing speedup of treebuilding' , type = int)
+    parser.add_argument('--nthreads', help='nthreads for multiprocessing' , type = int)
 
     dbdict = {
     'all': { 'taxfilter': None , 'taxmask': None },
