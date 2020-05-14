@@ -61,7 +61,11 @@ class Profiler:
 
 			self.tree_string = self.tree.write(format = 1)
 			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
-			h5_oma = open_file(config_utils.omadir + 'OmaServer.h5', mode="r")
+			if oma == True:
+				h5_oma = open_file(config_utils.omadir + 'OmaServer.h5', mode="r")
+			else:
+				h5_oma = open_file(oma, mode="r")
+
 			self.db_obj = db.Database(h5_oma)
 			#open up master tree
 			self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
@@ -239,18 +243,20 @@ class Profiler:
 				inq.put((fam,orthxml))
 		done = []
 		count = 0
-		while len(fams)-1 > count:
+
+		while len(fams)-1 > count :
 			try:
-				data =retq.get(False)
+				data =retq.get(False	)
 				count+=1
 				total.update(data)
-				print(data)
+				if count % 100 == 0 :
+					print(count)
 			except :
 				pass
 			time.sleep(.01)
+
 		for i in range(nworkers):
 			processes[i]['process'].terminate()
-		gc.collect()
 		retdf= pd.DataFrame.from_dict( total , orient= 'index')
 		return retdf
 
