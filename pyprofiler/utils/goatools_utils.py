@@ -1,14 +1,25 @@
 
+
+from __future__ import print_function
+
 from goatools import semantic
+from pyprofiler.pyoma.browser.models import ProteinEntry
+
 from goatools.obo_parser import GODag
-
-
 import json
 from . import hashutils
 from . import config_utils
+import gc
 import pickle
-
 from goatools.go_enrichment import GOEnrichmentStudy
+from pyprofiler.pyoma.browser import db
+import multiprocessing as mp
+from tables import *
+
+import time
+
+import sys
+import threading
 
 ##############enrichment##############################################
 
@@ -30,7 +41,9 @@ def return_enrichment_study_obj(gaf_taxfiltered, obo = None):
         methods = ['fdr_bh']) # defult multipletest correction method
     return goeaobj
 
+
 def buildGAF(gaf_file , universe= None):
+
     gaf_filtered = {}
     with open(gaf_file, mode='r') as gafin:
         for line in gafin:
@@ -46,6 +59,14 @@ def buildGAF(gaf_file , universe= None):
 
     return gaf_filtered
 
+
+def return_hogs_timeout(result, retq):
+    print('started')
+    with open_file('/home/cactuskid13/mntpt/OMA/jun/OmaServer.h5', mode="r") as h5_oma:
+        db_obj = db.Database(h5_oma)
+        res =  [ ProteinEntry(db_obj, e).omaid for  e in db_obj.member_of_fam(int(result)) ]
+        retq.put(res)
+
 def run_GOEA_onresults(results, db_obj, goeaobj, outname = None):
     '''
         Perform enrichment analysis on returned results
@@ -56,13 +77,44 @@ def run_GOEA_onresults(results, db_obj, goeaobj, outname = None):
     HOGS={}
     print('compiling hogs')
     prots = []
-    for i,result in enumerate(hogids):
+
+    print('mod13')
+    retq = mp.Queue()
+
+    for i,result in enumerate(results):
         if i %10 ==0:
             print(i)
+        print(result)
         HOGS[result]=[]
-        for member in db_obj.iter_members_of_hog_id(result):
-            HOGS[result].append(member.omaid)
-            prots.append(member.omaid)
+        p = mp.Process( target= return_hogs_timeout , args= (result, retq))
+        p.start()
+
+        t0 = time.time()
+        timeout = False
+
+        while time.time()-t0 < 10 :
+            time.sleep(.1)
+            if p.is_alive() == False:
+                print('done')
+                break
+        if time.time()-t0 > 10:
+            timeout = True
+            print('Dead')
+        p.terminate()
+        del p
+
+
+        if retq.empty() == False:
+            iterobj = retq.get(10)
+            #retq get
+            for k,member in enumerate(iterobj):
+                if k < 1:
+                    print(member)
+                if k > 500:
+                    break
+                HOGS[result].append(member)
+                prots.append(member)
+
     print('done')
     print('running GO enrichment study')
     goea_results_all = goeaobj.run_study(prots )

@@ -2,6 +2,7 @@
 
 from pyprofiler.pyoma.browser import db
 
+
 import pickle
 import pandas as pd
 import h5py
@@ -273,6 +274,8 @@ class Profiler:
 		query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5 , nsamples=  self.nsamples )
 		#print(query_hash.hashvalues)
 		results = self.lshobj.query(query_hash, k)
+
+
 		return results
 
 	def hog_query_sorted(self, hog_id=None, fam_id=None , k = 100  ):
@@ -290,8 +293,9 @@ class Profiler:
 		hogdict = self.pull_hashes(results)
 
 		hogdict = { hog: hogdict[hog].jaccard(query_hash) for hog in hogdict  }
-
-
+		sortedhogs = [(k, v) for k, v in hogdict.items()]
+		sortedhogs = sorted(student_tuples, key=lambda x: x[1])
+		sortedhogs = [ h[0] for h in sortehogs.reverse() ]
 		return hogdict
 
 	def pull_hashes(self , hoglist):
