@@ -477,10 +477,5 @@ if __name__ == '__main__':
         treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
         lsh_builder.run_pipeline(threads)
 
-    r = resource.getrusage(resource.RUSAGE_BOTH).ru_maxrss
-    print('maxmem')
-    print(r)
-    print('time')
     print(time.time() - start)
-
     print('DONE')

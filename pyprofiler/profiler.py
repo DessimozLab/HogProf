@@ -103,6 +103,38 @@ class Profiler:
 				hog_matrix_raw[:,hogindex] = 1
 		return {fam:{ 'mat':hog_matrix_raw, 'tree':tp} }
 
+
+
+	def return_profile_complements(self, fam):
+		"""
+		Returns profiles for each loss to search for complementary hogs
+		"""
+		if type(fam) is str:
+			fam = hashutils.hogid2fam(fam)
+		ortho_fam = self.READ_ORTHO(fam)
+		tp = self.HAM_PIPELINE([fam, ortho_fam])
+
+		losses = set([ n.name  for n in tp.traverse() if n.lost and n.name in self.taxaIndex  ])
+		#these are the roots of the fams we are looking for
+		#we just assume no duplications or losses from this point
+
+		ancestral_nodes = ([ n for n in profiler.tree.traverse() if n.name in losses])
+		losses=[]
+		dupl=[]
+		complements={ n.name+'_loss' : [] }
+
+		indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
+
+		hog_matrix_raw = np.zeros((1, 3*len(self.taxaIndex)))
+		for i,event in enumerate(indices):
+			if len(indices[event])>0:
+				taxindex = np.asarray(indices[event])
+				hogindex = np.asarray(indices[event])+i*len(self.taxaIndex)
+				hog_matrix_raw[:,hogindex] = 1
+		
+		return {fam:{ 'mat':hog_matrix_raw, 'hash':tp} }
+
+
 	def return_profile_OTF_DCA(self, fam, lock = None):
 		"""
 		Returns profiles as strings for use with DCA pipelines
