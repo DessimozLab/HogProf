@@ -60,9 +60,9 @@ def buildGAF(gaf_file , universe= None):
     return gaf_filtered
 
 
-def return_hogs_timeout(result, retq):
+def return_hogs_timeout( result, retq):
     print('started')
-    with open_file('/home/cactuskid13/mntpt/OMA/jun/OmaServer.h5', mode="r") as h5_oma:
+    with open_file(config_utils.config['omadir'] , mode="r") as h5_oma:
         db_obj = db.Database(h5_oma)
         res =  [ ProteinEntry(db_obj, e).omaid for  e in db_obj.member_of_fam(int(result)) ]
         retq.put(res)
