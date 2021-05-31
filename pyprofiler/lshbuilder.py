@@ -329,7 +329,6 @@ class LSHBuilder:
     def run_pipeline(self , threads):
         functype_dict = {'worker': (self.worker, threads , True), 'updater': (self.saver, 1, False),
                          'matrix_updater': (self.matrix_updater, 0, False) }
-
         def mp_with_timeout(functypes, data_generator):
             work_processes = {}
             update_processes = {}
@@ -378,8 +377,7 @@ class LSHBuilder:
             gc.collect()
             print('DONE!')
 
-        with multiprocessing.Pool(threads) as pool:
-            self.mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(100))
+        mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(100))
         return self.hashes_path, self.lshforestpath , self.mat_path
 
 if __name__ == '__main__':
