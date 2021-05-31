@@ -329,58 +329,58 @@ class LSHBuilder:
     def run_pipeline(self , threads):
         functype_dict = {'worker': (self.worker, threads , True), 'updater': (self.saver, 1, False),
                          'matrix_updater': (self.matrix_updater, 0, False) }
-        self.mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(100))
+
+        def mp_with_timeout(functypes, data_generator):
+            work_processes = {}
+            update_processes = {}
+            lock = mp.Lock()
+            cores = mp.cpu_count()
+            q = mp.Queue(maxsize=cores * 10)
+            retq = mp.Queue(maxsize=cores * 10)
+            matq = mp.Queue(maxsize=cores * 10)
+            work_processes = {}
+            print('start workers')
+            for key in functypes:
+                worker_function, number_workers, joinval = functypes[key]
+                work_processes[key] = []
+                for i in range(int(number_workers)):
+                    t = mp.Process(target=worker_function, args=(i, q, retq, matq, lock))
+                    t.daemon = True
+                    work_processes[key].append(t)
+            for key in work_processes:
+                for process in work_processes[key]:
+                    process.start()
+            count = 0
+            for data in data_generator:
+                q.put(data)
+            print('done spooling data')
+            for key in work_processes:
+                for i in range(2):
+                    for _ in work_processes[key]:
+                        q.put(None)
+            print('joining processes')
+            for key in work_processes:
+                worker_function, number_workers , joinval = functypes[key]
+                if joinval == True:
+                    for process in work_processes[key]:
+                        process.join()
+            for key in work_processes:
+                worker_function, number_workers, joinval = functypes[key]
+                if joinval == False:
+                    for _ in work_processes[key]:
+                        retq.put(None)
+                        matq.put(None)
+            for key in work_processes:
+                worker_function, number_workers , joinval = functypes[key]
+                if joinval == False:
+                    for process in work_processes[key]:
+                        process.join()
+            gc.collect()
+            print('DONE!')
+
+        with multiprocessing.Pool(threads) as pool:
+            self.mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(100))
         return self.hashes_path, self.lshforestpath , self.mat_path
-
-    @staticmethod
-    def mp_with_timeout(functypes, data_generator):
-        work_processes = {}
-        update_processes = {}
-        lock = mp.Lock()
-        cores = mp.cpu_count()
-        q = mp.Queue(maxsize=cores * 10)
-        retq = mp.Queue(maxsize=cores * 10)
-        matq = mp.Queue(maxsize=cores * 10)
-        work_processes = {}
-        print('start workers')
-        for key in functypes:
-            worker_function, number_workers, joinval = functypes[key]
-            work_processes[key] = []
-            for i in range(int(number_workers)):
-                t = mp.Process(target=worker_function, args=(i, q, retq, matq, lock))
-                t.daemon = True
-                work_processes[key].append(t)
-        for key in work_processes:
-            for process in work_processes[key]:
-                process.start()
-        count = 0
-        for data in data_generator:
-            q.put(data)
-        print('done spooling data')
-        for key in work_processes:
-            for i in range(2):
-                for _ in work_processes[key]:
-                    q.put(None)
-        print('joining processes')
-        for key in work_processes:
-            worker_function, number_workers , joinval = functypes[key]
-            if joinval == True:
-                for process in work_processes[key]:
-                    process.join()
-        for key in work_processes:
-            worker_function, number_workers, joinval = functypes[key]
-            if joinval == False:
-                for _ in work_processes[key]:
-                    retq.put(None)
-                    matq.put(None)
-        for key in work_processes:
-            worker_function, number_workers , joinval = functypes[key]
-            if joinval == False:
-                for process in work_processes[key]:
-                    process.join()
-        gc.collect()
-        print('DONE!')
-
 
 if __name__ == '__main__':
 
