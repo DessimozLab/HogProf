@@ -6,9 +6,11 @@ import os
 config = {
     "dir":{
 #    "datadir": "/home/cactuskid13/mntpt/unil_backup/profilingbackup/",
-    "datadir": "/home/cactuskid13/pyprofiler/pyprofiler/plants/",
+    "datadir": "/scratch/dmoi/datasets/",
 
-    "omadir": "/home/cactuskid13/mntpt/OMA/latest/"
+
+
+    "omadir": "/scratch/dmoi/datasets/OMA/"
     },
     "orthoxmltar":"",
     "email": "dmoi@unil.ch"
