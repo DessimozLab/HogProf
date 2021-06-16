@@ -6,11 +6,8 @@ import os
 config = {
     "dir":{
 #    "datadir": "/home/cactuskid13/mntpt/unil_backup/profilingbackup/",
-    "datadir": "/scratch/dmoi/datasets/",
-
-
-
-    "omadir": "/scratch/dmoi/datasets/OMA/"
+    "datadir": "/scratch/dmoi/datasets/birds/",
+    "omadir": "/scratch/dmoi/datasets/birds/"
     },
     "orthoxmltar":"",
     "email": "dmoi@unil.ch"
@@ -20,6 +17,11 @@ datadir = config['dir']['datadir']
 omadir = config['dir']['omadir']
 email = config['email']
 tarfile = config['orthoxmltar']
+
+#ncbi ID in names ( weird orthoxml format for bird db)
+ncbi_inID = True
+mapdict_exceptions = {'ANAPL':'8839','CHICK':'9031','FICAL':'59894','JUNHY':'40217','MELGA':'9103','MELUD':'13146','PARMJ':'9157','SERCA':'9135' ,'TAEGU':'59729' }
+
 if len(tarfile)==0:
     tarfile = None
 

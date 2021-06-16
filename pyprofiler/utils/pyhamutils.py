@@ -24,15 +24,22 @@ def get_species_from_orthoxml(orthoxml):
             NCBI_taxid2name[child.attrib['NCBITaxId']] = child.attrib['name']
     return NCBI_taxid2name
 
-def switch_name_ncbi_id(orthoxml , mapdict = None):
+
+def switch_name_ncbi_id(orthoxml , mapdict = None  ):
     #swap ncbi taxid for species name to avoid ambiguity
     #mapdict should be a mapping from species name to taxid if the info isnt in the orthoxmls
+
     root = ET.fromstring(orthoxml)
     for child in root:
-        if 'species' in child.tag:
+
+        if 'species' in child.tag and config_utils.ncbi_inID == False :
             child.attrib['name'] = child.attrib['NCBITaxId']
         elif mapdict:
             child.attrib['name'] = mapdict[child.attrib['name']]
+        elif config_utils.ncbi_inID == True and 'species' in child.tag:
+            child.attrib['name'] = child.attrib['name'].split('_')[-1]
+            if child.attrib['name']  in config_utils.mapdict_exceptions:
+                child.attrib['name']= config_utils.mapdict_exceptions[child.attrib['name']]
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml
 
@@ -40,7 +47,10 @@ def switch_name_ncbi_id(orthoxml , mapdict = None):
 
 def get_ham_treemap_from_row(row, tree , level = None):
     fam, orthoxml = row
+
     orthoxml = switch_name_ncbi_id(orthoxml)
+
+
     try:
         if level is None:
             ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml", use_internal_name=True, orthoXML_as_string=True)

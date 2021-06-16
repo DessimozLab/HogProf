@@ -89,7 +89,7 @@ class LSHBuilder:
             taxout.write( pickle.dumps(self.taxaIndex))
         self.numperm = numperm
         if treeweights is None:
-            #generate all ones
+            #generate aconfig_utilsll ones
             self.treeweights = hashutils.generate_treeweights(self.tree_ete3  , self.taxaIndex , taxfilter, taxmask)
         else:
             #load machine learning weights
@@ -179,7 +179,10 @@ class LSHBuilder:
         while True:
             df = q.get()
             if df is not None :
+
                 df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+            
+
                 df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
                 retq.put(df[['Fam', 'hash']])
                 #matq.put(df[['Fam', 'rows']])
