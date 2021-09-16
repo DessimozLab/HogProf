@@ -13,6 +13,8 @@ import json
 import time
 import ete3
 import gc
+from pyoma.browser import db
+
 from utils import  config_utils, pyhamutils, hashutils , files_utils
 import numpy as np
 import random
@@ -21,10 +23,9 @@ import os
 random.seed(0)
 np.random.seed(0)
 
+
 class LSHBuilder:
     """
-
-
     This class contains the stuff you need to make a phylogenetic profiling database with input orthxml files and a taxonomic tree
 
     You must either input an OMA hdf5 file or an ensembl tarfile containing orthoxml file with orthologous groups.
@@ -35,7 +36,6 @@ class LSHBuilder:
 
     def __init__(self, tarfile_ortho = None,  h5_oma = None, taxa = None, masterTree = None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
         if h5_oma is not None:
-            from pyoma.browser import db
             self.h5OMA = h5_oma
             self.db_obj = db.Database(h5_oma)
             self.oma_id_obj = db.OmaIdMapper(self.db_obj)
@@ -60,11 +60,8 @@ class LSHBuilder:
             if not os.path.isdir(self.saving_path):
                 os.mkdir(path=self.saving_path)
         else:
-
-
             self.saving_path = config_utils.datadir + self.date_string +'/'
             if not os.path.isdir(self.saving_path):
-
                 os.mkdir(path=self.saving_path)
 
         if masterTree is None:
@@ -100,6 +97,8 @@ class LSHBuilder:
             taxout.write( pickle.dumps(self.taxaIndex))
 
         self.wmg = wmg
+
+        print( 'configuting pyham functions')
         self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
         self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=wmg )
         if self.h5OMA:
@@ -111,6 +110,7 @@ class LSHBuilder:
         self.lshforestpath = self.saving_path + 'newlshforest.pkl'
         self.mat_path = self.saving_path+ 'hogmat.h5'
         self.columns = len(self.taxaIndex)
+        print( 'done')
 
     def load_one(self, fam):
         #test function to try out the pipeline on one orthoxml
@@ -143,7 +143,7 @@ class LSHBuilder:
             print('last dataframe sent')
             families = {}
 
-
+            
         elif self.tar:
             groupfiles=glob.glob(self.tar)
             groups = []
@@ -330,6 +330,7 @@ class LSHBuilder:
         print('DONE MAT UPDATER' + str(i))
 
     def run_pipeline(self , threads):
+        print( 'run w n threads:', threads)
         functype_dict = {'worker': (self.worker, threads , True), 'updater': (self.saver, 1, False),
                          'matrix_updater': (self.matrix_updater, 0, False) }
         def mp_with_timeout(functypes, data_generator):
@@ -383,7 +384,10 @@ class LSHBuilder:
         mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(100))
         return self.hashes_path, self.lshforestpath , self.mat_path
 
+
+
 if __name__ == '__main__':
+
 
     parser=argparse.ArgumentParser()
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)

@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 from goatools import semantic
-from pyprofiler.pyoma.browser.models import ProteinEntry
+from pyoma.browser.models import ProteinEntry
 
 from goatools.obo_parser import GODag
 import json
@@ -12,7 +12,7 @@ from . import config_utils
 import gc
 import pickle
 from goatools.go_enrichment import GOEnrichmentStudy
-from pyprofiler.pyoma.browser import db
+from pyoma.browser import db
 import multiprocessing as mp
 from tables import *
 
