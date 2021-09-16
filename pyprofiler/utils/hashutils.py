@@ -51,18 +51,27 @@ def hash_tree(tp , taxaIndex , treeweights , wmg):
 
     """
 
-    losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
-    dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
-    presence = [ taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in taxaIndex ]
-    indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
     hog_matrix_weighted = np.zeros((1, 3*len(taxaIndex)))
+    
     hog_matrix_binary = np.zeros((1, 3*len(taxaIndex)))
-    for i,event in enumerate(indices):
-        if len(indices[event])>0:
-            taxindex = np.asarray(indices[event])
-            hogindex = np.asarray(indices[event])+i*len(taxaIndex)
-            hog_matrix_weighted[:,hogindex] = treeweights[hogindex,:].ravel()
-            hog_matrix_binary[:,hogindex] = 1
+
+
+
+    if tp:
+        losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
+        dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
+        presence = [ taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in taxaIndex ]
+        indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
+        for i,event in enumerate(indices):
+            if len(indices[event])>0:
+                taxindex = np.asarray(indices[event])
+                hogindex = np.asarray(indices[event])+i*len(taxaIndex)
+                hog_matrix_weighted[:,hogindex] = treeweights[hogindex,:].ravel()
+                hog_matrix_binary[:,hogindex] = 1
+    else:
+        #throwaway vector... 
+        hog_matrix_weighted[0,0] = 1
+    
     weighted_hash = wmg.minhash(list(hog_matrix_weighted.flatten()))
     return  hog_matrix_binary , weighted_hash
 

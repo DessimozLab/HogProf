@@ -98,7 +98,7 @@ class LSHBuilder:
 
         self.wmg = wmg
 
-        print( 'configuting pyham functions')
+        print( 'configuring pyham functions')
         self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
         self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=wmg )
         if self.h5OMA:
