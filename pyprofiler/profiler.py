@@ -1,6 +1,4 @@
-
-
-from pyprofiler.pyoma.browser import db
+from pyoma.browser import db
 
 
 import pickle
@@ -56,7 +54,7 @@ class Profiler:
 			#self.profile_matrix = profile_matrix_unpickled.load()
 			pass
 		if oma:
-			from pyprofiler.pyoma.browser import db
+			from pyoma.browser import db
 			if mastertree is None:
 				mastertree = config_utils.datadir + 'mastertree.pkl'
 			with open(mastertree , 'rb') as treein:
