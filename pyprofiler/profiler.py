@@ -81,12 +81,21 @@ class Profiler:
 		print('DONE')
 
 
+	def hogid2fam(self, hog_entry):
+		if type(hog_entry )== int:
+			return hog_entry
+		else:
+			try:
+				return int(self.db_obj.hog_family( entry=hog_entry ) )
+			except:
+				return np.nan
+
 	def return_profile_OTF(self, fam):
 		"""
 		Returns profiles as binary vectors for use with optimisation pipelines
 		"""
 		if type(fam) is str:
-			fam = hashutils.hogid2fam(fam)
+			fam = self.hogid2fam(fam)
 		ortho_fam = self.READ_ORTHO(fam)
 		tp = self.HAM_PIPELINE([fam, ortho_fam])
 
@@ -110,7 +119,7 @@ class Profiler:
 		Returns profiles for each loss to search for complementary hogs
 		"""
 		if type(fam) is str:
-			fam = hashutils.hogid2fam(fam)
+			fam = self.hogid2fam(fam)
 		ortho_fam = self.READ_ORTHO(fam)
 		tp = self.HAM_PIPELINE([fam, ortho_fam])
 
@@ -143,7 +152,7 @@ class Profiler:
 
 		"""
 		if type(fam) is str:
-			fam = hashutils.hogid2fam(fam)
+			fam = self.hogid2fam(fam)
 		if lock is not None:
 			lock.acquire()
 		ortho_fam = self.READ_ORTHO(fam)
@@ -302,7 +311,7 @@ class Profiler:
 		"""
 
 		if hog_id is not None:
-			fam_id = hashutils.hogid2fam(hog_id)
+			fam_id = self.hogid2fam(hog_id)
 		query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5 , nsamples=  self.nsamples )
 		#print(query_hash.hashvalues)
 		results = self.lshobj.query(query_hash, k)
@@ -319,7 +328,7 @@ class Profiler:
 		"""
 
 		if hog_id is not None:
-			fam_id = hashutils.hogid2fam(hog_id)
+			fam_id = self.hogid2fam(hog_id)
 		query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5 , nsamples=  self.nsamples )
 		results = self.lshobj.query(query_hash, k)
 		hogdict = self.pull_hashes(results)
@@ -340,7 +349,7 @@ class Profiler:
 		:return: a dict containing the hash values of the hogs in hoglist
 		"""
 
-		return { hog: hashutils.fam2hash_hdf5( hashutils.hogid2fam(str(hog)), self.hashes_h5 , nsamples=  self.nsamples) for hog in hoglist}
+		return { entry: hashutils.fam2hash_hdf5( self.hogid2fam(entry), self.hashes_h5 , nsamples=  self.nsamples) for entry in hoglist}
 
 	def pull_matrows(self,fams):
 		"""

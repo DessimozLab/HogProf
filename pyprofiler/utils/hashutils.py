@@ -1,3 +1,5 @@
+
+
 import datasketch
 import itertools
 import ete3
@@ -5,7 +7,6 @@ import copy
 import math
 import numpy as np
 import pandas as pd
-import re
 
 
 def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
@@ -130,46 +131,8 @@ def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):
     """
     if dataset is None:
         dataset = list(hdf5.keys())[0]
-    hashvalues = np.asarray(hdf5[dataset][fam, :])
+    hashvalues = np.asarray(hdf5[dataset][fam, :].reshape(nsamples,2 ))
     hashvalues = hashvalues.astype('int64')
     minhash1 = datasketch.WeightedMinHash( seed = 1, hashvalues=hashvalues)
     return minhash1
 
-def hogid2fam(hog_id):
-    """
-    For use with OMA HOGs
-    Get fam given hog id
-    :param hog_id: hog id
-    :return: fam
-
-    """
-
-    if not hog_id:
-        return hog_id
-    if type(hog_id) is int:
-        return hog_id
-
-    if ':' in str(hog_id):
-        hog_id = str(hog_id).split(':')[1]
-        if '.' in hog_id:
-            hog_id = hog_id.split('.')[0]
-        hog_id = hog_id.replace("'",'')
-        hog_id = re.sub(r"^A",'', hog_id)
-        fam = int(hog_id)
-    else:
-        try:
-            fam = int(hog_id)
-        except:
-            return None
-    return fam
-
-
-def fam2hogid(fam_id):
-    """
-    For use with OMA HOGs
-    Get hog id given fam
-    :param fam_id: fam
-    :return: hog id
-    """
-    hog_id = "HOG:" + (7-len(str(fam_id))) * '0' + str(fam_id)
-    return hog_id
