@@ -276,10 +276,11 @@ class Profiler:
 			#processes[i]['process'].daemon = True
 			processes[i]['process'].start()
 		for fam in fams:
+			orthxml = None
 			try:
 				orthxml = self.READ_ORTHO(fam)
 			except:
-				orthoxml = None
+				orthxml = None
 
 			if orthxml is not None:
 				inq.put((fam,orthxml))
