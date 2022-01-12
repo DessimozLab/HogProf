@@ -44,7 +44,7 @@ def switch_name_ncbi_id(orthoxml , mapdict = None  ):
     return orthoxml
 
 
-
+'''
 def get_ham_treemap_from_row(row, tree , level = None):
 
     try:
@@ -56,6 +56,20 @@ def get_ham_treemap_from_row(row, tree , level = None):
     except AttributeError:
         print('err pyham w/' , fam )
         return None
+
+
+
+'''
+def get_ham_treemap_from_row(row, tree , level = None):
+
+    fam, orthoxml = row
+    if orthoxml:
+        orthoxml = switch_name_ncbi_id(orthoxml)
+        ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml", use_internal_name=True, orthoXML_as_string=True)
+        print(ham_obj)
+        tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
+        return tp.treemap
+
 
 def yield_families(h5file, start_fam):
     """

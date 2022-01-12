@@ -21,8 +21,8 @@ def get_tree(taxa , genomes ,  savename = None):
     tax.remove(0)
     print(len(tax))
 
-    tree = ete3.PhyloTree( name = '')
-    tree.add_child(name ='131567')
+    tree = ete3.PhyloTree( name = '-1')
+    #tree.add_child(name ='131567')
     topo = ncbi.get_topology(genomes , collapse_subspecies=False)
     tax = set([ str(taxid) for taxid in tax])
     tree.add_child(topo)

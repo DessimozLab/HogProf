@@ -80,6 +80,8 @@ class LSHBuilder:
             with open( masterTree , 'wb') as pklin:
                 self.tree_ete3 = pickle.loads(pklin.read())
                 self.tree_string = self.tree_ete3.write(format=1)
+        
+
 
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
         with open( config_utils.datadir + 'taxaIndex.pkl', 'wb') as taxout:

@@ -97,21 +97,23 @@ class Profiler:
 		if type(fam) is str:
 			fam = self.hogid2fam(fam)
 		ortho_fam = self.READ_ORTHO(fam)
-		tp = self.HAM_PIPELINE([fam, ortho_fam])
+		if ortho_fam:
+			tp = self.HAM_PIPELINE([fam, ortho_fam])
 
-		losses = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in self.taxaIndex  ]
-		dupl = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in self.taxaIndex  ]
-		presence = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in self.taxaIndex  ]
+			losses = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in self.taxaIndex  ]
+			dupl = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in self.taxaIndex  ]
+			presence = [ self.taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in self.taxaIndex  ]
 
-		indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
-		hog_matrix_raw = np.zeros((1, 3*len(self.taxaIndex)))
-		for i,event in enumerate(indices):
-			if len(indices[event])>0:
-				taxindex = np.asarray(indices[event])
-				hogindex = np.asarray(indices[event])+i*len(self.taxaIndex)
-				hog_matrix_raw[:,hogindex] = 1
-		return {fam:{ 'mat':hog_matrix_raw, 'tree':tp} }
-
+			indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
+			hog_matrix_raw = np.zeros((1, 3*len(self.taxaIndex)))
+			for i,event in enumerate(indices):
+				if len(indices[event])>0:
+					taxindex = np.asarray(indices[event])
+					hogindex = np.asarray(indices[event])+i*len(self.taxaIndex)
+					hog_matrix_raw[:,hogindex] = 1
+			return {fam:{ 'mat':hog_matrix_raw, 'tree':tp} }
+		else:
+			return{ fam: { 'mat':None , 'tree':None }}
 
 
 	def return_profile_complements(self, fam):
@@ -222,6 +224,7 @@ class Profiler:
 			slicedf = traindf.iloc[batch:batch+chunksize, :]
 			fams = list(set(list(slicedf.HogFamA.unique()) + list(slicedf.HogFamB.unique() ) ) )
 			total= {}
+
 			for fam in fams:
 				orthxml = self.READ_ORTHO(fam)
 				if orthxml is not None:
@@ -254,7 +257,7 @@ class Profiler:
 			processes[i]['process'].terminate()
 
 
-	def retmat_mp_profiles(self, fams , nworkers = 25, chunksize=50  ):
+	def retmat_mp_profiles(self, fams , nworkers = 25, chunksize=50 , verbose = True ):
 		"""
 		function used to create dataframe containing binary profiles
 		and trees of fams
@@ -276,12 +279,17 @@ class Profiler:
 			#processes[i]['process'].daemon = True
 			processes[i]['process'].start()
 		for fam in fams:
-			orthxml = None
+			if verbose == True:
+				print(fam)
 			try:
 				orthxml = self.READ_ORTHO(fam)
 			except:
 				orthxml = None
 
+			if orthxml and verbose == True:
+				print(str(orthxml)[0:100])
+			else:
+				print('err', fam)
 			if orthxml is not None:
 				inq.put((fam,orthxml))
 		done = []
