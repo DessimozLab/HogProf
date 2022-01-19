@@ -219,7 +219,6 @@ class Profiler:
 			processes[i]['process'].start()
 
 		for batch in range(0, len(traindf) , chunksize ):
-			print(batch)
 
 			slicedf = traindf.iloc[batch:batch+chunksize, :]
 			fams = list(set(list(slicedf.HogFamA.unique()) + list(slicedf.HogFamB.unique() ) ) )
@@ -257,7 +256,7 @@ class Profiler:
 			processes[i]['process'].terminate()
 
 
-	def retmat_mp_profiles(self, fams , nworkers = 25, chunksize=50 , verbose = True ):
+	def retmat_mp_profiles(self, fams , nworkers = 25, chunksize=50 , verbose = False ):
 		"""
 		function used to create dataframe containing binary profiles
 		and trees of fams
@@ -286,10 +285,7 @@ class Profiler:
 			except:
 				orthxml = None
 
-			if orthxml and verbose == True:
-				print(str(orthxml)[0:100])
-			else:
-				print('err', fam)
+			
 			if orthxml is not None:
 				inq.put((fam,orthxml))
 		done = []
