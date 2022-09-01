@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61.0",
+"biopython",
+"certifi",
+"chardet",
+"datasketch",
+"ete3",
+"future",
+"goatools",
+"h5py",
+"idna",
+"lxml",
+"numexpr",
+"numpy",
+"pandas",
+"pyham==1.1.10",
+"pyoma",
+"pyopa",
+"python-dateutil",
+"pytz",
+"requests",
+"scipy",
+"six",
+"tables",
+"urllib3",
+]
+
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "HogProf"
+version = "0.0.1"
+authors = [
+  { name="Dave Moi", email="dmoi@unil.ch" },
+]
+
+description = "Phylogenetic Profiling with OMA and minhashing"
+readme = "README.md"
+
+license = { file="LICENSE" }
+
+requires-python = ">=3.7"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/DessimozLab/HogProf"
+"Bug Tracker" = "https://github.com/DessimozLab/HogProf/issues"
