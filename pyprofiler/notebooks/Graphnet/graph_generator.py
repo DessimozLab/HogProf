@@ -7,7 +7,7 @@
 import sys
 import smallpars
 import copy
-sys.path.append('../..')
+sys.path.append('../../..')
 #sys.path.append( '/home/cactuskid13/miniconda3/pkgs/')
 print(sys.path)
 import torch
@@ -31,16 +31,24 @@ import dask
 import warnings
 import scipy
 from dask import dataframe as dd
+import torch_geometric.transforms as T
+
 import pickle
 from bloom_filter2 import BloomFilter
 from sklearn.model_selection import train_test_split
+import functools
 
 path = '/work/FAC/FBM/DBC/cdessim2/default/dmoi/'
 
+
+p = profiler.Profiler(lshforestpath = path + 'datasets/OMA/sep2022/all/newlshforest.pkl' , hashes_h5=path +'datasets/OMA/sep2022/all/hashes.h5' , mat_path= None, oma = path + 'datasets/OMA/sep2022/OmaServer.h5', tar= None , nsamples = 256 , mastertree = path + 'datasets/OMA/sep2022/all_master_tree.pkl')
+
+
 coglink_df = pd.read_csv('STRINGCOGS2OMAHOGS.csv')
 stringPairs = coglink_df
-with open(path + 'STRING/' + 'gold_standard_profiles.pkl' , 'rb' )as profiles_out:
+with open(path + 'datasets/STRING/' + 'gold_standard_profiles.pkl' , 'rb' )as profiles_out:
     stringprofiles = pickle.loads(profiles_out.read())
+
 string_df = pd.DataFrame.from_dict(stringprofiles , orient='index')
 
 #make the profiles for this small set of HOGs
@@ -57,7 +65,6 @@ def check_filters(element,filters):
             return True
     return False
 
-import functools
 #check filters
 bfilter = functools.partial(check_filters , filters= resfinal)
 print(bfilter('COG1756_COG0088_4113'))
@@ -409,7 +416,6 @@ def create_data_updown_nosectors( tree, coglinkdf, profiles , taxindex , posi_pe
                     else:
                         yield data
 
-
 gen = create_data_updown_nosectors( dendrotree, Datasets['string']['Train']  , stringprofiles , profile_mapper, .5  , verbose = False  )
 print(next(gen))
 
@@ -421,7 +427,7 @@ trainsample= 10000
 
 
 #create training set using the generator on training samples
-reload = True
+reload = False
 if traindata_gen == True:
     if reload == True:
         with open('trainingset_nosectors.pkl' , 'rb')as trainout:
