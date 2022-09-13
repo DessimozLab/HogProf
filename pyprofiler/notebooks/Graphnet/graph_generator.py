@@ -424,10 +424,10 @@ print(next(gen))
 traindata_gen = True
 trainsample= 10000
 
-
-
 #create training set using the generator on training samples
 reload = False
+
+'''
 if traindata_gen == True:
     if reload == True:
         with open('trainingset_nosectors.pkl' , 'rb')as trainout:
@@ -448,13 +448,13 @@ if traindata_gen == True:
             samples.append(data)
             if i > trainsample:
                 break
-
 '''
+
 #create testing set using the testing set dataframe
 testdata_gen = True
 testsample= 5000
 NCORE = 20
-reload = True
+reload = False
 if testdata_gen == True:
     if reload == True:
         with open('testgset_nosectors.pkl' , 'rb')as trainout:
@@ -473,5 +473,3 @@ if testdata_gen == True:
 
             if i > testsample:
                 break
-
-'''
