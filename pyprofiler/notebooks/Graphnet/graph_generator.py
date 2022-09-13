@@ -5,23 +5,16 @@
 
 
 import sys
+import smallpars
+import copy
 sys.path.append('../..')
 #sys.path.append( '/home/cactuskid13/miniconda3/pkgs/')
 print(sys.path)
-
-
-# In[2]:
-
-
 import torch
-
-
-# In[3]:
-
-
 from pyprofiler.utils import hashutils
 import ete3
 import random
+
 from pyprofiler.utils import config_utils
 import pyprofiler.utils.goatools_utils as goa
 import pyprofiler.utils.hashutils as hashutils
@@ -36,219 +29,41 @@ import redis
 #you may need to get these up and running for you own cluster configuration before this notebook will work for you
 import dask
 import warnings
-
-
-from sklearn.metrics import precision_recall_curve
-import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve
-from sklearn.metrics import auc
-
-
 import scipy
 from dask import dataframe as dd
 import pickle
 from bloom_filter2 import BloomFilter
 from sklearn.model_selection import train_test_split
 
+path = '/work/FAC/FBM/DBC/cdessim2/default/dmoi/'
 
-# In[4]:
-
-
-#lets load a compiled db containing the OMA root HOGs into a profiler oject 
-p = profiler.Profiler(lshforestpath = '/scratch/dmoi/datasets/all/newlshforest.pkl' , hashes_h5='/scratch/dmoi/datasets/birds/all/hashes.h5' , mat_path= None, oma = '/scratch/dmoi/datasets/OMA/apr2021/OmaServer.h5', tar= None , nsamples = 256 , mastertree = '/scratch/dmoi/datasets/birds/all_test_master_tree.pkl')
-
-
-# In[5]:
-
-
-def grabHog(ID, verbose = True):
-    try:
-        entry = p.db_obj.entry_by_entry_nr(p.db_obj.id_resolver.resolve(ID))
-        return entry[4].decode() , entry
-    except:
-        return np.nan,np.nan
-#map to OMA HOGs
-
-
-# In[6]:
-
-filter_coglinks = False
-
-if filter_coglinks == True:
-    from collections import Counter
-    coglink_df = dd.read_csv('/scratch/dmoi/datasets/STRING/COG.links.detailed.v11.5.txt', blocksize=25e6 , header = 0, sep = ' ')
-    print(coglink_df)
-    print(coglink_df.columns)
-    dropcols = [ 'cooccurence', 'combined_score' ]
-    coglink_df = coglink_df.drop(columns = dropcols)
-    coglink_df['score'] = coglink_df.coexpression + coglink_df.experimental +coglink_df.database+ coglink_df.textmining
-    #these cutoffs ere found below using jaccard and AUC
-    coglink_df= coglink_df[coglink_df.score>1000]
-    coglink_df= coglink_df[coglink_df.textmining>500]
-
-    coglink_df = coglink_df.compute()
-    
-    coglink_count = Counter(list(coglink_df.group1)+list(coglink_df.group2))
-    coglink_df['count1']= coglink_df.group1.map(coglink_count)
-    coglink_df['count2']= coglink_df.group2.map(coglink_count)
-    #filter input set
-    #coglink_df = coglink_df[coglink_df.count1 > 50 ]
-    #coglink_df = coglink_df[coglink_df.count2 > 50 ]
-    
-    print(coglink_df.head() , len(coglink_df))
-
-
-# In[14]:
-#map the interacting cogs to the proteins
-compute_grabcogs = False
-if compute_grabcogs == True:
-    grabcogs = set( list(coglink_df.group1.unique()) + list(coglink_df.group2.unique()) )
-    grabcogs= list(grabcogs)
-    COGmapings_df = dd.read_csv('/scratch/dmoi/datasets/STRING/COG.mappings.v11.5.txt', blocksize=25e6 , header = 0, sep = '\t')
-    COGmapings_df = COGmapings_df.set_index('orthologous_group')
-    COGmapings_df.astype(str)
-    COGmapings_df['##protein'].map( lambda x : x.strip() )
-    COGmapings_df['species'] = COGmapings_df['##protein'].map( lambda x : x.split('.')[0] )
-    COGmapings_df['COG'] = COGmapings_df.index
-    COGmapings_df = COGmapings_df.loc[grabcogs]
-    COGmapings_df = COGmapings_df.compute()
-    print(COGmapings_df.head())
-
-
-# In[15]:
-
-
-#only take the proteins in our cogs of interest
-if compute_grabcogs == True:
-    grabprots =list(COGmapings_df['##protein'].unique())
-    print(len(grabprots))
-    with open('/scratch/dmoi/datasets/STRING/COG.links.detailed.v11.5.txt' + '.grabcogs.txt', 'w') as protsout:
-        protsout.write(''.join([ p + '\n' for p in grabcogs ]) )
-    with open('/scratch/dmoi/datasets/STRING/COG.mappings.v11.5.txt' + '.grabprots.txt' , 'w') as protsout:
-        protsout.write(''.join([ p + '\n' for p in grabprots ]) )
-else:
-    with open('/scratch/dmoi/datasets/STRING/COG.links.detailed.v11.5.txt' + '.grabcogs.txt', 'r') as protsout:
-        grabcogs = [ cog for cog in protsout.readlines()]
-    with open('/scratch/dmoi/datasets/STRING/COG.mappings.v11.5.txt' + '.grabprots.txt' , 'r') as protsout:
-        grabprots = [ prot for prot in protsout.readlines()]
-
-
-# In[16]:
-
-
-calc_mappers = False
-if calc_mappers == True:
-    rdb = redis.Redis(host='10.202.12.174', port=6379, db=0)
-
-    count = 0
-    for i,r in COGmapings_df.iterrows():
-        rdb.set(r['##protein'], i)
-        count+=1
-        if count < 10:
-            print(i+'\n',r)
-        if count%1000000==0:
-            print(count/len(COGmapings_df))
-
-
-# In[17]:
-
-
-maphogs = False
-if maphogs == True:
-    #mapping each string cog to an oma hog by selecting a member of the cog
-    rdb = redis.Redis(host='10.202.12.174', port=6379, db=0)
-    hogmap = {}
-    for i,prot in enumerate(grabprots):
-        if i % 100000 == 0 :
-            print(i/len(grabprots))
-        cog = rdb.get(prot)
-        if cog not in hogmap:
-            mapped =  grabHog(prot)
-            #retry until something maps
-            if mapped[0] != np.nan and type(mapped[0]) == str :
-                if len(mapped[0])>1 :
-                    hogmap[cog] = mapped
-    with open('stringhogmap.pkl' , 'wb')as hogmapout:
-        hogmapout.write(pickle.dumps(hogmap))
-else:
-    with open('stringhogmap.pkl' , 'rb')as hogmapout:
-        hogmap = pickle.loads(hogmapout.read())
-
-
-# In[18]:
-
-
-print(len(hogmap))
-for i, key in enumerate(hogmap):
-    if i < 10:
-        print(key, hogmap[key])
-
-
-# In[19]:
-
-
-#add the HOGs to the COGdf
-#grab the corresponding profiles
-compile_final_cogdf = False
-if compile_final_cogdf == True:
-    print(len(coglink_df))
-    try:
-        coglink_df.group1  = coglink_df.group1.map( lambda x : x.encode())
-        coglink_df.group2  = coglink_df.group2.map( lambda x : x.encode())
-    except:
-        pass
-    coglink_df['hog1'] = coglink_df.group1.map(hogmap)
-    coglink_df['hog2'] = coglink_df.group2.map(hogmap)
-    coglink_df=coglink_df.dropna()
-    print(len(coglink_df))
-    print(coglink_df.head())
-    coglink_df['hogid_1'] = coglink_df['hog1'].map(lambda x:x[0])
-    coglink_df['hogid_2'] = coglink_df['hog2'].map(lambda x:x[0])
-    coglink_df['fam1'] = coglink_df['hog1'].map( lambda x :   p.hogid2fam(x[1]) )
-    coglink_df['fam2'] = coglink_df['hog2'].map( lambda x :   p.hogid2fam(x[1]) ) 
-    coglink_df.fam1 = coglink_df.fam1.map(int)
-    coglink_df.fam2 = coglink_df.fam2.map(int)
-    stringHOGs = set(coglink_df.fam1.unique()).union(set(coglink_df.fam2.unique()))
-    print(len(stringHOGs))
-    print(coglink_df)
-    coglink_df.to_csv('STRINGCOGS2OMAHOGS.csv')
-else:
-    coglink_df = pd.read_csv('STRINGCOGS2OMAHOGS.csv')
-
-
-# In[20]:
+coglink_df = pd.read_csv('STRINGCOGS2OMAHOGS.csv')
 stringPairs = coglink_df
-# In[21]:
-with open('/scratch/dmoi/datasets/STRING/' + 'gold_standard_profiles.pkl' , 'rb' )as profiles_out:
+with open(path + 'STRING/' + 'gold_standard_profiles.pkl' , 'rb' )as profiles_out:
     stringprofiles = pickle.loads(profiles_out.read())
-
 string_df = pd.DataFrame.from_dict(stringprofiles , orient='index')
 
 #make the profiles for this small set of HOGs
 for i, key in enumerate(stringprofiles):
     if i < 10:
         print(key,stringprofiles[key])
-
-
 with open('bloomfinal_big.pkl' , 'rb' ) as finalout:
     resfinal = pickle.loads(finalout.read()) 
 print(resfinal)
-
-
-# In[35]:
-
 
 def check_filters(element,filters):
     for f in filters:
         if element in f[0][0]:
             return True
     return False
+
 import functools
+#check filters
 bfilter = functools.partial(check_filters , filters= resfinal)
 print(bfilter('COG1756_COG0088_4113'))
 print(bfilter('crap'))
-
-
+#lets make sure all of our string species are mapped to their corresponding OMA equivalent
+#lets make sure all of our string species are mapped to their corresponding OMA equivalent
 taxmapper = 'string2oma_specmap.pkl'
 calc_taxmapper = True
 if calc_taxmapper == True:
@@ -258,7 +73,7 @@ if calc_taxmapper == True:
         from ete3 import NCBITaxa
         ncbi = NCBITaxa()
         #map profiler leaves to closest leaf in string
-        strings_species = '/scratch/dmoi/datasets/STRING/species.v11.5.txt'
+        strings_species = path + 'datasets/STRING/species.v11.5.txt'
         string_specdata = pd.read_table(strings_species)
         print(string_specdata)
         stringset = set([ str(tax) for tax in list(string_specdata['#taxon_id']) ]) 
@@ -266,35 +81,58 @@ if calc_taxmapper == True:
         print('omaset',len(omaset))
         print('stringset',len(stringset))
         shared_leaves = omaset.intersection(stringset)
-        missing_leaves = omaset - stringset
-        #these are oma leaves not in string...we can map to the closest string species.
+        
+        print('shared',len(shared_leaves))
+        oma_missing = omaset - stringset
         string_missing = stringset - omaset
-        omalineages = {tax: set(ncbi.get_lineage(int(tax))) for tax in missing_leaves}
+        
+        #these are oma leaves not in string...we can map to the closest string species.
+        print('missing from OMA' ,len(string_missing))
+        print('missing from string' ,len(oma_missing)) 
+        
+        
+        omalineages = {tax: set(ncbi.get_lineage(int(tax))) for tax in oma_missing}
         stringlineages = {tax: set(ncbi.get_lineage(int(tax))) for tax in string_missing}
+        
         string2oma={}
         print('done lineages')
-        for i,tax in enumerate(stringlineages):
+        
+        #missing from oma
+        for i,tax in enumerate(string_missing):
             #find the closest
-            shared = { tax_oma: len(stringlineages[tax].intersection(omalineages[tax_oma]))/len(omalineages[tax_oma]) for tax_oma in omalineages } 
-
+            #jaccard ftw
+            shared = { tax_oma : len(stringlineages[tax].intersection(omalineages[tax_oma]))/ len(stringlineages[tax].union(omalineages[tax_oma]) )  for tax_oma in omalineages } 
             string2oma[tax] = max(shared, key=shared.get)
+            
             if i %1000 == 0:
-                print(i/ len(stringlineages) )
+                print(i/ len(string_missing) )
+        
+        oma2string ={}
+         #missing from sting
+        for i,tax_oma in enumerate(oma_missing):
+            #find the closest
+            #jaccard ftw
+            shared = { tax : len(stringlineages[tax].intersection(omalineages[tax_oma]))/ len(stringlineages[tax].union(omalineages[tax_oma]) )  for tax in stringlineages } 
+            oma2string[tax_oma] = max(shared, key=shared.get)            
+            if i %100 == 0:
+                print(i/ len(oma_missing) )
+                
+        
+        #looking at the coverage of the oma species with the mapping
+        allspecies = set( list(string2oma.values() ) ).union(shared_leaves ).union(set( list(oma2string.keys())) )
+        print('coverage of oma ' , len(allspecies))
         with open(taxmapper, 'wb') as taxmapper:
             taxmapper.write(pickle.dumps(string2oma))
+        with open('stringset.pkl', 'wb') as ss:
+            ss.write(pickle.dumps(stringset))            
 else:
-    with open(taxmapper, 'rb') as taxmapper:
-        string2oma= pickle.loads(taxmapper.read())
-
-
-
-#test out to find the species for a cog pair
-species = [ spec.name  for spec in p.tree.get_leaves()] + list(string2oma.keys())
-species = set(species)
-
+    with open(taxmapper, 'rb') as taxmap:
+        string2oma= pickle.loads(taxmap.read())
+    with open('stringset.pkl', 'rb') as ss:
+        stringset= pickle.laods(ss.read())
 
 import dendropy
-taxnwk = '/scratch/dmoi/datasets/birds/all_test_master_tree.nwk'
+taxnwk = path + 'datasets/OMA/sep2022/all_master_tree.nwk'
 with open( 'taxtree.nwk' , 'w') as treeout:
     treeout.write(p.tree.write())
 dendrotree = dendropy.Tree.get(
@@ -313,27 +151,24 @@ for i,l in enumerate(dendrotree.nodes()):
     l.matrow = i
 
 
-import smallpars
-import copy
-
 #we're checking for interaction in a subset of species and propagating up
 allowed_symbols =set([0,1,None])
 transition_dict = { (c[0],c[1]):i for i,c in enumerate(itertools.permutations(allowed_symbols,2) ) }
-def calc_interaction_on_taxonomy(cog1,cog2,treein ,species_set = species, string2oma= string2oma, verbose = False):
+def calc_interaction_on_taxonomy(cog1,cog2,treein ,species_set = stringset, string2oma= string2oma, verbose = False):
     #set interaction states
     #look for interactions in bloom
     coglink1 = cog1+'_'+cog2 +'_'
     coglinks_species = [ coglink1+spec for spec in species_set ]
+    checklinks1 = [ bfilter( spec) for spec in coglinks_species ]
     coglink2 = cog2+'_'+cog1+'_'
     coglinks_species += [ coglink2+spec for spec in species_set ]
-    
-    checklinks = [ bfilter( spec) for spec in coglinks_species ]
-    
-    species_set = [ s for s,c in list(zip(species_set,checklinks))  if c== True  ]
+    checklinks2 = [ bfilter( spec) for spec in coglinks_species ]
+    #bitwise or
+    checklinks = [ c[0] or c[1] for c in zip(checklinks1,checklinks2)]
+    species_set = set([ string2oma[s] if s in string2oma and c==True  else s if s not in string2oma and c==True else 'Null' for s,c in list(zip(species_set,checklinks)) ])
     if verbose == True:
         print(cog1,cog2)
         print('string entries:',len(species_set))
-    species_set = set([ s if s not in string2oma else string2oma[s] for s in species_set  ])
     tree = copy.deepcopy(treein)
     for i,l in enumerate(tree.leaf_nodes()):
         l.event = {}
@@ -372,13 +207,6 @@ for label,df,mapping,profilemat in [  ('string', stringPairs, string_fam_map ,st
     print('test',len(df_test))
 
 
-# In[47]:
-
-
-import torch.nn.functional as F
-import torch_geometric.transforms as T
-from torch_geometric.nn import ChebConv
-from torch_geometric.nn import  to_hetero
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from torch_geometric.data import HeteroData ,InMemoryDataset
@@ -388,30 +216,10 @@ import pickle
 import random
 
 
-# In[54]:
-
 
 nodes = set([ n.name for n in p.tree.traverse() ])
 dendrotree_nodes = set([str(n.taxon.label) if n.taxon else '-1' for n in dendrotree.nodes()] )
-
-
-# In[55]:
-
-
-print(len(nodes))
-print(len(dendrotree_nodes))
-print(len(nodes.intersection(dendrotree_nodes)))
-
-
-# In[56]:
-
-
 profile_mapper = { n.name:i for i,n in enumerate(p.tree.traverse()) }
-
-
-# In[57]:
-
-
 profile_mapper = { (n.taxon.label if n.taxon else '-1'):n.matrow for n in  dendrotree.nodes() }
 
 def tree2Single_sparse_graph_updown(tree):
@@ -437,17 +245,12 @@ def tree2Single_sparse_graph_updown(tree):
     Norm_nchild/=mchild 
     Norm_nsister= np.array( [ len(n.sister_nodes()) for n in tree.nodes() ] ,dtype='double' )
     msis =np.amax(Norm_nsister)
-    Norm_nsister/=msis    
+    Norm_nsister/=msis
     template_features = np.stack([ntime ,  Norm_nchild , Norm_nsister ]).T    
     return connectmat_up, connectmat_down, connectmat_diag, template_features
 
 
-# In[59]:
-
-
-
 def getmrca(treein,taxset):
-    
     tree = copy.deepcopy(treein)
     n = tree.mrca(taxon_labels=taxset)
     if n is not None:
@@ -458,15 +261,12 @@ def getmrca(treein,taxset):
     else: 
         return None, None, None
 
-
-
 def sparse2pairs(sparsemat, matrows = None):
     if matrows :
         sparsemat = sparsemat[matrows,:]
         sparsemat = sparsemat[:,matrows]
     sparsemat = scipy.sparse.find(sparsemat)
     return np.vstack([sparsemat[0],sparsemat[1]])
-
 
 def process_node_down(node, sector = 0, breakpt = 10 , total = 0 ):
     node.sector = sector
@@ -486,14 +286,6 @@ def process_node_down(node, sector = 0, breakpt = 10 , total = 0 ):
         else:
             process_node_down(child, count , total = total , breakpt = breakpt)
 
-    
-def get_sectors(tree, breakpt = 20):
-    process_node_down( tree.seed_node , sector = 0, breakpt = breakpt )
-    row = [n.matrow for n in tree.nodes()]
-    col = [n.sector for n in tree.nodes()]
-    data = np.ones((len(row)))
-    sectormat = scipy.sparse.csc_matrix( (data,(row,col)) )
-    return sectormat
 
 for i,l in enumerate(dendrotree.nodes()):
     l.sum_lengths = None

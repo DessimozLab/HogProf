@@ -6,8 +6,8 @@ import os
 config = {
     "dir":{
 #    "datadir": "/home/cactuskid13/mntpt/unil_backup/profilingbackup/",
-    "datadir": "/scratch/dmoi/datasets/birds/",
-    "omadir": "/scratch/dmoi/datasets/birds/"
+    "datadir": "/work/FAC/FBM/DBC/cdessim2/default/dmoi/datasets/birds/",
+    "omadir": "/work/FAC/FBM/DBC/cdessim2/default/dmoi/datasets/birds/"
     },
     "orthoxmltar":"",
     "email": "dmoi@unil.ch"
