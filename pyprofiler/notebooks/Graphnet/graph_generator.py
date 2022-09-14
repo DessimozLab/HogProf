@@ -14,6 +14,7 @@ import torch
 from pyprofiler.utils import hashutils
 import ete3
 import random
+import multiprocessing as mp
 
 from pyprofiler.utils import config_utils
 import pyprofiler.utils.goatools_utils as goa
@@ -39,9 +40,24 @@ from sklearn.model_selection import train_test_split
 import functools
 
 path = '/work/FAC/FBM/DBC/cdessim2/default/dmoi/'
+reload = False
+
+traindata_gen = True
+testdata_gen = True
 
 
-p = profiler.Profiler(lshforestpath = path + 'datasets/OMA/sep2022/all/newlshforest.pkl' , hashes_h5=path +'datasets/OMA/sep2022/all/hashes.h5' , mat_path= None, oma = path + 'datasets/OMA/sep2022/OmaServer.h5', tar= None , nsamples = 256 , mastertree = path + 'datasets/OMA/sep2022/all_master_tree.pkl')
+mp_datagen = True
+trainsample= 200
+testsample= 200
+nworkers = 10
+
+print('mk1')
+
+p = profiler.Profiler(lshforestpath = path + 'datasets/OMA/sep2022/all/newlshforest.pkl' , 
+    hashes_h5=path +'datasets/OMA/sep2022/all/hashes.h5' , 
+    mat_path= None, oma = path + 'datasets/OMA/sep2022/OmaServer.h5', 
+    tar= None , nsamples = 256 , 
+    mastertree = path + 'datasets/OMA/sep2022/all_master_tree.pkl')
 
 
 coglink_df = pd.read_csv('STRINGCOGS2OMAHOGS.csv')
@@ -299,15 +315,14 @@ for i,l in enumerate(dendrotree.nodes()):
 for i,l in enumerate(dendrotree.leaf_nodes()):
     l.sum_lengths = 1
 
-
-def create_data_updown_nosectors( tree, coglinkdf, profiles , taxindex , posi_percent = .5 ,  q = None , iolock= None,  verbose = False, loop= True ):
+def create_data_updown_nosectors( tree, coglinkdf, profiles , taxindex , posi_percent = .5 , seed = None, iolock = None, verbose = False, loop= True ):
         #upward and downward connected phylo nodes
         connectmat_up, connectmat_down, connectmat_diag, template_features = tree2Single_sparse_graph_updown(tree)
         N = len(tree.nodes())
         allfams = list(set(coglinkdf.fam1.unique()).union( set(coglinkdf.fam2.unique() ) ))
         leafset = set([n.taxon.label for n in tree.leaf_nodes()])
         while True:
-            toss = scipy.stats.bernoulli.rvs(posi_percent, loc=0, size=1, random_state=42)
+            toss = scipy.stats.bernoulli.rvs(posi_percent, loc=0, size=1, random_state=seed)
             if verbose == True:
                 print('posi/nega',toss)
             if toss == 0:
@@ -317,29 +332,48 @@ def create_data_updown_nosectors( tree, coglinkdf, profiles , taxindex , posi_pe
                     fam2 = random.choice(allfams)
                 labels = np.zeros((template_features.shape[0],))
             else:
+                if verbose == True:
+                    print('filtering')
                 #positive sample
                 dfline = coglinkdf.sample(n=1, random_state = random.randint(1,1000)).iloc[0]
                 cog1= str(dfline.group1).replace("b",'').replace("'",'').strip()
                 cog2= str(dfline.group2).replace("b",'').replace("'",'').strip()
                 fam1 = dfline.fam1
                 fam2 = dfline.fam2
+                if verbose == True:
+                    print(fam1,fam2)
+                
                 labels = calc_interaction_on_taxonomy(cog1,cog2,tree)
+                if verbose == True:
+                    print('done',labels)
+                
             nodefeatures = []
             presences= []
             #find profile nameset
+
+            if verbose == True:
+                print('profile')
             for i,tp in enumerate([profiles[fam1]['tree'], profiles[fam2]['tree']]):    
                 profilefeatures = np.zeros((template_features.shape[0],3) )
                 #find on which nodes the events happened
                 losses = [ taxindex[n.name]  for n in tp.traverse() if n.lost ]
                 dupl = [ taxindex[n.name]  for n in tp.traverse() if n.dupl ]
-                presence = [ n.name  for n in tp.traverse() if n.nbr_genes > 0   ]
+                presence = [ n.name  for n in tp.traverse() if n.nbr_genes > 0  ]
                 presences.append(presence)
+                
                 presence = [taxindex[n] for n in presence]
                 profilefeatures[losses, 0] = 1
                 profilefeatures[dupl, 1] = 1
                 profilefeatures[presence, 2] = 1
                 nodefeatures.append(profilefeatures)
+
+
             nodeset = set(presences[0]).union(set(presences[1]))
+            if verbose == True:
+                print('done')
+            if verbose == True:
+                print('compile')
+            
             if len(nodeset)> 10:
                 skip = False
                 try:
@@ -349,7 +383,6 @@ def create_data_updown_nosectors( tree, coglinkdf, profiles , taxindex , posi_pe
                 except ValueError:
                     #no species overlap
                     skip = True
-
                 if skip == False:
                     
                     #pare down labels
@@ -358,9 +391,6 @@ def create_data_updown_nosectors( tree, coglinkdf, profiles , taxindex , posi_pe
                     if verbose == True:
                         print('features',nodefeatures)
                         print( 'labels' , labels)
-                    neglabels = np.ones(labels.shape)
-                    neglabels = neglabels - labels
-                    labels = np.vstack([labels,neglabels]).T
 
                     overview = scipy.sparse.lil_matrix( (len(matrows) , 2 ) )
                     overview[:,0] = 1
@@ -376,19 +406,18 @@ def create_data_updown_nosectors( tree, coglinkdf, profiles , taxindex , posi_pe
                     
                     #profile features
                     nodefeatures=np.hstack(nodefeatures)
-                    
                     sub_template_features= template_features[matrows,:]
                     sub_node_features= nodefeatures[matrows,:]
                     sub_node_features = np.hstack([sub_template_features , sub_node_features])
-                    godlabel = np.ones((1,1))*toss
-                    godlabel = np.hstack([np.ones((1,1))-godlabel, godlabel])
                     
-                    
-                    data = HeteroData()   
-                    
-                    data['phylonodes_up'].x = torch.tensor(sub_node_features, dtype=torch.double )
-                    data['phylonodes_down'].x = torch.tensor(sub_node_features, dtype=torch.double )
-                    data['godnode'].x =torch.tensor(  np.zeros((1,1))  ,  dtype=torch.double )
+
+                    if verbose == True:
+                        print('done')
+
+                    data = HeteroData()
+                    data['phylonodes_up'].x = torch.tensor(sub_node_features, dtype=torch.float )
+                    data['phylonodes_down'].x = torch.tensor(sub_node_features, dtype=torch.float )
+                    data['godnode'].x =torch.tensor(  np.zeros((1,1))  ,  dtype=torch.float )
 
                     #up down fitch net
                     data['phylonodes_up', 'phylolink_up', 'phylonodes_up'].edge_index = torch.tensor(subconnect_up ,  dtype=torch.long )
@@ -405,71 +434,99 @@ def create_data_updown_nosectors( tree, coglinkdf, profiles , taxindex , posi_pe
                     data['godnode',  'informs','phylonodes_up'].edge_index = torch.tensor(overview_rev ,  dtype=torch.long )
                     
                     #add 2 label classes                
-                    data['phylonodes_up'].y =torch.tensor(labels  ,  dtype=torch.long )
-                    data['phylonodes_down'].y =torch.tensor(labels  ,  dtype=torch.long )
-                    data['godnode'].y =torch.tensor( godlabel  ,  dtype=torch.long )
+                    data['phylonodes_up'].y =torch.tensor(labels  ,  dtype=torch.int )
+                    data['phylonodes_down'].y =torch.tensor(labels  ,  dtype=torch.int )
+                    data['godnode'].y = torch.tensor(  np.ones((1,1))*toss  ,  dtype=torch.int )
 
                     data = T.AddSelfLoops()(data)
                     data = T.NormalizeFeatures()(data)
-                    if q:
-                        q.put(data)
-                    else:
-                        yield data
+                    yield data
 
-gen = create_data_updown_nosectors( dendrotree, Datasets['string']['Train']  , stringprofiles , profile_mapper, .5  , verbose = False  )
-print(next(gen))
+def worker(nsamples,outq,iolock , dataset, worker_nb ):
+    with iolock:
+        print('worker inint')
+        gen = create_data_updown_nosectors( dendrotree, dataset  , stringprofiles , profile_mapper, .5  ,iolock = iolock, seed = worker_nb , verbose = True  )
+        print('generator init done')
+    for i , data in enumerate( gen ):
+        outq.put(data)
+    outq.put(None)
 
-# In[ ]:
+if __name__ == '__main__':
 
-traindata_gen = True
-trainsample= 10000
-
-#create training set using the generator on training samples
-reload = False
-
-'''
-if traindata_gen == True:
-    if reload == True:
-        with open('trainingset_nosectors.pkl' , 'rb')as trainout:
-            samples = pickle.loads(trainout.read())
+    if mp_datagen == True:
+        worker_processes = []
+        sets = []
+        if traindata_gen == True:
+            sets+=['Train']
+        if testdata_gen == True:
+            sets+=['Test']
+        for TT in sets:
+            dataset = Datasets['string'][TT]
+            iolock = mp.Lock()
+            outq = mp.Queue()
+            for i in range(nworkers):
+                p = mp.Process(target=worker, args=(trainsample,outq, iolock , dataset, i ))
+                worker_processes.append(p)
+            for p in worker_processes:
+                p.start()
+            finished = 0
+            #retrieve all samples
+            while True:
+                data = outq.get()
+                if data is None:
+                    finished +=1
+                else:
+                    samples.append(data)
+                    if len(samples) % 100 ==0:
+                        print('saving')
+                        with open('trainingset_nosectors.pkl' , 'wb')as trainout:
+                            trainout.write(pickle.dumps(samples))
+                        print('done')
+                if len(worker_processes) == finished:
+                    break
+            for p in worker_processes:
+                p.join()
     else:
-        print('newsamples')
-        samples = []
-    if traindata_gen == True:
-        gen = create_data_updown_nosectors( dendrotree, Datasets['string']['Train']  , stringprofiles , profile_mapper, .5  , verbose = False  )
-        for i , data in enumerate( gen ):
-            if i < 5:
-                print(data)
-                print(data['godnode'].y)
-            if i % 100 ==0:
-                print(i, len(samples))
-                with open('trainingset_nosectors.pkl' , 'wb')as trainout:
-                    trainout.write(pickle.dumps(samples))
-            samples.append(data)
-            if i > trainsample:
-                break
-'''
+        #create training set using the generator on training samples
+        if traindata_gen == True:
+            print('generating training set')
+            if reload == True:
+                with open('trainingset_nosectors.pkl' , 'rb')as trainout:
+                    samples = pickle.loads(trainout.read())
+            else:
+                print('newsamples')
+                samples = []
+            if traindata_gen == True:
 
-#create testing set using the testing set dataframe
-testdata_gen = True
-testsample= 5000
-NCORE = 20
-reload = False
-if testdata_gen == True:
-    if reload == True:
-        with open('testgset_nosectors.pkl' , 'rb')as trainout:
-            samples = pickle.loads(trainout.read())
-    else:
-        print('newsamples')
-        samples = []
-    if testdata_gen == True:
-        gen = create_data_updown_nosectors( dendrotree, Datasets['string']['Test']  , stringprofiles , profile_mapper, .5  )
-        for i , data in enumerate( gen ):
-            if i % 100 ==0:
-                print(i, len(samples))
-                with open('testgset_nosectors.pkl' , 'wb')as trainout:
-                    trainout.write(pickle.dumps(samples))
-            samples.append(data)
+                gen = create_data_updown_nosectors( dendrotree, Datasets['string']['Train']  , stringprofiles , profile_mapper, .5  , verbose = True  )
+                for i , data in enumerate( gen ):
+                    if i % 100 ==0:
+                        print(i, len(samples))
+                        with open('trainingset_nosectors.pkl' , 'wb')as trainout:
+                            trainout.write(pickle.dumps(samples))
+                    samples.append(data)
+                    if i > trainsample:
+                        break
 
-            if i > testsample:
-                break
+
+
+        #create testing set using the testing set dataframe
+        if testdata_gen == True:
+            print('generating test set')
+            if reload == True:
+                with open('testgset_nosectors.pkl' , 'rb')as trainout:
+                    samples = pickle.loads(trainout.read())
+            else:
+                print('newsamples')
+                samples = []
+            if testdata_gen == True:
+                gen = create_data_updown_nosectors( dendrotree, Datasets['string']['Test']  , stringprofiles , profile_mapper, .5  )
+                for i , data in enumerate( gen ):
+                    if i % 100 ==0:
+                        print(i, len(samples))
+                        with open('testgset_nosectors.pkl' , 'wb')as trainout:
+                            trainout.write(pickle.dumps(samples))
+                    samples.append(data)
+
+                    if i > testsample:
+                        break
