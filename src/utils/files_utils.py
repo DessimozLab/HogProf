@@ -7,7 +7,7 @@ import os
 from . import config_utils
 
 
-def get_tree(taxa , genomes ,  savename = None):
+def get_tree(taxa , genomes ,  outdir = None):
     """
     Generates a taxonomic tree using the ncbi taxonomy and
     :param oma:  a pyoma db object
@@ -20,9 +20,7 @@ def get_tree(taxa , genomes ,  savename = None):
     genomes = set(genomes)
     tax.remove(0)
     print(len(tax))
-
     tree = ete3.PhyloTree( name = '-1')
-    #tree.add_child(name ='131567')
     topo = ncbi.get_topology(genomes , collapse_subspecies=False)
     tax = set([ str(taxid) for taxid in tax])
     tree.add_child(topo)
@@ -46,19 +44,11 @@ def get_tree(taxa , genomes ,  savename = None):
     tree = add_orphans(orphans_info2, tree, genomes)
     orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
     tree_string = tree.write(format=1)
-    if savename is None:
-        with open( config_utils.datadir +'mastertree.nwk' , 'w') as nwkout:
-            nwkout.write(tree_string)
-        with open( config_utils.datadir +'mastertree.pkl' , 'wb') as pklout:
-            pklout.write(pickle.dumps(tree))
-    else:
-        with open( config_utils.datadir + savename +'_master_tree.nwk' , 'w') as nwkout:
-            nwkout.write(tree_string)
-        with open( config_utils.datadir + savename + '_master_tree.pkl' , 'wb') as pklout:
-            pklout.write(pickle.dumps(tree))
+    with open( outdir +'master_tree.nwk' , 'w') as nwkout:
+        nwkout.write(tree_string)
+    with open( outdir + '_master_tree.pkl' , 'wb') as pklout:
+        pklout.write(pickle.dumps(tree))
     return tree_string, tree
-
-
 
 def generate_taxa_index(tree , taxfilter= None, taxmask=None):
     """

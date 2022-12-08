@@ -27,10 +27,8 @@ import time
 import sys
 import gc
 import logging
-
-
-
-
+from pyoma.browser import db
+		
 class Profiler:
 
 	"""
@@ -44,41 +42,32 @@ class Profiler:
 			self.lshobj = pickle.loads(lshpickle.read())
 			print('indexing lsh')
 			self.lshobj.index()
+
 		self.hashes_h5 = h5py.File(hashes_h5, mode='r')
 		self.nsamples = nsamples
 
-		if mat_path:
-			## TODO: change this to read hdf5
-			#profile_matrix_file = open(profile_matrix_path, 'rb')
-			#profile_matrix_unpickled = pickle.Unpickler(profile_matrix_file)
-			#self.profile_matrix = profile_matrix_unpickled.load()
-			pass
-		if oma:
-			from pyoma.browser import db
-			if mastertree is None:
-				mastertree = config_utils.datadir + 'mastertree.pkl'
-			with open(mastertree , 'rb') as treein:
-				self.tree = pickle.loads(treein.read())
-
-			self.tree_string = self.tree.write(format = 1)
+		if mastertree.split('.')[-1] == 'pkl':
+                with open( mastertree , 'rb') as pklin:
+                    self.tree = pickle.loads(pklin.read())
+                    self.tree_string = self.tree.write(format=1)
+            elif mastertree.split('.')[-1] == 'nwk':                
+                self.tree = ete3.Tree(mastertree,format=1)
+                self.tree_string = self.tree.write(format=1)
+            
+            else:
+                raise Exception( 'please provide a pickled ete3 tree or a newick file' )
 			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
-			if oma == True:
-				h5_oma = open_file(config_utils.omadir + 'OmaServer.h5', mode="r")
-			else:
-				h5_oma = open_file(oma, mode="r")
-
+			
+		if oma:
+			h5_oma = open_file(oma, mode="r")
 			self.db_obj = db.Database(h5_oma)
-			#open up master tree
 			self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
 			self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma	, db_obj=self.db_obj)
-		elif tar:
-			## TODO: finish tar function
-			self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_tar, db_obj=self.db_obj)
-		if oma or tar:
 			self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
 			self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )
 
 		print('DONE')
+
 	def hogid2fam(self, hog_entry):
 		if type(hog_entry )== int:
 			return hog_entry
@@ -142,25 +131,6 @@ class Profiler:
 				hog_matrix_raw[:,hogindex] = 1
 		
 		return {fam:{ 'mat':hog_matrix_raw, 'hash':tp} }
-
-
-	def return_profile_OTF_DCA(self, fam, lock = None):
-		"""
-		Returns profiles as strings for use with DCA pipelines
-		just concatenate the numpy arrays and use the tostring
-		function to generate an input "alignment"
-
-		"""
-		if type(fam) is str:
-			fam = self.hogid2fam(fam)
-		if lock is not None:
-			lock.acquire()
-		ortho_fam = self.READ_ORTHO(fam)
-		if lock is not None:
-			lock.release()
-		tp = self.HAM_PIPELINE([fam, ortho_fam])
-		dcastr = hashutils.tree2str_DCA(tp,self.taxaIndex)
-		return {fam:{ 'dcastr':dcastr, 'tree':tp} }
 
 	def worker( self,i, inq, retq ):
 		"""
@@ -258,7 +228,6 @@ class Profiler:
 		"""
 		function used to create dataframe containing binary profiles
 		and trees of fams
-
 		"""
 
 		fams = [ f for f in fams if f]
@@ -444,33 +413,3 @@ class Profiler:
 		hogsRanked = list( hogsRanked[ np.argsort(jaccard) ] )
 		jaccard = np.sort(jaccard)
 		return hogsRanked, jaccard
-
-
-	def get_vpairs(fam):
-
-		"""
-		get pairwise distance matrix of OMA all v all
-		#not finished
-		:param fam: an oma fam
-		:return sparesemat: a mat with all taxa in Oma with nonzero entries where this protein is found
-		:return densemat: a mat with the taxa covered by the fam
-		"""
-		taxa = self.db_obj.hog_levels_of_fam(fam)
-		subtaxindex = { taxon:i for i,taxon in enumerate(taxa) }
-		prots = self.db_obj.hog_members_from_hog_id(fam,  'LUCA')
-		for prot in prots:
-			taxon = prot.ncbi_taxon_id()
-			pairs = self.db_obj.get_vpairs(prot)
-			for EntryNr1, EntryNr2, RelType , score , distance in list(pairs):
-				pass
-		return sparsemat , densemat
-
-	def get_submatrix_form_results(self, results):
-		res_mat_list = []
-		for query, result in results.items():
-			res_mat = csr_matrix((len(result), self.profile_matrix.shape[1]))
-			for i, r in enumerate(result):
-				res_mat[i, :] = self.profile_matrix[r, :]
-			res_mat_list.append(res_mat)
-		final = np.vstack(res_mat_list)
-		return res_mat_list
