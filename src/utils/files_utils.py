@@ -4,7 +4,6 @@ from Bio import Entrez
 import copy
 import pickle
 import os
-from . import config_utils
 
 
 def get_tree(taxa , genomes ,  outdir = None):
@@ -27,7 +26,7 @@ def get_tree(taxa , genomes ,  outdir = None):
     orphans = list(genomes - set([x.name for x in tree.get_leaves()]))
     print('missing taxa:')
     print(len(orphans))
-    Entrez.email = config_utils.email
+
     orphans_info1 = {}
     orphans_info2 = {}
     for x in orphans:

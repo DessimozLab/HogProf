@@ -18,7 +18,7 @@ random.seed(0)
 import ete3
 from datasketch import WeightedMinHashGenerator
 #from validation import validation_semantic_similarity
-from pyprofiler.utils import hashutils, config_utils , pyhamutils , files_utils
+from pyprofiler.utils import hashutils , pyhamutils , files_utils
 from time import time
 import multiprocessing as mp
 import functools
