@@ -1,0 +1,121 @@
+\hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter}{}\doxysection{pyoma.\+browser.\+Ortho\+XMLSplitter.\+Ortho\+XMLSplitter Class Reference}
+\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter}\index{pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter@{pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter}}
+Inheritance diagram for pyoma.\+browser.\+Ortho\+XMLSplitter.\+Ortho\+XMLSplitter\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_ac001aa113e3b8f8cd707c97ba14fa159}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_ac001aa113e3b8f8cd707c97ba14fa159}} 
+def {\bfseries \+\_\+\+\_\+init\+\_\+\+\_\+} (self, xml\+\_\+file, cache\+\_\+dir=None)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a4e8a31de0fa225744582190ed64a8cba}{\+\_\+\+\_\+call\+\_\+\+\_\+}} (self, hogs\+\_\+to\+\_\+extract=None, single\+\_\+hog\+\_\+files=False, basename=None, cache\+\_\+dir=None)
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a6d5e66adc2ae4fc7c14e74ff4ec807b8}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a6d5e66adc2ae4fc7c14e74ff4ec807b8}} 
+def {\bfseries iter\+\_\+generefs\+\_\+in\+\_\+og} (self, og\+\_\+node)
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_ad3b203c8b34308db7d7ac48c1ca0a7f1}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_ad3b203c8b34308db7d7ac48c1ca0a7f1}} 
+def {\bfseries get\+\_\+gene\+\_\+via\+\_\+generef} (self, genesref\+\_\+ids)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a952a8832c0ff974a1107fbc4a7e17156}{create\+\_\+new\+\_\+orthoxml}} (self, fn, OGs)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_abde319f474a9fc32211100350fe5aaa4}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_abde319f474a9fc32211100350fe5aaa4}} 
+{\bfseries xml\+\_\+file}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_afea7baa8d2e38466c672d558b798cb1e}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_afea7baa8d2e38466c672d558b798cb1e}} 
+{\bfseries Etree\+\_\+\+XML}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_aa9c3bac066189735ad45c68bd57f65c5}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_aa9c3bac066189735ad45c68bd57f65c5}} 
+{\bfseries Etree\+\_\+root}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a3d02f7036ea071df926360e6f25aae9c}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a3d02f7036ea071df926360e6f25aae9c}} 
+{\bfseries gene\+\_\+lookup}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a74597e77c4a210d3de38a3e4e6d4ef93}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a74597e77c4a210d3de38a3e4e6d4ef93}} 
+{\bfseries cache\+\_\+dir}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\begin{DoxyVerb}Convert orthoxml files with several families.
+
+This class provides the means to extract a subset of root HOGs (i.e.
+families) into a new output orthoxml file, or to split it and create
+for each family an individual file.
+
+The object should be instantiated with the input orthoxml file and
+optionally a cache_dir argument where the output orthoxml files will
+be stored. This later parameter can be overwritten in the __call__
+method call that does the work.
+
+.. note::
+
+   Calls to the splitter will remove the created families from the
+   loaded input file, so subsequent calls that contain a family in
+   common will miss them from the second call onwards.
+
+
+:Example:
+
+  splitter = OrthoXMLSplitter("data.orthoxml", cache_dir="./splits")
+  splitter()
+
+will create files HOGxxxxxx.orthoxml in the ./splits directory.\end{DoxyVerb}
+ 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a4e8a31de0fa225744582190ed64a8cba}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a4e8a31de0fa225744582190ed64a8cba}} 
+\index{pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter@{pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter}!\_\_call\_\_@{\_\_call\_\_}}
+\index{\_\_call\_\_@{\_\_call\_\_}!pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter@{pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter}}
+\doxysubsubsection{\texorpdfstring{\_\_call\_\_()}{\_\_call\_\_()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+Ortho\+XMLSplitter.\+Ortho\+XMLSplitter.\+\_\+\+\_\+call\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{hogs\+\_\+to\+\_\+extract = {\ttfamily None},  }\item[{}]{single\+\_\+hog\+\_\+files = {\ttfamily False},  }\item[{}]{basename = {\ttfamily None},  }\item[{}]{cache\+\_\+dir = {\ttfamily None} }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}Split/extract hogs from orthoxml file based on root hogs ids.
+
+Split the input orthoxml or extract a subset of root hogs. If no
+argument is passed, one orthoxml file per root hog is created,
+named as 'HOGxxxxxx.orthoxml', where xxxxxx is the numeric id of
+each hog.
+
+The set of root hogs to be extracted can be limited by specifying
+a subset of hog ids in the hogs_to_extract parameter. If
+single_hog_files is set to true, each of these hogs will be converted
+into a single orthoxml file named as explained above. If single_hog_files
+is set to false, the whole subset of hogs will be stored in one
+orthoxml file named as specified in `basename`.
+
+The file(s) will be stored in the cache_dir folder which can be
+specified in the constructor or overwritten as an argument in
+this method.
+
+:param hogs_to_extract: list or set that contains the set of root
+    hogs to be extracted. If set to None, all hogs are extracted.
+:param bool single_hog_files: whether or not to build one orthoxml
+    file for all the selected hogs or individual ones.
+:param str basename: name of the output file if a subset of hogs
+    is extracted into a single file.
+:param str cache_dir: folder where to store the output files.
+\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a952a8832c0ff974a1107fbc4a7e17156}\label{classpyoma_1_1browser_1_1OrthoXMLSplitter_1_1OrthoXMLSplitter_a952a8832c0ff974a1107fbc4a7e17156}} 
+\index{pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter@{pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter}!create\_new\_orthoxml@{create\_new\_orthoxml}}
+\index{create\_new\_orthoxml@{create\_new\_orthoxml}!pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter@{pyoma.browser.OrthoXMLSplitter.OrthoXMLSplitter}}
+\doxysubsubsection{\texorpdfstring{create\_new\_orthoxml()}{create\_new\_orthoxml()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+Ortho\+XMLSplitter.\+Ortho\+XMLSplitter.\+create\+\_\+new\+\_\+orthoxml (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{fn,  }\item[{}]{OGs }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}create a new orthoxml file for the passed orthologGroup elements.
+
+:param fn: the filename of the output file. The path needs to exists
+    prior to calling this method.
+:param OGs: the orthologGroup elements that should be included in the
+    new output file.\end{DoxyVerb}
+ 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/build/lib/pyoma/browser/Ortho\+XMLSplitter.\+py\end{DoxyCompactItemize}

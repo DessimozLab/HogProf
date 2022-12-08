@@ -1,0 +1,157 @@
+\hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper}{}\doxysection{pyoma.\+browser.\+db.\+Xref\+Id\+Mapper Class Reference}
+\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper}\index{pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}}
+Inheritance diagram for pyoma.\+browser.\+db.\+Xref\+Id\+Mapper\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{classpyoma_1_1browser_1_1db_1_1XrefIdMapper}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_ab166e14fccf4bf0bfe47ee63df42918a}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_ab166e14fccf4bf0bfe47ee63df42918a}} 
+def {\bfseries \+\_\+\+\_\+init\+\_\+\+\_\+} (self, db)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a6834accae4eb7d3c585097668080b883}{map\+\_\+entry\+\_\+nr}} (self, entry\+\_\+nr)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a988fb51add9a91a71ba20b1b7ded768f}{canonical\+\_\+source\+\_\+order}} (self)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a96184e1bc7d3c27ee5114cd196dc077f}{iter\+\_\+xrefs\+\_\+for\+\_\+entry\+\_\+nr}} (self, entry\+\_\+nr)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a8336630a4585ef889e64b2c120f23c41}{map\+\_\+many\+\_\+entry\+\_\+nrs}} (self, entry\+\_\+nrs)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_af6951ce1c602bb022288c9fb5b80b146}{search\+\_\+xref}} (self, xref, is\+\_\+prefix=False, match\+\_\+any\+\_\+substring=False)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_af23255c43a3f8fb6e4fe3ee6c5f060b2}{source\+\_\+as\+\_\+string}} (self, source)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a781587fef0deff673bdeef932780564c}{xreftab\+\_\+to\+\_\+dict}} (self, tab)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_ac9fa07286440dc382938209f1cdbb29c}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_ac9fa07286440dc382938209f1cdbb29c}} 
+{\bfseries xref\+\_\+tab}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_afb70eef0036ff022f8cb86090675026a}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_afb70eef0036ff022f8cb86090675026a}} 
+{\bfseries xref\+Enum}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a342e39bfa41deeefba73399ef4dfb328}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a342e39bfa41deeefba73399ef4dfb328}} 
+{\bfseries idtype}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a3261e83f48fab31145aa67e587a029a9}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a3261e83f48fab31145aa67e587a029a9}} 
+{\bfseries xref\+\_\+index}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a988fb51add9a91a71ba20b1b7ded768f}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a988fb51add9a91a71ba20b1b7ded768f}} 
+\index{pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}!canonical\_source\_order@{canonical\_source\_order}}
+\index{canonical\_source\_order@{canonical\_source\_order}!pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}}
+\doxysubsubsection{\texorpdfstring{canonical\_source\_order()}{canonical\_source\_order()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+db.\+Xref\+Id\+Mapper.\+canonical\+\_\+source\+\_\+order (\begin{DoxyParamCaption}\item[{}]{self }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}returns the list of xref sources in order of their importance.
+
+Most important source - in the base class for example UniProtKB/SwissProt
+are first. The canonical order is defined in the enum definition.
+
+:returns: list of source strings\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a96184e1bc7d3c27ee5114cd196dc077f}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a96184e1bc7d3c27ee5114cd196dc077f}} 
+\index{pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}!iter\_xrefs\_for\_entry\_nr@{iter\_xrefs\_for\_entry\_nr}}
+\index{iter\_xrefs\_for\_entry\_nr@{iter\_xrefs\_for\_entry\_nr}!pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}}
+\doxysubsubsection{\texorpdfstring{iter\_xrefs\_for\_entry\_nr()}{iter\_xrefs\_for\_entry\_nr()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+db.\+Xref\+Id\+Mapper.\+iter\+\_\+xrefs\+\_\+for\+\_\+entry\+\_\+nr (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{entry\+\_\+nr }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}Iterate over the xrefs of a given entry number.
+
+This method returns a dict with 'source' and 'xref' fields
+(both str) holding the information of the xref record.
+
+:param entry_nr: the numeric id of the query protein\end{DoxyVerb}
+ 
+
+Reimplemented in \mbox{\hyperlink{classpyoma_1_1browser_1_1db_1_1LinkoutIdMapper_ae7dbf6bacc50f5b4fc7b36eaa6f777d3}{pyoma.\+browser.\+db.\+Linkout\+Id\+Mapper}}.
+
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a6834accae4eb7d3c585097668080b883}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a6834accae4eb7d3c585097668080b883}} 
+\index{pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}!map\_entry\_nr@{map\_entry\_nr}}
+\index{map\_entry\_nr@{map\_entry\_nr}!pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}}
+\doxysubsubsection{\texorpdfstring{map\_entry\_nr()}{map\_entry\_nr()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+db.\+Xref\+Id\+Mapper.\+map\+\_\+entry\+\_\+nr (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{entry\+\_\+nr }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}returns the XRef entries associated with the query protein.
+
+The types of XRefs that are returned depends on the idtype
+class member variable. In the base-class, idtype contains
+all valid xref types. Typically, subclasses of XrefIdMapper
+will change this set.
+
+:param entry_nr: the numeric id of the query protein.
+:returns: list of dicts with 'source' and 'xref' keys.\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a8336630a4585ef889e64b2c120f23c41}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a8336630a4585ef889e64b2c120f23c41}} 
+\index{pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}!map\_many\_entry\_nrs@{map\_many\_entry\_nrs}}
+\index{map\_many\_entry\_nrs@{map\_many\_entry\_nrs}!pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}}
+\doxysubsubsection{\texorpdfstring{map\_many\_entry\_nrs()}{map\_many\_entry\_nrs()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+db.\+Xref\+Id\+Mapper.\+map\+\_\+many\+\_\+entry\+\_\+nrs (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{entry\+\_\+nrs }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}map several entry_nrs with as few db queries as possible
+to their cross-references. The function returns a
+:class:`numpy.recarray` containing all fields as defined in
+the table.
+
+:param entry_nrs: a list with numeric protein entry ids\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_af6951ce1c602bb022288c9fb5b80b146}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_af6951ce1c602bb022288c9fb5b80b146}} 
+\index{pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}!search\_xref@{search\_xref}}
+\index{search\_xref@{search\_xref}!pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}}
+\doxysubsubsection{\texorpdfstring{search\_xref()}{search\_xref()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+db.\+Xref\+Id\+Mapper.\+search\+\_\+xref (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{xref,  }\item[{}]{is\+\_\+prefix = {\ttfamily False},  }\item[{}]{match\+\_\+any\+\_\+substring = {\ttfamily False} }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}identify proteins associcated with `xref`.
+
+The crossreferences are limited to the types in the class
+member `idtype`. In the base class, all types are valid
+xrefs. The method returns a :class:`numpy.recarry` defined
+for the XRef table with all entries pointing to `xref`.
+
+The method by default returns only exact matches. By setting
+`is_prefix` to True, one can indicated that the requested xref
+should be interpreted as a prefix and all entries matching this
+prefix should be returned.
+
+:param str xref: an xref to be located
+:param bool is_prefix: treat xref as a prefix and return
+             potentially several matching xrefs\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_af23255c43a3f8fb6e4fe3ee6c5f060b2}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_af23255c43a3f8fb6e4fe3ee6c5f060b2}} 
+\index{pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}!source\_as\_string@{source\_as\_string}}
+\index{source\_as\_string@{source\_as\_string}!pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}}
+\doxysubsubsection{\texorpdfstring{source\_as\_string()}{source\_as\_string()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+db.\+Xref\+Id\+Mapper.\+source\+\_\+as\+\_\+string (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{source }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}string representation of xref source enum value
+
+this auxiliary method converts the numeric value of
+a xref source into a string representation.
+
+:param int source: numeric value of xref source\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a781587fef0deff673bdeef932780564c}\label{classpyoma_1_1browser_1_1db_1_1XrefIdMapper_a781587fef0deff673bdeef932780564c}} 
+\index{pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}!xreftab\_to\_dict@{xreftab\_to\_dict}}
+\index{xreftab\_to\_dict@{xreftab\_to\_dict}!pyoma.browser.db.XrefIdMapper@{pyoma.browser.db.XrefIdMapper}}
+\doxysubsubsection{\texorpdfstring{xreftab\_to\_dict()}{xreftab\_to\_dict()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+db.\+Xref\+Id\+Mapper.\+xreftab\+\_\+to\+\_\+dict (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{tab }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}convert a xreftable to a dictionary per entry_nr.
+
+All rows in `tab` are converted into a nested dictionary
+where the outer key is a protein entry number and the
+inner key the xref source type.
+
+:param tab: a :class:`numpy.recarray` corresponding to XRef
+    table definition to be converted\end{DoxyVerb}
+ 
+
+Reimplemented in \mbox{\hyperlink{classpyoma_1_1browser_1_1db_1_1LinkoutIdMapper_aa7b4dd4b84781699fc6f9bf32a5f0773}{pyoma.\+browser.\+db.\+Linkout\+Id\+Mapper}}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/build/lib/pyoma/browser/db.\+py\end{DoxyCompactItemize}

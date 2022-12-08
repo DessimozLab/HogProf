@@ -99,9 +99,7 @@ class LSHBuilder:
         wmg = WeightedMinHashGenerator(3*len(self.taxaIndex), sample_size = numperm , seed=1)
         with open( self.saving_path +saving_name + 'wmg.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
-
         self.wmg = wmg
-
         print( 'configuring pyham functions')
         self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
         self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=wmg )
@@ -442,17 +440,21 @@ if __name__ == '__main__':
     if 'OMA' in args:
         omafile = args['OMA']
         tarfile = None
-    elif 'tarfile' in args:
-        tarfile = args['tarfile']
-        omafile = None
-
     else:
         raise Exception(' please specify input data ')
+    
+    if args['outdidir'] in args:
+        dir = args['outdir']+dbname+'/'
+    else:
+        dir = ''.join(omafile.split('/')[:-1])+dbname+'/'
 
+
+    if not os.path.isdir(dir):
+        os.mkdir(path=dir)
+    
     threads = 4
     if args['nthreads']:
         threads = args['nthreads']
-
     if args['taxweights']:
         from keras.models import model_from_json
         json_file = open(  args['taxweights']+ '.json', 'r')

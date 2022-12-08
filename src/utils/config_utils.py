@@ -5,7 +5,6 @@ import os
 
 config = {
     "dir":{
-#    "datadir": "/home/cactuskid13/mntpt/unil_backup/profilingbackup/",
     "datadir": "/work/FAC/FBM/DBC/cdessim2/default/dmoi/datasets/birds/",
     "omadir": "/work/FAC/FBM/DBC/cdessim2/default/dmoi/datasets/birds/"
     },

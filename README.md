@@ -35,34 +35,18 @@ We also need to make a location to store our pyprofiler databases
 $ cd ..
 $ mkdir YourPyProfilerDirectory
 ```
-Now navigate to the pyprofiler source folder. Open the file config_utils.py in the utils folder and give it the location of you OMA data as well as the folder where you would like to save your pyprofiler databases.
 
-```
-$ cd utils
-$ nano config_utils.py
-```
+Ok. We're ready! Now let's compile a database containing all HOGs and our desired taxonomic levels using default settings. Launch the lshbuilder.
 
-change these to your parameters. Don't forget the trailing slash on your paths to your directories
-```
-config = {
-    "dir":{
-    "datadir": "YOURPYPROFILERDATADIRECTORY/",
-    "omadir": "YOUROMADIRECTORY/"
-    },
-    "orthoxmltar":"",
-    "email": "YOUREMAIL"
-}
-```
-Your email will be used to identify you to the NCBI when using their API.
-
-Ok. We're ready! Now let's compile a database containing all HOGs and our desired taxonomic levels using default settings. Launch the lshbuilder script from the pyprofiler folder.
 
 dbtypes available on the command line are : all , plants , archaea, bacteria , eukarya , protists , fungi , metazoa and vertebrates.
 
+
 ```
-$python lshbuilder.py --name YOURDBNAME --dbtype all                     
+$python lshbuilder.py --name YOURDBNAME --dbtype all --OMA YourOmaDirectory/OmaServer.h5                   
+
 ```
 
 This should build a taxonomic tree for the genomes contained in the release and then calculate enhanced phylogenies for all HOGs in OMA.
 
-Once the database is completed it can be interogated using a profiler object. Construction and usage of this object is shown in the example notebook searchenrich.ipynb found in the notebooks folder. It contains analysis related to a known and poorly described protein network. Please feel free to modify it to suit the needs of your own research.
+Once the database is completed it can be interogated using a profiler object. Construction and usage of this object should be done using a python script or notebook. This shown in the example notebook searchenrich.ipynb found in the examples. Please feel free to modify it to suit the needs of your own research.

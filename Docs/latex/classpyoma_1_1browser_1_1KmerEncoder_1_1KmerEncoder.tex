@@ -1,0 +1,90 @@
+\hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder}{}\doxysection{pyoma.\+browser.\+Kmer\+Encoder.\+Kmer\+Encoder Class Reference}
+\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder}\index{pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}}
+Inheritance diagram for pyoma.\+browser.\+Kmer\+Encoder.\+Kmer\+Encoder\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a87a138a9a4b1395dbef577e938b9c0bf}{\+\_\+\+\_\+init\+\_\+\+\_\+}} (self, k, is\+\_\+protein=True)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a7cb9ec02988df0c28d9ee2ff59951204}{\+\_\+\+\_\+len\+\_\+\+\_\+}} (self)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a34b9f64712b49b667d3a355b8f7a9f24}{encode}} (self, seq)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_af3b6728cbee9122950a121c2d6b841ea}{decode}} (self, seq)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a5236c85663c1a86dd874663a7927b78a}{decompose}} (self, seq)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a699eabdb6e96ed4b072e88ba29ce2f46}\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a699eabdb6e96ed4b072e88ba29ce2f46}} 
+{\bfseries digits}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a1a18a649cfc62aafc20d5d745c96dc87}\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a1a18a649cfc62aafc20d5d745c96dc87}} 
+{\bfseries k}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a3d58f59a98d178b89ebfd4eb84863bc5}\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a3d58f59a98d178b89ebfd4eb84863bc5}} 
+{\bfseries max}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_af9596248654b7c889dfc32de1105432b}\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_af9596248654b7c889dfc32de1105432b}} 
+{\bfseries n}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a87a138a9a4b1395dbef577e938b9c0bf}\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a87a138a9a4b1395dbef577e938b9c0bf}} 
+\index{pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}!\_\_init\_\_@{\_\_init\_\_}}
+\index{\_\_init\_\_@{\_\_init\_\_}!pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}}
+\doxysubsubsection{\texorpdfstring{\_\_init\_\_()}{\_\_init\_\_()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+Kmer\+Encoder.\+Kmer\+Encoder.\+\_\+\+\_\+init\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{k,  }\item[{}]{is\+\_\+protein = {\ttfamily True} }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}    Initialise the kmer converter. k is the kmer length.
+    If is_dna=True then DNA else AA.
+\end{DoxyVerb}
+ 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a7cb9ec02988df0c28d9ee2ff59951204}\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a7cb9ec02988df0c28d9ee2ff59951204}} 
+\index{pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}!\_\_len\_\_@{\_\_len\_\_}}
+\index{\_\_len\_\_@{\_\_len\_\_}!pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}}
+\doxysubsubsection{\texorpdfstring{\_\_len\_\_()}{\_\_len\_\_()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+Kmer\+Encoder.\+Kmer\+Encoder.\+\_\+\+\_\+len\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{}]{self }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}    Return the maximum integer-representation of the kmer length
+    in this converter.
+\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_af3b6728cbee9122950a121c2d6b841ea}\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_af3b6728cbee9122950a121c2d6b841ea}} 
+\index{pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}!decode@{decode}}
+\index{decode@{decode}!pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}}
+\doxysubsubsection{\texorpdfstring{decode()}{decode()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+Kmer\+Encoder.\+Kmer\+Encoder.\+decode (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{seq }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}    Decode a protein kmer -> integer. NOTE: sanitisation to a byte
+    string required first.
+\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a5236c85663c1a86dd874663a7927b78a}\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a5236c85663c1a86dd874663a7927b78a}} 
+\index{pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}!decompose@{decompose}}
+\index{decompose@{decompose}!pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}}
+\doxysubsubsection{\texorpdfstring{decompose()}{decompose()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+Kmer\+Encoder.\+Kmer\+Encoder.\+decompose (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{seq }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}    Decompose a sequence into counts of its constituent (decoded) kmers.
+\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a34b9f64712b49b667d3a355b8f7a9f24}\label{classpyoma_1_1browser_1_1KmerEncoder_1_1KmerEncoder_a34b9f64712b49b667d3a355b8f7a9f24}} 
+\index{pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}!encode@{encode}}
+\index{encode@{encode}!pyoma.browser.KmerEncoder.KmerEncoder@{pyoma.browser.KmerEncoder.KmerEncoder}}
+\doxysubsubsection{\texorpdfstring{encode()}{encode()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+Kmer\+Encoder.\+Kmer\+Encoder.\+encode (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{seq }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}    Encode integer kmer in protein chars.
+\end{DoxyVerb}
+ 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/build/lib/pyoma/browser/Kmer\+Encoder.\+py\end{DoxyCompactItemize}

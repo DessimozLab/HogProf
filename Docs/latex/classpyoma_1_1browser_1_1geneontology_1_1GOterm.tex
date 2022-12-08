@@ -1,0 +1,67 @@
+\hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm}{}\doxysection{pyoma.\+browser.\+geneontology.\+GOterm Class Reference}
+\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm}\index{pyoma.browser.geneontology.GOterm@{pyoma.browser.geneontology.GOterm}}
+Inheritance diagram for pyoma.\+browser.\+geneontology.\+GOterm\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classpyoma_1_1browser_1_1geneontology_1_1GOterm}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a7eef7f9a18e104d2dc5671b082d0c673}\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a7eef7f9a18e104d2dc5671b082d0c673}} 
+def {\bfseries \+\_\+\+\_\+init\+\_\+\+\_\+} (self, stanza)
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a4474c478d7d65fdc70b779ab241328f1}\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a4474c478d7d65fdc70b779ab241328f1}} 
+def {\bfseries replace\+\_\+parentnames\+\_\+by\+\_\+refs} (self, ont)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a796b8a0a431645d5a167e11ff52bb32e}{get\+\_\+parents}} (self, rels=None)
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a7b2fcbd828ff7c1aa443d956c3ac6a36}\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a7b2fcbd828ff7c1aa443d956c3ac6a36}} 
+def {\bfseries \+\_\+\+\_\+str\+\_\+\+\_\+} (self)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a83520a55f3a33d0a02c005e8f2d4c68f}\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a83520a55f3a33d0a02c005e8f2d4c68f}} 
+{\bfseries id}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm_af125828cb72df83b9edafce14249341b}\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm_af125828cb72df83b9edafce14249341b}} 
+{\bfseries name}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a8945e81ddf0d73f3c7143afff10a9bc5}\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a8945e81ddf0d73f3c7143afff10a9bc5}} 
+{\bfseries definition}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a99900c0943e2d3bd95879b34745a8935}\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a99900c0943e2d3bd95879b34745a8935}} 
+{\bfseries aspect}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a325f43346fdb728bca1f4b304196f403}\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a325f43346fdb728bca1f4b304196f403}} 
+{\bfseries is\+\_\+a}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\begin{DoxyVerb}A class representing a single Gene Ontology term.
+
+This class can serve as a factory for the OntologyParser. For that,
+pass it as a factory on 'Term'. \end{DoxyVerb}
+ 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a796b8a0a431645d5a167e11ff52bb32e}\label{classpyoma_1_1browser_1_1geneontology_1_1GOterm_a796b8a0a431645d5a167e11ff52bb32e}} 
+\index{pyoma.browser.geneontology.GOterm@{pyoma.browser.geneontology.GOterm}!get\_parents@{get\_parents}}
+\index{get\_parents@{get\_parents}!pyoma.browser.geneontology.GOterm@{pyoma.browser.geneontology.GOterm}}
+\doxysubsubsection{\texorpdfstring{get\_parents()}{get\_parents()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+geneontology.\+GOterm.\+get\+\_\+parents (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{rels = {\ttfamily None} }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}iterate over the direct parent GO terms.
+
+by default "is_a" and "part_of" relations are followed. This can be overwritten
+with the `rels`.
+
+:param rels: a set of relations to follow.\end{DoxyVerb}
+ 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/build/lib/pyoma/browser/geneontology.\+py\end{DoxyCompactItemize}

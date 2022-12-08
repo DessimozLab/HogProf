@@ -1,0 +1,75 @@
+\hypertarget{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser}{}\doxysection{pyoma.\+browser.\+geneontology.\+Ontology\+Parser Class Reference}
+\label{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser}\index{pyoma.browser.geneontology.OntologyParser@{pyoma.browser.geneontology.OntologyParser}}
+Inheritance diagram for pyoma.\+browser.\+geneontology.\+Ontology\+Parser\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=3.000000cm]{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a3070a12c79435aeb8b6836169876e3d8}{\+\_\+\+\_\+init\+\_\+\+\_\+}} (self, fp, factories=None)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a058dba58ea287e4994f836e8cb76ed24}{stanzas}} (self)
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_ac65244ef834085aa372a1069a4888795}\label{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_ac65244ef834085aa372a1069a4888795}} 
+def {\bfseries \+\_\+\+\_\+iter\+\_\+\+\_\+} (self)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a97d752a908f1275851531121bddf80d5}\label{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a97d752a908f1275851531121bddf80d5}} 
+{\bfseries factories}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a41a315abb2e7dce14562919b391c332a}\label{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a41a315abb2e7dce14562919b391c332a}} 
+{\bfseries tag\+\_\+value\+\_\+pair\+\_\+re}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a9a333c0f4d722f3e7246c55ee4b87ba2}\label{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a9a333c0f4d722f3e7246c55ee4b87ba2}} 
+{\bfseries stanza\+\_\+name\+\_\+re}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\begin{DoxyVerb}A general purpose Ontolgoy parser
+
+Any ontology in the OBO format can be parsed with this object. The
+stanzas are converted to objects using the factories passed in the
+initializer.\end{DoxyVerb}
+ 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a3070a12c79435aeb8b6836169876e3d8}\label{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a3070a12c79435aeb8b6836169876e3d8}} 
+\index{pyoma.browser.geneontology.OntologyParser@{pyoma.browser.geneontology.OntologyParser}!\_\_init\_\_@{\_\_init\_\_}}
+\index{\_\_init\_\_@{\_\_init\_\_}!pyoma.browser.geneontology.OntologyParser@{pyoma.browser.geneontology.OntologyParser}}
+\doxysubsubsection{\texorpdfstring{\_\_init\_\_()}{\_\_init\_\_()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+geneontology.\+Ontology\+Parser.\+\_\+\+\_\+init\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{fp,  }\item[{}]{factories = {\ttfamily None} }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}creates an ontology parser
+
+:param fp: a filehandle or path to file (either plaintext or
+    gzipped) containing the ontology.
+:param factories: a dictionary containing per stanza class
+    (e.g. [Term]) a factory that returns an object from the
+    data. The data is passed as dict to the factory\end{DoxyVerb}
+ 
+
+Reimplemented from \mbox{\hyperlink{classpyoma_1_1browser_1_1geneontology_1_1AbstractParser}{pyoma.\+browser.\+geneontology.\+Abstract\+Parser}}.
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a058dba58ea287e4994f836e8cb76ed24}\label{classpyoma_1_1browser_1_1geneontology_1_1OntologyParser_a058dba58ea287e4994f836e8cb76ed24}} 
+\index{pyoma.browser.geneontology.OntologyParser@{pyoma.browser.geneontology.OntologyParser}!stanzas@{stanzas}}
+\index{stanzas@{stanzas}!pyoma.browser.geneontology.OntologyParser@{pyoma.browser.geneontology.OntologyParser}}
+\doxysubsubsection{\texorpdfstring{stanzas()}{stanzas()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+geneontology.\+Ontology\+Parser.\+stanzas (\begin{DoxyParamCaption}\item[{}]{self }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}iterates over the stanzas in the ontology yielding 
+objects according to the factory parameter provided 
+in the constructor.\end{DoxyVerb}
+ 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/build/lib/pyoma/browser/geneontology.\+py\end{DoxyCompactItemize}

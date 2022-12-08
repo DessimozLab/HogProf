@@ -1,0 +1,67 @@
+\hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter}{}\doxysection{pyoma.\+browser.\+convert.\+Hog\+Converter Class Reference}
+\label{classpyoma_1_1browser_1_1convert_1_1HogConverter}\index{pyoma.browser.convert.HogConverter@{pyoma.browser.convert.HogConverter}}
+Inheritance diagram for pyoma.\+browser.\+convert.\+Hog\+Converter\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classpyoma_1_1browser_1_1convert_1_1HogConverter}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter_ad88a756fd2a0d64f2b668a7670497422}\label{classpyoma_1_1browser_1_1convert_1_1HogConverter_ad88a756fd2a0d64f2b668a7670497422}} 
+def {\bfseries \+\_\+\+\_\+init\+\_\+\+\_\+} (self, entry\+\_\+tab)
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter_aaa84e46a23120ce0b1ae23b6931872fc}\label{classpyoma_1_1browser_1_1convert_1_1HogConverter_aaa84e46a23120ce0b1ae23b6931872fc}} 
+def {\bfseries attach\+\_\+newick\+\_\+taxonomy} (self, tree)
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter_a81cad22558b60b8277cdbc7a323931d9}\label{classpyoma_1_1browser_1_1convert_1_1HogConverter_a81cad22558b60b8277cdbc7a323931d9}} 
+def {\bfseries convert\+\_\+file} (self, fn)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1convert_1_1HogConverter_ae017e4fde26fc2af2de403a1f6d50bba}{write\+\_\+hogs}} (self)
+\item 
+def \mbox{\hyperlink{classpyoma_1_1browser_1_1convert_1_1HogConverter_a52be05b8131f55dcd48c1af04e421a5a}{get\+\_\+hog\+\_\+scores}} (self, og\+\_\+node)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter_ac3bf7a74c40238c973d22ea306f84aa4}\label{classpyoma_1_1browser_1_1convert_1_1HogConverter_ac3bf7a74c40238c973d22ea306f84aa4}} 
+{\bfseries fam\+\_\+re}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter_a4de0ea526fe778728ed794ab43af5481}\label{classpyoma_1_1browser_1_1convert_1_1HogConverter_a4de0ea526fe778728ed794ab43af5481}} 
+{\bfseries hogs}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter_aa27a18e5a2d7eff6746df549e2b30e95}\label{classpyoma_1_1browser_1_1convert_1_1HogConverter_aa27a18e5a2d7eff6746df549e2b30e95}} 
+{\bfseries entry\+\_\+tab}
+\item 
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter_ad64af133e32834ed2f33790215285201}\label{classpyoma_1_1browser_1_1convert_1_1HogConverter_ad64af133e32834ed2f33790215285201}} 
+{\bfseries taxonomy}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter_a52be05b8131f55dcd48c1af04e421a5a}\label{classpyoma_1_1browser_1_1convert_1_1HogConverter_a52be05b8131f55dcd48c1af04e421a5a}} 
+\index{pyoma.browser.convert.HogConverter@{pyoma.browser.convert.HogConverter}!get\_hog\_scores@{get\_hog\_scores}}
+\index{get\_hog\_scores@{get\_hog\_scores}!pyoma.browser.convert.HogConverter@{pyoma.browser.convert.HogConverter}}
+\doxysubsubsection{\texorpdfstring{get\_hog\_scores()}{get\_hog\_scores()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+convert.\+Hog\+Converter.\+get\+\_\+hog\+\_\+scores (\begin{DoxyParamCaption}\item[{}]{self,  }\item[{}]{og\+\_\+node }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}extract the scores associated with an orthologGroup node
+
+only scores that are defined in HOGsTable are extract. The method
+returns a tuple with the scores in the order of the score fields.\end{DoxyVerb}
+ \mbox{\Hypertarget{classpyoma_1_1browser_1_1convert_1_1HogConverter_ae017e4fde26fc2af2de403a1f6d50bba}\label{classpyoma_1_1browser_1_1convert_1_1HogConverter_ae017e4fde26fc2af2de403a1f6d50bba}} 
+\index{pyoma.browser.convert.HogConverter@{pyoma.browser.convert.HogConverter}!write\_hogs@{write\_hogs}}
+\index{write\_hogs@{write\_hogs}!pyoma.browser.convert.HogConverter@{pyoma.browser.convert.HogConverter}}
+\doxysubsubsection{\texorpdfstring{write\_hogs()}{write\_hogs()}}
+{\footnotesize\ttfamily def pyoma.\+browser.\+convert.\+Hog\+Converter.\+write\+\_\+hogs (\begin{DoxyParamCaption}\item[{}]{self }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}update the Entry Table with the newly collected OmaHOG values for all
+the proteins at once.
+
+.. note: This method will overwrite any previous value of the OmaHOG column\end{DoxyVerb}
+ 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/build/lib/pyoma/browser/convert.\+py\end{DoxyCompactItemize}
