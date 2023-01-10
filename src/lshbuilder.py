@@ -6,12 +6,10 @@ import multiprocessing as mp
 import pandas as pd
 import time as t
 import pickle
-from datasketch import MinHashLSH,   MinHashLSHForest , WeightedMinHashGenerator
+from datasketch import MinHashLSHForest , WeightedMinHashGenerator
 from datetime import datetime
 import h5py
-import json
 import time
-import ete3
 import gc
 from pyoma.browser import db
 
@@ -36,7 +34,7 @@ class LSHBuilder:
     with a list of taxonomic codes for all the species in your db
     """
 
-    def __init__(self, outpath , tarfile_ortho = None,  h5_oma = None, taxa = None, masterTree = None,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
+    def __init__(self,tarfile_ortho=None,h5_oma=None,taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
         if h5_oma is not None:
             self.h5OMA = h5_oma
             self.db_obj = db.Database(h5_oma)
@@ -53,36 +51,36 @@ class LSHBuilder:
         self.verbose = verbose
         self.datetime = datetime
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
+        self.saving_name= saving_name
 
-        if outpath:
-            self.saving_path = outpath
+        # original_umask = os.umask(0)
+
+        if saving_name:
+            self.saving_path =config_utils.datadir + saving_name +'/'
             if not os.path.isdir(self.saving_path):
                 os.mkdir(path=self.saving_path)
         else:
-            raise Exception( 'please provide an output path' )
+            self.saving_path = config_utils.datadir + self.date_string +'/'
+            if not os.path.isdir(self.saving_path):
+                os.mkdir(path=self.saving_path)
 
         if masterTree is None:
             if h5_oma:
                 genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
                 genomes = [ str(g) for g in genomes]
                 taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
-                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa, genomes = genomes , outdir = self.saving_path )
+                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa, genomes = genomes , savename =saving_name )
             elif taxa:
                 with open(taxa, 'r') as taxin:
                     taxlist = [ int(line) for line in taxin ]
-                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist , outdir = self.saving_path )
+                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist , savename =saving_name )
             else:
                 raise Exception( 'please specify either a list of taxa or a tree' )
         elif mastertree:
-            if masterTree.split('.')[-1] == 'pkl':
-                with open( masterTree , 'rb') as pklin:
-                    self.tree_ete3 = pickle.loads(pklin.read())
-                    self.tree_string = self.tree_ete3.write(format=1)
-            elif masterTree.split('.')[-1] == 'nwk':                
-                self.tree_ete3 = ete3.Tree(masterTree,format=1)
+            with open( masterTree , 'wb') as pklin:
+                self.tree_ete3 = pickle.loads(pklin.read())
                 self.tree_string = self.tree_ete3.write(format=1)
-            else:
-                raise Exception( 'please provide a pickled ete3 tree or a newick file' )
+        
 
 
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
@@ -97,9 +95,11 @@ class LSHBuilder:
             self.treeweights = treeweights
         print(self.treeweights)
         wmg = WeightedMinHashGenerator(3*len(self.taxaIndex), sample_size = numperm , seed=1)
-        with open( self.saving_path + 'wmg.pkl', 'wb') as taxout:
+        with open( self.saving_path +saving_name + 'wmg.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
+
         self.wmg = wmg
+
         print( 'configuring pyham functions')
         self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
         self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=wmg )
@@ -181,7 +181,10 @@ class LSHBuilder:
         while True:
             df = q.get()
             if df is not None :
+
                 df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+            
+
                 df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
                 retq.put(df[['Fam', 'hash']])
                 #matq.put(df[['Fam', 'rows']])
@@ -205,7 +208,7 @@ class LSHBuilder:
             taxstr+= 'NoMask'
         else:
             taxstr = str(self.tax_filter)
-        dataset_name = taxstr
+        dataset_name = self.saving_name+'_'+taxstr
         self.errorfile = self.saving_path + 'errors.txt'
         with open(self.errorfile, 'w') as hashes_error_files:
             with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
@@ -386,8 +389,6 @@ class LSHBuilder:
 
 
 if __name__ == '__main__':
-
-
     parser=argparse.ArgumentParser()
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
     parser.add_argument('--taxmask', help='consider only one branch',type = str)
@@ -399,7 +400,7 @@ if __name__ == '__main__':
     parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = int)
     parser.add_argument('--mastertree', help='master taxonomic tree. should use ncbi taxonomic id numbers as leaf names' , type = str)
     parser.add_argument('--nthreads', help='nthreads for multiprocessing' , type = int)
-
+    parser.add_argument('--outfolder', help='folder for storing hash, db and tree objects' , type = str)
     dbdict = {
     'all': { 'taxfilter': None , 'taxmask': None },
     'plants': { 'taxfilter': None , 'taxmask': 33090 },
@@ -411,17 +412,13 @@ if __name__ == '__main__':
     'metazoa':{ 'taxfilter': None , 'taxmask': 33208 },
     'vertebrates':{ 'taxfilter': None , 'taxmask': 7742 },
     }
-
     taxfilter = None
     taxmask = None
-
     args = vars(parser.parse_args(sys.argv[1:]))
-
-    if 'outdir' in args:
-        outdir = args['outdir']
+    if 'name' in args:
+        dbname = args['name']
     else:
-        raise Exception(' please give your profile db a location ')
-
+        raise Exception(' please give your profile db a name ')
     if 'dbtype' in args:
         taxfilter = dbdict[args['dbtype']]['taxfilter']
         taxmask = dbdict[args['dbtype']]['taxmask']
@@ -440,7 +437,7 @@ if __name__ == '__main__':
         tarfile = None
     else:
         raise Exception(' please specify input data ')
-   
+
     threads = 4
     if args['nthreads']:
         threads = args['nthreads']
@@ -459,24 +456,18 @@ if __name__ == '__main__':
     else:
         weights = None
 
-
     if 'masterTree' in args:
         mastertree = args['masterTree']
+
     else:
         mastertree=None
 
-
+    if omafile:
+        with open_file( omafile , mode="r") as h5_oma:
+            lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname, numperm = nperm ,
+            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
+            lsh_builder.run_pipeline(threads)
     print('compiling' + dbname)
-    
-
-    import resource
     start = time.time()
-
-    with open_file( omafile , mode="r") as h5_oma:
-        lsh_builder = LSHBuilder(h5_oma = h5_oma,  outpath=outdir, numperm = nperm ,
-        treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
-        lsh_builder.run_pipeline(threads)
-    
-
     print(time.time() - start)
     print('DONE')

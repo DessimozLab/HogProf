@@ -21,10 +21,12 @@ $ cd hogprof/pyprofiler
 $ pip install -r reqs.txt .
 ```
 
-or install it with pip
+or install it from pypi with pip
+
 ```
 $ pip install hogprof
 ```
+
 lets get a current version of the OMA hdf5 file and GAF. This will alow us to use the HOGs and study the functional enrichment of our search results.
 
 ```
@@ -48,7 +50,7 @@ dbtypes available on the command line are : all , plants , archaea, bacteria , e
 
 
 ```
-$python lshbuilder.py --name YOURDBNAME --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores                  
+$python lshbuilder.py --name YOURDBNAME --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores --                 
 
 ```
 
