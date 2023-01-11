@@ -52,5 +52,3 @@ $python lshbuilder.py --outpath YourHogProfDirectory --dbtype all --OMA YourOmaD
 This should build a taxonomic tree for the genomes contained in the release and then calculate enhanced phylogenies for all HOGs in OMA.
 
 Once the database is completed it can be interogated using a profiler object. Construction and usage of this object should be done using a python script or notebook. This shown in the example notebook searchenrich.ipynb found in the examples. Please feel free to modify it to suit the needs of your own research.
-
-
