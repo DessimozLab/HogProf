@@ -19,9 +19,11 @@ Installation
 To install My Project, run the following command:
 
 Using pip
+
+
 .. code-block:: bash
    $ pip install hogprof
-
+ 
 Or from github 
 .. code-block:: bash
 $ git clone https://github.com/DessimozLab/HogProf.git
