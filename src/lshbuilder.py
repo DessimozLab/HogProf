@@ -12,16 +12,13 @@ import h5py
 import time
 import gc
 from pyoma.browser import db
-
-from utils import  config_utils, pyhamutils, hashutils , files_utils
+from utils import pyhamutils, hashutils , files_utils
 import numpy as np
 import random
 import os
-
+import ete3
 random.seed(0)
 np.random.seed(0)
-
-
 class LSHBuilder:
     """
     This class contains the stuff you need to make 
@@ -35,35 +32,23 @@ class LSHBuilder:
     """
 
     def __init__(self,tarfile_ortho=None,h5_oma=None,taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
-        if h5_oma is not None:
-            self.h5OMA = h5_oma
-            self.db_obj = db.Database(h5_oma)
-            self.oma_id_obj = db.OmaIdMapper(self.db_obj)
-
-        elif tarfile_ortho:
-            self.tar = tarfile_ortho
-            self.h5OMA = None
-            self.db_obj = None
-            self.oma_id_obj = None
-
+        self.h5OMA = h5_oma
+        self.db_obj = db.Database(h5_oma)
+        self.oma_id_obj = db.OmaIdMapper(self.db_obj)
         self.tax_filter = taxfilter
         self.tax_mask = taxmask
         self.verbose = verbose
         self.datetime = datetime
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
         self.saving_name= saving_name
-
         # original_umask = os.umask(0)
-
         if saving_name:
-            self.saving_path =config_utils.datadir + saving_name +'/'
+            self.saving_path = saving_name +'/'
             if not os.path.isdir(self.saving_path):
                 os.mkdir(path=self.saving_path)
         else:
-            self.saving_path = config_utils.datadir + self.date_string +'/'
-            if not os.path.isdir(self.saving_path):
-                os.mkdir(path=self.saving_path)
-
+            raise Exception( 'please specify an output location' )
+        
         if masterTree is None:
             if h5_oma:
                 genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
@@ -76,15 +61,13 @@ class LSHBuilder:
                 self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist , savename =saving_name )
             else:
                 raise Exception( 'please specify either a list of taxa or a tree' )
+            self.swap2taxcode = True
         elif mastertree:
-            with open( masterTree , 'wb') as pklin:
-                self.tree_ete3 = pickle.loads(pklin.read())
-                self.tree_string = self.tree_ete3.write(format=1)
-        
-
-
+            self.tree_ete3 = ete3.Tree(masterTree, format=1)
+            self.tree_string = self.tree_ete3.write(format=1)
+            self.swap2taxcode = False
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
-        with open( config_utils.datadir + 'taxaIndex.pkl', 'wb') as taxout:
+        with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
         self.numperm = numperm
         if treeweights is None:
@@ -95,14 +78,12 @@ class LSHBuilder:
             self.treeweights = treeweights
         print(self.treeweights)
         wmg = WeightedMinHashGenerator(3*len(self.taxaIndex), sample_size = numperm , seed=1)
-        with open( self.saving_path +saving_name + 'wmg.pkl', 'wb') as taxout:
-            taxout.write( pickle.dumps(self.taxaIndex))
-
+        with open( self.saving_path  + 'wmg.pkl', 'wb') as wmgout:
+            wmgout.write( pickle.dumps(wmg))
         self.wmg = wmg
-
         print( 'configuring pyham functions')
-        self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
-        self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=wmg )
+        self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  )
+        self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg)
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
         elif self.tar:
@@ -112,7 +93,7 @@ class LSHBuilder:
         self.lshforestpath = self.saving_path + 'newlshforest.pkl'
         self.mat_path = self.saving_path+ 'hogmat.h5'
         self.columns = len(self.taxaIndex)
-        print( 'done')
+        print('done')
 
     def load_one(self, fam):
         #test function to try out the pipeline on one orthoxml
@@ -181,10 +162,7 @@ class LSHBuilder:
         while True:
             df = q.get()
             if df is not None :
-
                 df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-            
-
                 df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
                 retq.put(df[['Fam', 'hash']])
                 #matq.put(df[['Fam', 'rows']])
@@ -200,7 +178,6 @@ class LSHBuilder:
         chunk_size = 100
         count = 0
         forest = MinHashLSHForest(num_perm=self.numperm)
-
         taxstr = ''
         if self.tax_filter is None:
             taxstr = 'NoFilter'
@@ -260,40 +237,6 @@ class LSHBuilder:
                             print('DONE SAVER' + str(i))
                         break
 
-    '''    def hamsaver(self, i, q, retq, matq, l)
-            #use sqlit to save ham objects on the fly
-            #possible speedup with multiple savers?
-
-            sqliteConnection = sqlite3.connect('SQLite_Python.db')
-            cursor = sqliteConnection.cursor()
-            print("Connected to SQLite")
-
-            sqlite_insert_blob_query = """ INSERT INTO new_employee
-                                      (id, name, photo, resume) VALUES (?, ?, ?, ?)"""
-
-            while True:
-                if this_dataframe is not None:
-                    if not this_dataframe.empty:
-                        hamdict = this_dataframe['ham'].to_dict()
-                        [cursor.execute(sqlite_insert_blob_query, (fam, hamdict[fam] ) for fam in hamdict )
-                        sqliteConnection.commit()
-
-                else:
-                    if self.verbose == True:
-                        print('wrap it up')
-                        print('hamsaver')
-                        print(i)
-
-                    break
-
-            data_tuple = (fam, pickle.dumps(ham))
-            cursor.execute(sqlite_insert_blob_query, data_tuple)
-
-            sqliteConnection.commit()
-            print("Image and file inserted successfully as a BLOB into a table")
-            cursor.close()
-
-    '''
     def matrix_updater(self, iprocess , q, retq, matq, l):
         save_start = t.time()
         chunk_size = 100
@@ -393,7 +336,7 @@ if __name__ == '__main__':
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
     parser.add_argument('--taxmask', help='consider only one branch',type = str)
     parser.add_argument('--taxfilter', help='remove these taxa' , type = str)
-    parser.add_argument('--name', help='name of the db', type = str)
+    parser.add_argument('--outpath', help='name of the db', type = str)
     parser.add_argument('--dbtype', help='preconfigured taxonomic ranges' , type = str)
     parser.add_argument('--OMA', help='use oma data ' , type = str)
     parser.add_argument('--tarfile', help='use tarfile with orthoxml data ' , type = str)
@@ -415,33 +358,28 @@ if __name__ == '__main__':
     taxfilter = None
     taxmask = None
     args = vars(parser.parse_args(sys.argv[1:]))
-    if 'name' in args:
-        dbname = args['name']
+    if 'outpath' in args:
+        dbname = args['outpath']
     else:
-        raise Exception(' please give your profile db a name ')
-    if 'dbtype' in args:
+        raise Exception(' please give your profile an output path with the --outpath argument ')
+    if args['dbtype']:
         taxfilter = dbdict[args['dbtype']]['taxfilter']
         taxmask = dbdict[args['dbtype']]['taxmask']
-    if 'taxmask' in args:
+    if args['taxmask']:
         taxfilter = args['taxfilter']
-    if 'taxfilter' in args:
+    if args['taxfilter']:
         taxmask = args['taxmask']
-
     if args['nperm']:
         nperm = int(args['nperm'])
     else:
         nperm = 256
-
-    if 'OMA' in args:
+    if args['OMA']:
         omafile = args['OMA']
-        tarfile = None
     else:
         raise Exception(' please specify input data ')
-
     threads = 4
     if args['nthreads']:
         threads = args['nthreads']
-
     if args['taxweights']:
         from keras.models import model_from_json
         json_file = open(  args['taxweights']+ '.json', 'r')
@@ -455,19 +393,16 @@ if __name__ == '__main__':
         weights += 10 ** -10
     else:
         weights = None
-
-    if 'masterTree' in args:
-        mastertree = args['masterTree']
-
+    if args['mastertree']:
+        mastertree = args['mastertree']
     else:
         mastertree=None
-
+    start = time.time()
+    print('compiling' + dbname)
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
-            lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname, numperm = nperm ,
+            lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname , numperm = nperm ,
             treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
             lsh_builder.run_pipeline(threads)
-    print('compiling' + dbname)
-    start = time.time()
     print(time.time() - start)
     print('DONE')
