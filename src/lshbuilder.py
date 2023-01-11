@@ -238,22 +238,19 @@ class LSHBuilder:
                         break
 
     def matrix_updater(self, iprocess , q, retq, matq, l):
-        save_start = t.time()
-        chunk_size = 100
         print('hogmat saver init ' + str(iprocess))
         h5mat = None
         times1 = []
-        times2 = []
         frames = []
-        with h5py.File(self.mat_path + str(iprocess) + 'h5' , 'w', libver='latest' ) as h5hashes:
-            i =0
+        with h5py.File(self.mat_path + str(iprocess) + 'h5', 'w', libver='latest') as h5hashes:
+            i = 0
             while True:
                 rows = matq.get()
                 if rows is not None:
                     rows = rows.dropna()
                     maxfam = rows.Fam.max()
                     if h5mat is None:
-                        h5hashes.create_dataset( 'matrows',(10,block.shape[1]), maxshape=(None, block.shape[1]),chunks=(1, block.shape[1]), dtype='i8')
+                        h5hashes.create_dataset('matrows',(10,block.shape[1]), maxshape=(None, block.shape[1]),chunks=(1, block.shape[1]), dtype='i8')
                         h5mat = h5hashes['matrows']
                     if h5mat.shape[0] < maxfam:
                         h5mat.resize((maxfam+1,block.shape[1]))
@@ -298,7 +295,6 @@ class LSHBuilder:
             for key in work_processes:
                 for process in work_processes[key]:
                     process.start()
-            count = 0
             for data in data_generator:
                 q.put(data)
             print('done spooling data')
@@ -332,7 +328,7 @@ class LSHBuilder:
 
 
 if __name__ == '__main__':
-    parser=argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
     parser.add_argument('--taxmask', help='consider only one branch',type = str)
     parser.add_argument('--taxfilter', help='remove these taxa' , type = str)
@@ -345,15 +341,15 @@ if __name__ == '__main__':
     parser.add_argument('--nthreads', help='nthreads for multiprocessing' , type = int)
     parser.add_argument('--outfolder', help='folder for storing hash, db and tree objects' , type = str)
     dbdict = {
-    'all': { 'taxfilter': None , 'taxmask': None },
-    'plants': { 'taxfilter': None , 'taxmask': 33090 },
-    'archaea':{ 'taxfilter': None , 'taxmask': 2157 },
-    'bacteria':{ 'taxfilter': None , 'taxmask': 2 },
-    'eukarya':{ 'taxfilter': None , 'taxmask': 2759 },
-    'protists':{ 'taxfilter': [2 , 2157 , 33090 , 4751, 33208] , 'taxmask':None },
-    'fungi':{ 'taxfilter': None , 'taxmask': 4751 },
-    'metazoa':{ 'taxfilter': None , 'taxmask': 33208 },
-    'vertebrates':{ 'taxfilter': None , 'taxmask': 7742 },
+        'all': { 'taxfilter': None , 'taxmask': None },
+        'plants': { 'taxfilter': None , 'taxmask': 33090 },
+        'archaea':{ 'taxfilter': None , 'taxmask': 2157 },
+        'bacteria':{ 'taxfilter': None , 'taxmask': 2 },
+        'eukarya':{ 'taxfilter': None , 'taxmask': 2759 },
+        'protists':{ 'taxfilter': [2 , 2157 , 33090 , 4751, 33208] , 'taxmask':None },
+        'fungi':{ 'taxfilter': None , 'taxmask': 4751 },
+        'metazoa':{ 'taxfilter': None , 'taxmask': 33208 },
+        'vertebrates':{ 'taxfilter': None , 'taxmask': 7742 },
     }
     taxfilter = None
     taxmask = None

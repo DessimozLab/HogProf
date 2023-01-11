@@ -1,34 +1,26 @@
 from pyoma.browser import db
-
-
 import pickle
 import pandas as pd
 import h5py
-import itertools
-import json
 import random
-from scipy.sparse import csr_matrix
 from tables import *
 import numpy as np
 import random
-np.random.seed(0)
-
-
-random.seed(0)
 import ete3
-from datasketch import WeightedMinHashGenerator
 #from validation import validation_semantic_similarity
-from pyprofiler.utils import hashutils , pyhamutils , files_utils
+from .utils import hashutils , pyhamutils , files_utils
 from time import time
 import multiprocessing as mp
 import functools
 import numpy as np
 import time
-import sys
 import gc
 import logging
 from pyoma.browser import db
-		
+
+np.random.seed(0)
+random.seed(0)
+
 class Profiler:
 
 	"""
@@ -47,15 +39,15 @@ class Profiler:
 		self.nsamples = nsamples
 
 		if mastertree.split('.')[-1] == 'pkl':
-                with open( mastertree , 'rb') as pklin:
-                    self.tree = pickle.loads(pklin.read())
-                    self.tree_string = self.tree.write(format=1)
-            elif mastertree.split('.')[-1] == 'nwk':                
-                self.tree = ete3.Tree(mastertree,format=1)
-                self.tree_string = self.tree.write(format=1)
-            
-            else:
-                raise Exception( 'please provide a pickled ete3 tree or a newick file' )
+				with open( mastertree , 'rb') as pklin:
+					self.tree = pickle.loads(pklin.read())
+					self.tree_string = self.tree.write(format=1)
+			elif mastertree.split('.')[-1] == 'nwk':                
+				self.tree = ete3.Tree(mastertree,format=1)
+				self.tree_string = self.tree.write(format=1)
+			
+			else:
+				raise Exception( 'please provide a pickled ete3 tree or a newick file' )
 			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
 			
 		if oma:
@@ -223,7 +215,6 @@ class Profiler:
 		for i in processes:
 			processes[i]['process'].terminate()
 
-
 	def retmat_mp_profiles(self, fams , nworkers = 25, chunksize=50 , verbose = False ):
 		"""
 		function used to create dataframe containing binary profiles
@@ -231,7 +222,6 @@ class Profiler:
 		"""
 
 		fams = [ f for f in fams if f]
-
 		retq= mp.Queue(-1)
 		inq= mp.Queue(-1)
 		processes = {}
@@ -251,8 +241,6 @@ class Profiler:
 				orthxml = self.READ_ORTHO(fam)
 			except:
 				orthxml = None
-
-			
 			if orthxml is not None:
 				inq.put((fam,orthxml))
 		done = []
