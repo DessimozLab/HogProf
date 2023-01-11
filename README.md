@@ -19,14 +19,7 @@ $ git clone https://github.com/DessimozLab/HogProf.git
 $ pip install -r pipreqs.txt .
 ```
 
-or install it from pypi with pip
-
-```
-$ pip install hogprof
-```
-
 lets get a current version of the OMA hdf5 file and GAF. This will alow us to use the HOGs and study the functional enrichment of our search results.
-
 
 ```
 $ cd ../..
@@ -46,7 +39,7 @@ $ mkdir YourHogProfDirectory
 Ok. We're ready! Now let's compile a database containing all HOGs and our desired taxonomic levels using default settings. Launch the lshbuilder.
 dbtypes available on the command line are : all , plants , archaea, bacteria , eukarya , protists , fungi , metazoa and vertebrates. These will use the NCBI taxonomy as a tree to annotate events in different gene family's histories.
 ```
-$python lshbuilder.py --outpath YourHogProfDirectory --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores          
+$python lshbuilder.py --outpath YourHogProfDirectory --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores         
 
 ```
 This should build a taxonomic tree for the genomes contained in the release and then calculate enhanced phylogenies for all HOGs in OMA.
