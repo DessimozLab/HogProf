@@ -1,0 +1,3 @@
+[submodule "PhyloGnn"]
+	path = PhyloGnn
+	url = git@github.com:DessimozLab/PhyloGnn.git
