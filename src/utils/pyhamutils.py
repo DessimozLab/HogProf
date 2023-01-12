@@ -4,7 +4,6 @@ import pickle
 def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()
     return orthoxml
-
 def get_orthoxml_tar(fam, tar):
     f = tar.extractfile(fam)
     if f is not None:
