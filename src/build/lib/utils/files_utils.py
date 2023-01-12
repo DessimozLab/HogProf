@@ -9,12 +9,19 @@ from utils import config_utils
 
 def get_tree(taxa , savename = None):
     """
-    Generates a taxonomic tree using the ncbi taxonomy and
-    :param oma:  a pyoma db object
-    :param saveTree: Bool for whether or not to save a mastertree newick file
-    :return: tree_string: a newick string tree: an ete3 object
+    get_tree() - Generates a taxonomic tree using the ncbi taxonomy and saves it in a newick file format.
 
+    Attributes:
+    ncbi (ete3.NCBITaxa): An instance of the NCBITaxa class.
+    tax (set): A set of taxa to include in the tree.
+    genomes (set): A set of genomes to include in the tree.
+    savename (str, optional): A name to save the tree file. If None, saves the tree as mastertree.nwk
+
+    Returns:
+    tree_string (str): A newick string representation of the tree.
+    tree (ete3.PhyloTree): An ete3 object of the generated tree.
     """
+    
     ncbi = ete3.NCBITaxa()
     tax = set(tax)
     genomes = set(genomes)
