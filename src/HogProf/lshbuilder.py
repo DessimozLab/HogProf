@@ -60,7 +60,7 @@ class LSHBuilder:
         if saving_name:
             self.saving_name= saving_name 
             if self.saving_name[-1]!= '/':
-            self.saving_name = self.saving_name+'/'
+                self.saving_name = self.saving_name+'/'
             self.saving_path = saving_name
             if not os.path.isdir(self.saving_path):
                 os.mkdir(path=self.saving_path)
