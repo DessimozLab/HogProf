@@ -68,13 +68,13 @@ class Profiler:
 				with open( mastertree , 'rb') as pklin:
 					self.tree = pickle.loads(pklin.read())
 					self.tree_string = self.tree.write(format=1)
-			elif mastertree.split('.')[-1] == 'nwk':                
-				self.tree = ete3.Tree(mastertree,format=1)
-				self.tree_string = self.tree.write(format=1)
-			
-			else:
-				raise Exception( 'please provide a pickled ete3 tree or a newick file' )
-			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
+		elif mastertree.split('.')[-1] == 'nwk':
+			self.tree = ete3.Tree(mastertree,format=1)
+			self.tree_string = self.tree.write(format=1)
+		
+		else:
+			raise Exception( 'please provide a pickled ete3 tree or a newick file' )
+		self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
 			
 		if oma:
 			h5_oma = open_file(oma, mode="r")

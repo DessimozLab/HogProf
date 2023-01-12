@@ -1,1 +1,1 @@
-name = "PyProfiler"
+name = "HogProf"
