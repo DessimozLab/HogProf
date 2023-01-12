@@ -1,6 +1,16 @@
 [build-system]
-requires = ["setuptools>=61.0",
-"biopython",
+requires = ["setuptools>=61.0"]
+
+
+build-backend = "setuptools.build_meta"
+[project]
+name = "HogProf"
+dynamic = ["entry-points"]
+version = "0.0.3"
+authors = [
+  { name="Dave Moi", email="dmoi@unil.ch" },
+]
+dependencies = ["biopython",
 "certifi",
 "chardet",
 "datasketch",
@@ -24,17 +34,6 @@ requires = ["setuptools>=61.0",
 "tables",
 "urllib3",
 ]
-
-
-build-backend = "setuptools.build_meta"
-[project]
-name = "HogProf"
-dynamic = ["entry-points"]
-version = "0.0.2"
-authors = [
-  { name="Dave Moi", email="dmoi@unil.ch" },
-]
-
 description = "Phylogenetic Profiling with OMA and minhashing"
 readme = "README.md"
 
