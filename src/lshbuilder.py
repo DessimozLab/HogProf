@@ -31,7 +31,24 @@ class LSHBuilder:
     with a list of taxonomic codes for all the species in your db
     """
 
-    def __init__(self,tarfile_ortho=None,h5_oma=None,taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
+    def __init__(self,h5_oma=None,taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
+                
+        """
+            Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
+            
+            Args:
+            - tarfile_ortho (str):  path to an ensembl tarfile containing orthoxml files
+            - h5_oma (str): path to an OMA hdf5 file
+            - taxa (str): path to a file containing a list of taxonomic codes for all the species in the db
+            - masterTree (str): path to a newick tree file
+            - saving_name (str): path to the directory where the output files will be saved
+            - numperm (int): the number of permutations to use in the MinHash generation (default: 256)
+            - treeweights (str): path to a pickled file containing the weights for the tree
+            - taxfilter (str): path to a file containing a list of taxonomic codes to filter from the tree
+            - taxmask (str): path to a file containing a list of taxonomic codes to mask from the tree
+            - verbose (bool): whether to print verbose output (default: False)
+
+        """
         self.h5OMA = h5_oma
         self.db_obj = db.Database(h5_oma)
         self.oma_id_obj = db.OmaIdMapper(self.db_obj)
@@ -40,10 +57,11 @@ class LSHBuilder:
         self.verbose = verbose
         self.datetime = datetime
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
-        self.saving_name= saving_name
-        # original_umask = os.umask(0)
         if saving_name:
-            self.saving_path = saving_name +'/'
+            self.saving_name= saving_name 
+            if self.saving_name[-1]!= '/':
+            self.saving_name = self.saving_name+'/'
+            self.saving_path = saving_name
             if not os.path.isdir(self.saving_path):
                 os.mkdir(path=self.saving_path)
         else:

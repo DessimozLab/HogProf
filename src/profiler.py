@@ -27,8 +27,34 @@ class Profiler:
 	A profiler object allows the user to query the LSH with HOGs and get a list of result HOGs back
 
 	"""
-	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False, tar= None , nsamples = 256 , mastertree = None ):
-		#use the lsh forest or the lsh
+	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False , nsamples = 256 , mastertree = None ):
+		"""
+		The Profiler class initializes a profiler object for querying the LSH with HOGs and returning a list of result HOGs.
+
+		Attributes:
+		lshobj (object): LSH object for querying.
+		hashes_h5 (h5py.File): H5 file containing HOGs.
+		nsamples (int): Number of samples to use.
+		tree (ete3.Tree): Master tree used for generating taxa index.
+		tree_string (str): String representation of the master tree.
+		taxaIndex (dict): Dictionary mapping taxa names to their indices in the master tree.
+		ReverseTaxaIndex (dict): Dictionary mapping indices in the master tree to their corresponding taxa names.
+		db_obj (db.Database): OMA database object.
+		treeweights (dict): Dictionary containing the tree weight for each taxon.
+		READ_ORTHO (callable): Function for reading orthoxml files from OMA.
+		HAM_PIPELINE (callable): Function for generating the Annotated tree from a row.
+		HASH_PIPELINE (callable): Function for generating the hash from a row.
+
+		Parameters:
+		lshforestpath (str, optional): Path to the pickled LSH forest object.
+		hashes_h5 (str, optional): Path to the H5 file containing HOGs.
+		mat_path (str, optional): Path to the matrix file containing HOGs.
+		oma (str, optional): Path to the OMA database.
+		tar (str, optional): Path to the tar archive.
+		nsamples (int, optional): Number of samples to use. Defaults to 256.
+		mastertree (str, optional): Path to the master tree file.
+		"""
+
 		print('loading lsh')
 		with open(lshforestpath, 'rb') as lshpickle:
 			self.lshobj = pickle.loads(lshpickle.read())

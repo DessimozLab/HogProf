@@ -1,4 +1,4 @@
-name: pyprofiler_test
+name: Hogprof
 channels:
   - defaults
 dependencies:
@@ -43,4 +43,3 @@ dependencies:
     - six==1.16.0
     - tables==3.6.1
     - urllib3==1.26.5
-prefix: /scratch/dmoi/miniconda/envs/pyprofiler_test

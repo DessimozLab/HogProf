@@ -26,9 +26,8 @@ requires = ["setuptools>=61.0",
 ]
 
 build-backend = "setuptools.build_meta"
-
 [project]
-name = "HogProf_dave_moi13"
+name = "HogProf"
 version = "0.0.1"
 authors = [
   { name="Dave Moi", email="dmoi@unil.ch" },
@@ -47,6 +46,8 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+
 [project.urls]
 "Homepage" = "https://github.com/DessimozLab/HogProf"
 "Bug Tracker" = "https://github.com/DessimozLab/HogProf/issues"
+"Docs" = "https://dessimozlab.github.io/HogProf/"
