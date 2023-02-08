@@ -130,16 +130,9 @@ def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):
     :return: minhash1: the weighted hash of your HOG
     """
     print(fam,  hdf5, dataset, nsamples)
-
-
-
     if dataset is None:
-        print(list(hdf5.keys()))
         dataset = list(hdf5.keys())[0]
-    
-    print(fam,  list(hdf5[dataset].values())[0], dataset, nsamples)
-    
-    hashvalues = np.asarray(hdf5[dataset] [fam, :].reshape(nsamples,2 ))
+    hashvalues = np.asarray(hdf5[dataset][fam, :].reshape(nsamples,2 ))
     hashvalues = hashvalues.astype('int64')
     minhash1 = datasketch.WeightedMinHash( seed = 1, hashvalues=hashvalues)
     return minhash1

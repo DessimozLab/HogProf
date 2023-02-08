@@ -14,6 +14,8 @@ import gc
 from pyoma.browser import db
 from utils import pyhamutils, hashutils , files_utils
 import numpy as np
+import tqdm
+
 import random
 import os
 import ete3
@@ -57,6 +59,8 @@ class LSHBuilder:
         self.verbose = verbose
         self.datetime = datetime
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
+
+
         if saving_name:
             self.saving_name= saving_name 
             if self.saving_name[-1]!= '/':
@@ -106,6 +110,8 @@ class LSHBuilder:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
         elif self.tar:
             self.READ_ORTHO = pyhamutils.get_orthoxml
+
+        self.n_groups  = len(self.h5OMA.root.OrthoXML.Index)
         self.hashes_path = self.saving_path + 'hashes.h5'
         self.lshpath = self.saving_path + 'newlsh.pkl'
         self.lshforestpath = self.saving_path + 'newlshforest.pkl'
@@ -189,7 +195,7 @@ class LSHBuilder:
                     print('Worker done' + str(i))
                 break
 
-    def saver(self, i, q, retq, matq, l):
+    def saver(self, i, q, retq, matq, l ):
         print_start = t.time()
         save_start = t.time()
         global_time = t.time()
@@ -203,19 +209,16 @@ class LSHBuilder:
             taxstr+= 'NoMask'
         else:
             taxstr = str(self.tax_filter)
-        dataset_name = self.saving_name+'_'+taxstr
-        dataset_name = dataset_name.replace('/' , '_')
         self.errorfile = self.saving_path + 'errors.txt'
         with open(self.errorfile, 'w') as hashes_error_files:
             with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
                 datasets = {}
-                if dataset_name not in h5hashes.keys():
+                if taxstr not in h5hashes.keys():
                     if self.verbose == True:
                         print('creating dataset')
                         print(dataset_name)
                         print('filtered at taxonomic level: '+taxstr)
-                    h5hashes.create_dataset(dataset_name+'_'+taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
-                    datasets[dataset_name] = h5hashes[dataset_name+'_'+taxstr]
+                    h5hashes.create_dataset(taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
                     if self.verbose == True:
                         print(datasets)
                     h5flush = h5hashes.flush
@@ -230,9 +233,9 @@ class LSHBuilder:
                             hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
                             [ forest.add(str(fam),hashes[fam]) for fam in hashes]
                             for fam in hashes:
-                                if len(datasets[dataset_name]) < fam + 10:
-                                    datasets[dataset_name].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                                datasets[dataset_name][fam, :] = hashes[fam].hashvalues.ravel()
+                                if len(h5hashes[taxstr]) < fam + 10:
+                                    h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
+                                h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
                                 count += 1
                             if t.time() - save_start > 200:
                                 print( t.time() - global_time )
