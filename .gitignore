@@ -2,3 +2,6 @@
 *.pkl
 *.txt
 *.gaf
+**/*.tar.gz
+**/*.whl
+**/*.pyc

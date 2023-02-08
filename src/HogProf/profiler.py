@@ -8,7 +8,7 @@ import numpy as np
 import random
 import ete3
 #from validation import validation_semantic_similarity
-from .utils import hashutils , pyhamutils , files_utils
+from utils import hashutils , pyhamutils , files_utils
 from time import time
 import multiprocessing as mp
 import functools
@@ -62,6 +62,7 @@ class Profiler:
 			self.lshobj.index()
 
 		self.hashes_h5 = h5py.File(hashes_h5, mode='r')
+		print(self.hashes_h5.keys())
 		self.nsamples = nsamples
 
 		if mastertree.split('.')[-1] == 'pkl':
@@ -90,10 +91,9 @@ class Profiler:
 		if type(hog_entry )== int:
 			return hog_entry
 		else:
-			try:
-				return int(self.db_obj.hog_family( entry=hog_entry ) )
-			except:
-				return np.nan
+			hog_entry = self.db_obj.entry_by_entry_nr(self.db_obj.id_resolver.resolve(hog_entry))
+			famnr = int(self.db_obj.hog_family( entry=hog_entry ) )
+			return famnr
 
 	def return_profile_OTF(self, fam):
 		"""

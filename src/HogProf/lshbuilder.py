@@ -204,6 +204,7 @@ class LSHBuilder:
         else:
             taxstr = str(self.tax_filter)
         dataset_name = self.saving_name+'_'+taxstr
+        dataset_name = dataset_name.replace('/' , '_')
         self.errorfile = self.saving_path + 'errors.txt'
         with open(self.errorfile, 'w') as hashes_error_files:
             with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
@@ -412,7 +413,6 @@ if __name__ == '__main__':
     else:
         mastertree=None
     start = time.time()
-    print('compiling' + dbname)
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname , numperm = nperm ,
