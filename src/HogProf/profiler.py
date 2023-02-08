@@ -62,11 +62,8 @@ class Profiler:
 			self.lshobj.index()
 
 		self.hashes_h5 = h5py.File(hashes_h5, mode='r')
-		
-		print(self.hashes_h5, self.hashes_h5.keys())
-
+		print('h5' , self.hashes_h5 , self.hashes_h5.keys())
 		self.nsamples = nsamples
-
 		if mastertree.split('.')[-1] == 'pkl':
 				with open( mastertree , 'rb') as pklin:
 					self.tree = pickle.loads(pklin.read())

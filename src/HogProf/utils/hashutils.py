@@ -89,19 +89,15 @@ def tree2str_DCA(tp , taxaIndex ):
     losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
     dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
     presence = [ taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in taxaIndex ]
-
-
     Ds = list( set(dupl).intersection(set(presence)))
     Ps=  list(set(presence).difference(set(dupl)))
     Ls=  list(set(losses))
     charar = np.chararray(len(taxaIndex) )
     #set to absent
-
     charar.fill( 'A')
     charar[Ds] = 'D'
     charar[Ls] = 'L'
     charar[Ps] = 'P'
-
     return charar
 
 def row2hash(row , taxaIndex , treeweights , wmg):
@@ -119,7 +115,6 @@ def row2hash(row , taxaIndex , treeweights , wmg):
     hog_matrix,weighted_hash = hash_tree(treemap , taxaIndex , treeweights , wmg)
     return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows'])
 
-
 def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):
     #read the stored hash values and return a weighted minhash
     """
@@ -129,7 +124,6 @@ def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):
     :param dataset: which dataset to use when constructing the hash
     :return: minhash1: the weighted hash of your HOG
     """
-    print(fam,  hdf5, dataset, nsamples)
     if dataset is None:
         dataset = list(hdf5.keys())[0]
     hashvalues = np.asarray(hdf5[dataset][fam, :].reshape(nsamples,2 ))
