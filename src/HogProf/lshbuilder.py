@@ -15,7 +15,6 @@ from pyoma.browser import db
 from utils import pyhamutils, hashutils , files_utils
 import numpy as np
 import tqdm
-
 import random
 import os
 import ete3

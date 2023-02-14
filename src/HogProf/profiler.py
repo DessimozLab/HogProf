@@ -17,10 +17,8 @@ import time
 import gc
 import logging
 from pyoma.browser import db
-
 np.random.seed(0)
 random.seed(0)
-
 class Profiler:
 
 	"""
@@ -69,7 +67,6 @@ class Profiler:
 					self.tree = pickle.loads(pklin.read())
 					self.tree_string = self.tree.write(format=1)
 		elif mastertree.split('.')[-1] == 'nwk':
-
 			self.tree = ete3.Tree(mastertree,format=1)
 			self.tree_string = self.tree.write(format=1)
 		

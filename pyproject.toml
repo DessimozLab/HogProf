@@ -50,3 +50,11 @@ classifiers = [
 "Homepage" = "https://github.com/DessimozLab/HogProf"
 "Bug Tracker" = "https://github.com/DessimozLab/HogProf/issues"
 "Docs" = "https://dessimozlab.github.io/HogProf/"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
