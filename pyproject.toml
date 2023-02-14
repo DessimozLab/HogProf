@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "HogProf"
 dynamic = ["entry-points"]
-version = "0.0.5"
+version = "0.0.6"
 authors = [
   { name="Dave Moi", email="dmoi@unil.ch" },
 ]
@@ -53,8 +53,6 @@ classifiers = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-
-
 
 [tool.setuptools.packages.find]
 where = ["src"]
