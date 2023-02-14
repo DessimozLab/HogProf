@@ -8,7 +8,7 @@ import numpy as np
 import random
 import ete3
 #from validation import validation_semantic_similarity
-from utils import hashutils , pyhamutils , files_utils
+from HogProf.utils import hashutils , pyhamutils , files_utils
 from time import time
 import multiprocessing as mp
 import functools

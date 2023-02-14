@@ -12,7 +12,7 @@ import h5py
 import time
 import gc
 from pyoma.browser import db
-from utils import pyhamutils, hashutils , files_utils
+from HogProf.utils import pyhamutils, hashutils , files_utils
 import numpy as np
 import tqdm
 import random
@@ -21,6 +21,7 @@ import ete3
 random.seed(0)
 np.random.seed(0)
 class LSHBuilder:
+    
     """
     This class contains the stuff you need to make 
     a phylogenetic profiling 
