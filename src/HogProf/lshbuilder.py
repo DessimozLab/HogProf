@@ -20,8 +20,9 @@ import os
 import ete3
 random.seed(0)
 np.random.seed(0)
+
 class LSHBuilder:
-    
+
     """
     This class contains the stuff you need to make 
     a phylogenetic profiling 
