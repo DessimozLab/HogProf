@@ -359,6 +359,7 @@ if __name__ == '__main__':
     parser.add_argument('--outpath', help='name of the db', type = str)
     parser.add_argument('--dbtype', help='preconfigured taxonomic ranges' , type = str)
     parser.add_argument('--OMA', help='use oma data ' , type = str)
+    parser.add_argument('--OrthoGlob', help='a glob expression for orthoxml files ' , type = str)
     parser.add_argument('--tarfile', help='use tarfile with orthoxml data ' , type = str)
     parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = int)
     parser.add_argument('--mastertree', help='master taxonomic tree. should use ncbi taxonomic id numbers as leaf names' , type = str)
@@ -377,7 +378,13 @@ if __name__ == '__main__':
     }
     taxfilter = None
     taxmask = None
+
     args = vars(parser.parse_args(sys.argv[1:]))
+    if 'OrthoGlob' in args:
+        orthoglob = glob.glob(args['OrthoGlob'])
+    else:   
+        orthoglob = None
+    
     if 'outpath' in args:
         dbname = args['outpath']
     else:
@@ -420,7 +427,7 @@ if __name__ == '__main__':
     start = time.time()
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
-            lsh_builder = LSHBuilder(h5_oma = h5_oma,  saving_name=dbname , numperm = nperm ,
+            lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
             treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
             lsh_builder.run_pipeline(threads)
     print(time.time() - start)
