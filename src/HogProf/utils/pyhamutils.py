@@ -4,6 +4,20 @@ import pickle
 def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()
     return orthoxml
+
+def get_orthoxml_glob(fam, fileglob):
+    #fileglob is a glob object
+    orthoxml = None
+    for member in fileglob:
+        #check if the fam is in the file name
+        if str(fam) in member.split('/')[-1]:
+            orthoxml = member
+            break
+    if orthoxml:
+        with open(orthoxml, 'r') as f:
+            orthoxml = f.read()
+    return orthoxml
+
 def get_orthoxml_tar(fam, tar):
     f = tar.extractfile(fam)
     if f is not None:

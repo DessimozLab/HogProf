@@ -34,7 +34,7 @@ class LSHBuilder:
     with a list of taxonomic codes for all the species in your db
     """
 
-    def __init__(self,h5_oma=None,taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
+    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -59,6 +59,7 @@ class LSHBuilder:
         self.tax_mask = taxmask
         self.verbose = verbose
         self.datetime = datetime
+        self.fileglob = fileglob
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
 
 
@@ -109,8 +110,8 @@ class LSHBuilder:
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg)
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
-        elif self.tar:
-            self.READ_ORTHO = pyhamutils.get_orthoxml
+        elif self.fileglob:
+            self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_glob , fileglob=self.fileglob)
 
         self.n_groups  = len(self.h5OMA.root.OrthoXML.Index)
         self.hashes_path = self.saving_path + 'hashes.h5'
