@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: HogProf
-Version: 0.0.3
+Version: 0.0.7
 Summary: Phylogenetic Profiling with OMA and minhashing
 Author-email: Dave Moi <dmoi@unil.ch>
 License: MIT License

@@ -3,6 +3,7 @@ import functools
 import argparse
 import sys
 import multiprocessing as mp
+import glob
 import pandas as pd
 import time as t
 import pickle
@@ -380,10 +381,13 @@ if __name__ == '__main__':
     taxmask = None
 
     args = vars(parser.parse_args(sys.argv[1:]))
+
+
     if 'OrthoGlob' in args:
-        orthoglob = glob.glob(args['OrthoGlob'])
-    else:   
-        orthoglob = None
+        if args['OrthoGlob']:
+            orthoglob = glob.glob(args['OrthoGlob'])
+        else:   
+            orthoglob = None
     
     if 'outpath' in args:
         dbname = args['outpath']
