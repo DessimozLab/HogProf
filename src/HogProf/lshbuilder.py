@@ -406,8 +406,13 @@ if __name__ == '__main__':
         nperm = 256
     if args['OMA']:
         omafile = args['OMA']
+    elif args['tarfile']:
+        omafile = args['tarfile']
+    elif orthoglob:
+        fileglob = orthoglob
     else:
         raise Exception(' please specify input data ')
+    
     threads = 4
     if args['nthreads']:
         threads = args['nthreads']
