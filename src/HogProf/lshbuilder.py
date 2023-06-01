@@ -79,11 +79,11 @@ class LSHBuilder:
                 genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
                 genomes = [ str(g) for g in genomes]
                 taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
-                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa, genomes = genomes , savename =saving_name )
+                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa, genomes = genomes , outdir=self.saving_path )
             elif taxa:
                 with open(taxa, 'r') as taxin:
                     taxlist = [ int(line) for line in taxin ]
-                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist , savename =saving_name )
+                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist  , outdir=self.saving_path)
             else:
                 raise Exception( 'please specify either a list of taxa or a tree' )
             self.swap2taxcode = True

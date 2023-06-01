@@ -43,10 +43,13 @@ def get_tree(taxa , genomes ,  outdir = None):
     tree = add_orphans(orphans_info2, tree, genomes)
     orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
     tree_string = tree.write(format=1)
+    
+    
     with open( outdir +'master_tree.nwk' , 'w') as nwkout:
         nwkout.write(tree_string)
     with open( outdir + '_master_tree.pkl' , 'wb') as pklout:
         pklout.write(pickle.dumps(tree))
+    
     return tree_string, tree
 
 def generate_taxa_index(tree , taxfilter= None, taxmask=None):
