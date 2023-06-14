@@ -35,7 +35,7 @@ class LSHBuilder:
     with a list of taxonomic codes for all the species in your db
     """
 
-    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None ,  verbose = False):
+    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now()):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -90,7 +90,8 @@ class LSHBuilder:
         elif mastertree:
             self.tree_ete3 = ete3.Tree(masterTree, format=1)
             self.tree_string = self.tree_ete3.write(format=1)
-            self.swap2taxcode = False
+            self.swap2taxcode = use_taxcodes
+
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
@@ -108,7 +109,7 @@ class LSHBuilder:
         self.wmg = wmg
         print( 'configuring pyham functions')
         self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  )
-        self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg)
+        self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
         elif self.fileglob:
@@ -366,6 +367,9 @@ if __name__ == '__main__':
     parser.add_argument('--mastertree', help='master taxonomic tree. should use ncbi taxonomic id numbers as leaf names' , type = str)
     parser.add_argument('--nthreads', help='nthreads for multiprocessing' , type = int)
     parser.add_argument('--outfolder', help='folder for storing hash, db and tree objects' , type = str)
+    parser.add_argument('--lossonly', help='only compile loss events' , type = bool)
+    parser.add_argument('--duplonly', help='only compile duplication events' , type = bool)
+    parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
     dbdict = {
         'all': { 'taxfilter': None , 'taxmask': None },
         'plants': { 'taxfilter': None , 'taxmask': 33090 },
@@ -413,6 +417,22 @@ if __name__ == '__main__':
     else:
         raise Exception(' please specify input data ')
     
+    if args['lossonly']:
+        lossonly = args['lossonly']
+    else:
+        lossonly = False
+    if args['duplonly']:
+        duplonly = args['duplonly']
+    else:
+        duplonly = False
+
+    if args['taxcodes']:
+        taxcodes = args['taxcodes']
+    else:   
+        taxcodes = False
+
+
+
     threads = 4
     if args['nthreads']:
         threads = args['nthreads']
@@ -437,7 +457,7 @@ if __name__ == '__main__':
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
-            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree )
+            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes)
             lsh_builder.run_pipeline(threads)
     print(time.time() - start)
     print('DONE')

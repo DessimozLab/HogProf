@@ -38,7 +38,7 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
             weights[len(taxaIndex)*i + taxaIndex[n.name] ] = 1
     return weights
 
-def hash_tree(tp , taxaIndex , treeweights , wmg):
+def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly = False ):
     """
     Generate a weighted minhash and binary matrix row for a tree profile
 
@@ -52,11 +52,7 @@ def hash_tree(tp , taxaIndex , treeweights , wmg):
     """
 
     hog_matrix_weighted = np.zeros((1, 3*len(taxaIndex)))
-    
     hog_matrix_binary = np.zeros((1, 3*len(taxaIndex)))
-
-
-
     if tp:
         losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
         dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
@@ -64,10 +60,16 @@ def hash_tree(tp , taxaIndex , treeweights , wmg):
         indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
         for i,event in enumerate(indices):
             if len(indices[event])>0:
+
                 taxindex = np.asarray(indices[event])
                 hogindex = np.asarray(indices[event])+i*len(taxaIndex)
                 hog_matrix_weighted[:,hogindex] = treeweights[hogindex,:].ravel()
-                hog_matrix_binary[:,hogindex] = 1
+                if lossonly == True and event == 'loss':
+                    hog_matrix_weighted[:,hogindex] = 1
+                if duplonly == True and event == 'dup':
+                    hog_matrix_weighted[:,hogindex] = 1
+                if lossonly == False and duplonly == False:
+                    hog_matrix_binary[:,hogindex] = 1
     else:
         #throwaway vector... 
         hog_matrix_weighted[0,0] = 1
@@ -100,7 +102,7 @@ def tree2str_DCA(tp , taxaIndex ):
     charar[Ps] = 'P'
     return charar
 
-def row2hash(row , taxaIndex , treeweights , wmg):
+def row2hash(row , taxaIndex , treeweights , wmg , lossonly = False , duplonly = False):
     """
     turn a dataframe row with an orthoxml file to hash and matrix row
     :param row: lsh builder dataframe row
@@ -112,7 +114,7 @@ def row2hash(row , taxaIndex , treeweights , wmg):
     """
     #convert a dataframe row to a weighted minhash
     fam, treemap = row.tolist()
-    hog_matrix,weighted_hash = hash_tree(treemap , taxaIndex , treeweights , wmg)
+    hog_matrix,weighted_hash = hash_tree(treemap , taxaIndex , treeweights , wmg , lossonly = lossonly , duplonly = duplonly)
     return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows'])
 
 def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):
