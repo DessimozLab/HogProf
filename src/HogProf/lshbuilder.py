@@ -7,6 +7,8 @@ import glob
 import pandas as pd
 import time as t
 import pickle
+import xml.etree.cElementTree as ET
+
 from datasketch import MinHashLSHForest , WeightedMinHashGenerator
 from datetime import datetime
 import h5py
@@ -17,6 +19,7 @@ from HogProf.utils import pyhamutils, hashutils , files_utils
 import numpy as np
 import tqdm
 import random
+import tqdm
 import os
 import ete3
 random.seed(0)
@@ -53,9 +56,15 @@ class LSHBuilder:
             - verbose (bool): whether to print verbose output (default: False)
 
         """
-        self.h5OMA = h5_oma
-        self.db_obj = db.Database(h5_oma)
-        self.oma_id_obj = db.OmaIdMapper(self.db_obj)
+        if h5_oma:
+            self.h5OMA = h5_oma
+            self.db_obj = db.Database(h5_oma)
+            self.oma_id_obj = db.OmaIdMapper(self.db_obj)
+        else:
+            self.h5OMA = None
+            self.db_obj = None
+            self.oma_id_obj = None
+        
         self.tax_filter = taxfilter
         self.tax_mask = taxmask
         self.verbose = verbose
@@ -112,15 +121,20 @@ class LSHBuilder:
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
+       
+        if self.h5OMA:
+            self.n_groups  = len(self.h5OMA.root.OrthoXML.Index)
         elif self.fileglob:
-            self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_glob , fileglob=self.fileglob)
-
-        self.n_groups  = len(self.h5OMA.root.OrthoXML.Index)
+            self.n_groups = len(self.fileglob)
+        else:
+            raise Exception( 'please specify an input file' )
+    
         self.hashes_path = self.saving_path + 'hashes.h5'
         self.lshpath = self.saving_path + 'newlsh.pkl'
         self.lshforestpath = self.saving_path + 'newlshforest.pkl'
         self.mat_path = self.saving_path+ 'hogmat.h5'
         self.columns = len(self.taxaIndex)
+        self.verbose = verbose
         print('done')
 
     def load_one(self, fam):
@@ -136,7 +150,7 @@ class LSHBuilder:
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
             self.rows = len(self.groups)
-            for i, row in enumerate(self.groups):
+            for i, row in tqdm.tqdm(enumerate(self.groups)):
                 if i > start:
                     fam = row[0]
                     ortho_fam = self.READ_ORTHO(fam)
@@ -155,20 +169,22 @@ class LSHBuilder:
             families = {}
 
             
-        elif self.tar:
-            groupfiles=glob.glob(self.tar)
-            groups = []
-            for tarfile in groupfiles:
-                with tarfile.open(tarfile, "r:gz") as tar:
-                    for member in tar.getmembers():
-                        f=tar.extractfile(member)
-                        oxml = ET.parse(f)
-                        for input in oxml.iter():
-                            ortho_fam = ET.tostring( next(oxml.iter()), encoding='utf8', method='xml' ).decode()
-                            hog_size = ortho_fam.count('<species name=')
-                            if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
-                                families[member] = {'ortho': ortho_fam}
-                    tar.close()
+        elif self.fileglob:
+            for file in tqdm.tqdm(self.fileglob):
+                member = file.split('/')[-1]
+                with open(file) as ortho:
+                        #oxml = ET.parse(ortho)
+                        #ortho_fam = ET.tostring( next(oxml.iter()), encoding='utf8', method='xml' ).decode()
+                        orthostr = ortho.read()
+                        hog_size = ortho.count('<species name=')
+
+                        if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
+                            families[member] = {'ortho': orthostr}
+                        if len(families) > size:
+                            pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
+                            pd_dataframe['Fam'] = pd_dataframe.index
+                            yield pd_dataframe
+                            families = {}
 
 
     def universe_saver(self, i, q, retq, matq,univerq, l):
@@ -190,8 +206,13 @@ class LSHBuilder:
         while True:
             df = q.get()
             if df is not None :
+                if self.verbose == True:
+                    print('worker ' + str(i) + ' got a dataframe')
                 df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+
                 df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+                if self.verbose == True:
+                    print('worker ' + str(i) + ' done hashing')
                 retq.put(df[['Fam', 'hash']])
                 #matq.put(df[['Fam', 'rows']])
             else:
@@ -220,7 +241,6 @@ class LSHBuilder:
                 if taxstr not in h5hashes.keys():
                     if self.verbose == True:
                         print('creating dataset')
-                        print(dataset_name)
                         print('filtered at taxonomic level: '+taxstr)
                     h5hashes.create_dataset(taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
                     if self.verbose == True:
@@ -232,8 +252,8 @@ class LSHBuilder:
                     if this_dataframe is not None:
                         if not this_dataframe.empty:
                             hashes = this_dataframe['hash'].to_dict()
-                            print(str(this_dataframe.Fam.max())+ 'fam num')
-                            print(str(count) + ' done')
+                            #print(str(this_dataframe.Fam.max())+ 'fam num')
+                            #print(str(count) + ' done')
                             hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
                             [ forest.add(str(fam),hashes[fam]) for fam in hashes]
                             for fam in hashes:
@@ -315,7 +335,7 @@ class LSHBuilder:
                 worker_function, number_workers, joinval = functypes[key]
                 work_processes[key] = []
                 for i in range(int(number_workers)):
-                    t = mp.Process(target=worker_function, args=(i, q, retq, matq, lock))
+                    t = mp.Process(target=worker_function, args=(i, q, retq, matq, lock ))
                     t.daemon = True
                     work_processes[key].append(t)
             for key in work_processes:
@@ -370,6 +390,7 @@ if __name__ == '__main__':
     parser.add_argument('--lossonly', help='only compile loss events' , type = bool)
     parser.add_argument('--duplonly', help='only compile duplication events' , type = bool)
     parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
+    parser.add_argument('--verbose', help='print verbose output' , type = bool)
     dbdict = {
         'all': { 'taxfilter': None , 'taxmask': None },
         'plants': { 'taxfilter': None , 'taxmask': 33090 },
@@ -383,13 +404,14 @@ if __name__ == '__main__':
     }
     taxfilter = None
     taxmask = None
+    omafile = None
 
     args = vars(parser.parse_args(sys.argv[1:]))
 
 
     if 'OrthoGlob' in args:
         if args['OrthoGlob']:
-            orthoglob = glob.glob(args['OrthoGlob'])
+            orthoglob = glob.glob(args['OrthoGlob']+ '*')
         else:   
             orthoglob = None
     
@@ -427,7 +449,7 @@ if __name__ == '__main__':
         duplonly = False
 
     if args['taxcodes']:
-        taxcodes = args['taxcodes']
+        taxcodes = args['taxcodes']     
     else:   
         taxcodes = False
 
@@ -454,10 +476,15 @@ if __name__ == '__main__':
     else:
         mastertree=None
     start = time.time()
+
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
-            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes)
+            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , verbose=args['verbose'])
             lsh_builder.run_pipeline(threads)
+    else:
+        lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
+        treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , verbose=args['verbose'])
+        lsh_builder.run_pipeline(threads)
     print(time.time() - start)
     print('DONE')

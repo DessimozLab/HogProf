@@ -1,21 +1,10 @@
 import pyham
 import xml.etree.cElementTree as ET
 import pickle
+import traceback
+
 def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()
-    return orthoxml
-
-def get_orthoxml_glob(fam, fileglob):
-    #fileglob is a glob object
-    orthoxml = None
-    for member in fileglob:
-        #check if the fam is in the file name
-        if str(fam) in member.split('/')[-1]:
-            orthoxml = member
-            break
-    if orthoxml:
-        with open(orthoxml, 'r') as f:
-            orthoxml = f.read()
     return orthoxml
 
 def get_orthoxml_tar(fam, tar):
@@ -47,11 +36,15 @@ def switch_name_ncbi_id(orthoxml , mapdict = None  ):
 def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True):
     fam, orthoxml = row
     if orthoxml:
-        if swap_ids == True:
-            orthoxml = switch_name_ncbi_id(orthoxml)
-        ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml", use_internal_name=True, orthoXML_as_string=True)
-        tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
-        return tp.treemap
+        try:
+            if swap_ids == True:
+                orthoxml = switch_name_ncbi_id(orthoxml)
+            ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml", use_internal_name=True, orthoXML_as_string=True)
+            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
+            return tp.treemap
+        except:
+            print('error' , traceback.format_exc()) 
+            return None 
 def yield_families(h5file, start_fam):
     """
     Given a h5file containing OMA server, returns an iterator over the families
