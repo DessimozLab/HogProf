@@ -98,7 +98,8 @@ class LSHBuilder:
             self.swap2taxcode = True
         elif mastertree:
             self.tree_ete3 = ete3.Tree(masterTree, format=1)
-            self.tree_string = self.tree_ete3.write(format=1)
+            with open(masterTree) as treein:
+                self.tree_string = treein.read()
             self.swap2taxcode = use_taxcodes
 
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
@@ -117,9 +118,13 @@ class LSHBuilder:
             wmgout.write( pickle.dumps(wmg))
         self.wmg = wmg
         print( 'configuring pyham functions')
-        self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  )
+        if self.h5OMA:
+            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  )
+        else:
+            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , orthoXML_as_string = False )     
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
+
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
        
         if self.h5OMA:
@@ -168,23 +173,26 @@ class LSHBuilder:
             print('last dataframe sent')
             families = {}
 
-            
         elif self.fileglob:
-            for file in tqdm.tqdm(self.fileglob):
-                member = file.split('/')[-1]
+            for i,file in enumerate(tqdm.tqdm(self.fileglob)):
                 with open(file) as ortho:
-                        #oxml = ET.parse(ortho)
-                        #ortho_fam = ET.tostring( next(oxml.iter()), encoding='utf8', method='xml' ).decode()
-                        orthostr = ortho.read()
-                        hog_size = ortho.count('<species name=')
-
-                        if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
-                            families[member] = {'ortho': orthostr}
-                        if len(families) > size:
-                            pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                            pd_dataframe['Fam'] = pd_dataframe.index
-                            yield pd_dataframe
-                            families = {}
+                    #oxml = ET.parse(ortho)
+                    #ortho_fam = ET.tostring( next(oxml.iter()), encoding='utf8', method='xml' ).decode()
+                    orthostr = ortho.read()
+                hog_size = orthostr.count('<species name=')
+                if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
+                    families[i] = {'ortho': file}
+                if len(families) > size:
+                    pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
+                    pd_dataframe['Fam'] = pd_dataframe.index
+                    yield pd_dataframe
+                    families = {}
+                if i%10000 == 0:
+                    print(i)
+                    #save the mapping of fam to orthoxml
+                    pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
+                    pd_dataframe['Fam'] = pd_dataframe.index
+                    pd_dataframe.to_csv(self.saving_path + 'fam2orthoxml.csv')
 
 
     def universe_saver(self, i, q, retq, matq,univerq, l):
@@ -206,13 +214,8 @@ class LSHBuilder:
         while True:
             df = q.get()
             if df is not None :
-                if self.verbose == True:
-                    print('worker ' + str(i) + ' got a dataframe')
                 df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-
                 df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
-                if self.verbose == True:
-                    print('worker ' + str(i) + ' done hashing')
                 retq.put(df[['Fam', 'hash']])
                 #matq.put(df[['Fam', 'rows']])
             else:
@@ -453,6 +456,11 @@ if __name__ == '__main__':
     else:   
         taxcodes = False
 
+    if args['verbose']:
+        verbose = args['verbose']
+    else:   
+        verbose = False
+
 
 
     threads = 4
@@ -480,11 +488,11 @@ if __name__ == '__main__':
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
-            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , verbose=args['verbose'])
+            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , verbose=verbose)
             lsh_builder.run_pipeline(threads)
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
-        treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , verbose=args['verbose'])
+        treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , verbose=verbose)
         lsh_builder.run_pipeline(threads)
     print(time.time() - start)
     print('DONE')

@@ -33,13 +33,13 @@ def switch_name_ncbi_id(orthoxml , mapdict = None  ):
         
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml
-def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True):
+def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True , orthoXML_as_string = True):
     fam, orthoxml = row
     if orthoxml:
         try:
-            if swap_ids == True:
-                orthoxml = switch_name_ncbi_id(orthoxml)
-            ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml", use_internal_name=True, orthoXML_as_string=True)
+            if swap_ids == True and orthoXML_as_string == True:
+                    orthoxml = switch_name_ncbi_id(orthoxml)
+            ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml", use_internal_name=True, orthoXML_as_string=orthoXML_as_string)
             tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
             return tp.treemap
         except:
