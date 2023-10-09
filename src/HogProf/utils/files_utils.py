@@ -1,16 +1,15 @@
-import ete3
-import pandas as pd
-from Bio import Entrez
 import copy
 import pickle
-import os
+
+import ete3
+from Bio import Entrez
 
 
-def get_tree(taxa , genomes ,  outdir = None):
+def get_tree(taxa, genomes, outdir=None):
     """
     Generates a taxonomic tree using the ncbi taxonomy and
     :param oma:  a pyoma db object
-    :param saveTree: Bool for whether or not to save a mastertree newick file
+    :param saveTree: Bool for whether to save a mastertree newick file
     :return: tree_string: a newick string tree: an ete3 object
 
     """
@@ -19,9 +18,8 @@ def get_tree(taxa , genomes ,  outdir = None):
     genomes = set(genomes)
     tax.remove(0)
     print(len(tax))
-    tree = ete3.PhyloTree( name = '-1')
-    topo = ncbi.get_topology(genomes , collapse_subspecies=False)
-    tax = set([ str(taxid) for taxid in tax])
+    tree = ete3.PhyloTree(name='-1')
+    topo = ncbi.get_topology(genomes, collapse_subspecies=False)
     tree.add_child(topo)
     orphans = list(genomes - set([x.name for x in tree.get_leaves()]))
     print('missing taxa:')
@@ -29,30 +27,32 @@ def get_tree(taxa , genomes ,  outdir = None):
 
     orphans_info1 = {}
     orphans_info2 = {}
+
     for x in orphans:
+        Entrez.email = 'leo.burgy@epfl.ch'
         search_handle = Entrez.efetch('taxonomy', id=str(x), retmode='xml')
         record = next(Entrez.parse(search_handle))
         print(record)
-        orphans_info1[ record['ParentTaxId']] = x
+        orphans_info1[record['ParentTaxId']] = x
         orphans_info2[x] = [x['TaxId'] for x in record['LineageEx']]
+
     for n in tree.traverse():
         if n.name in orphans_info1:
-            n.add_sister(name = orphans_info1[n.name])
+            n.add_sister(name=orphans_info1[n.name])
             print(n)
-    orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
+
     tree = add_orphans(orphans_info2, tree, genomes)
-    orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
     tree_string = tree.write(format=1)
-    
-    
-    with open( outdir +'master_tree.nwk' , 'w') as nwkout:
+
+    with open(outdir + 'master_tree.nwk', 'w') as nwkout:
         nwkout.write(tree_string)
-    with open( outdir + '_master_tree.pkl' , 'wb') as pklout:
+    with open(outdir + '_master_tree.pkl', 'wb') as pklout:
         pklout.write(pickle.dumps(tree))
-    
+
     return tree_string, tree
 
-def generate_taxa_index(tree , taxfilter= None, taxmask=None):
+
+def generate_taxa_index(tree, taxfilter=None, taxmask=None):
     """
     Generates an index for the global taxonomic tree for all OMA
     :param tree: ete3 tree
@@ -67,13 +67,13 @@ def generate_taxa_index(tree , taxfilter= None, taxmask=None):
                 break
         if taxfilter:
             if n.name in taxfilter:
-                #set weight for descendants of n to 0
+                # set weight for descendants of n to 0
                 n.delete()
     taxa_index = {}
     taxa_index_reverse = {}
     for i, n in enumerate(tree.traverse()):
         taxa_index_reverse[i] = n.name
-        taxa_index[n.name] = i-1
+        taxa_index[n.name] = i - 1
 
     return taxa_index, taxa_index_reverse
 
@@ -89,7 +89,6 @@ def add_orphans(orphan_info, tree, genome_ids_list, verbose=False):
     """
     first = True
 
-
     newdict = {}
 
     leaves = set([leaf.name for leaf in tree.get_leaves()])
@@ -101,7 +100,7 @@ def add_orphans(orphan_info, tree, genome_ids_list, verbose=False):
     i = 0
     print(i)
 
-    while first or ( len(orphans) > 0  and keys != oldkeys ) :
+    while first or (len(orphans) > 0 and keys != oldkeys):
         first = False
         oldkeys = keys
         leaves = set([leaf.name for leaf in tree.get_leaves()])
@@ -126,18 +125,17 @@ def add_orphans(orphan_info, tree, genome_ids_list, verbose=False):
         newdict = {}
     nodes = {}
     print(orphans)
-    #clean up duplicates
+    # clean up duplicates
     for n in tree.traverse():
         if n.name not in nodes:
-            nodes[ n.name] =1
+            nodes[n.name] = 1
         else:
-            nodes[ n.name] +=1
+            nodes[n.name] += 1
 
     for n in tree.traverse():
-        if nodes[ n.name] >1:
-            if n.is_leaf()== False:
+        if nodes[n.name] > 1:
+            if n.is_leaf() == False:
                 n.delete()
-                nodes[ n.name]-= 1
-
+                nodes[n.name] -= 1
 
     return tree
