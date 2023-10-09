@@ -1,59 +1,21 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-
-
-build-backend = "setuptools.build_meta"
-[project]
-name = "HogProf"
-dynamic = ["entry-points"]
-version = "0.0.8"
-authors = [
-  { name="Dave Moi", email="dmoi@unil.ch" },
-]
-dependencies = ["biopython",
-"certifi",
-"chardet",
-"datasketch",
-"ete3",
-"future",
-"goatools",
-"h5py",
-"idna",
-"lxml",
-"numexpr",
-"numpy",
-"pandas",
-"pyham>=1.1.10",
-"pyoma",
-"pyopa",
-"python-dateutil",
-"pytz",
-"requests",
-"scipy",
-"six",
-"tables",
-"urllib3",
-"tqdm"
-]
-description = "Phylogenetic Profiling with OMA and minhashing"
+[tool.poetry]
+name = "hogprof"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
 readme = "README.md"
 
-license = { file="LICENSE" }
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+tables = "^3.9.1"
+pyoma = "^0.12.1"
+pandas = "^2.1.1"
+h5py = "^3.9.0"
+ete3 = "^3.1.3"
+pyham = "^1.1.12"
+goatools = "^1.3.9"
 
-requires-python = ">=3.7"
 
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-[project.urls]
-"Homepage" = "https://github.com/DessimozLab/HogProf"
-"Bug Tracker" = "https://github.com/DessimozLab/HogProf/issues"
-"Docs" = "https://dessimozlab.github.io/HogProf/"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

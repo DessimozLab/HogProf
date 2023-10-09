@@ -4,4 +4,7 @@
 *.gaf
 **/*.tar.gz
 **/*.whl
-**/*.pyc
+*.pyc
+
+.idea/
+__pycache__/
