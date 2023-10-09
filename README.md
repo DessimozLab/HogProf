@@ -18,6 +18,11 @@ to install from github
 $ git clone https://github.com/DessimozLab/HogProf.git
 $ pip install -r pipreqs.txt .
 ```
+or to install from pypi
+```
+$ pip install hogprof
+```
+
 
 lets get a current version of the OMA hdf5 file and GAF. This will alow us to use the HOGs and study the functional enrichment of our search results.
 

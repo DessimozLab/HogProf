@@ -376,7 +376,8 @@ class LSHBuilder:
 
 
 
-if __name__ == '__main__':
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
     parser.add_argument('--taxmask', help='consider only one branch',type = str)
@@ -496,3 +497,7 @@ if __name__ == '__main__':
         lsh_builder.run_pipeline(threads)
     print(time.time() - start)
     print('DONE')
+
+
+if __name__ == '__main__':
+    main()
