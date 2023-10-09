@@ -16,6 +16,7 @@ If you run into any problems feel free to contact me at [dmoi@unil.ch](dmoi@unil
 to install from github
 ```
 $ git clone https://github.com/DessimozLab/HogProf.git
+$ cd HogProf
 $ pip install -r pipreqs.txt .
 ```
 or to install from pypi
