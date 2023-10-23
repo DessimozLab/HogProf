@@ -73,6 +73,8 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     else:
         #throwaway vector... 
         hog_matrix_weighted[0,0] = 1
+    if np.sum(hog_matrix_weighted) == 0:
+        hog_matrix_weighted[0,0] = 1
     
     weighted_hash = wmg.minhash(list(hog_matrix_weighted.flatten()))
     return  hog_matrix_binary , weighted_hash

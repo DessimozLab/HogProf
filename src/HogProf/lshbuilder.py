@@ -8,6 +8,8 @@ import pandas as pd
 import time as t
 import pickle
 import xml.etree.cElementTree as ET
+from ete3 import Phyloxml
+
 
 from datasketch import MinHashLSHForest , WeightedMinHashGenerator
 from datetime import datetime
@@ -71,8 +73,6 @@ class LSHBuilder:
         self.datetime = datetime
         self.fileglob = fileglob
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
-
-
         if saving_name:
             self.saving_name= saving_name 
             if self.saving_name[-1]!= '/':
@@ -95,13 +95,27 @@ class LSHBuilder:
                 self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist  , outdir=self.saving_path)
             else:
                 raise Exception( 'please specify either a list of taxa or a tree' )
-            self.swap2taxcode = True
-        elif mastertree:
-            self.tree_ete3 = ete3.Tree(masterTree, format=1)
+        elif masterTree:
+            if 'xml' in masterTree.lower():
+                project = Phyloxml()
+                project.build_from_file(masterTree)
+                trees = [t for t in  project.get_phylogeny()]
+                self.tree_ete3 = [ n for n in trees[0] ][0]
+                print( self.tree_ete3 )
+
+            else:
+
+                try:
+                    self.tree_ete3 = ete3.Tree(masterTree, format=1 , quoted_node_names= True)
+                    print( self.tree_ete3 )
+                except:
+                    self.tree_ete3 = ete3.Tree(masterTree, format=0)
+            
             with open(masterTree) as treein:
                 self.tree_string = treein.read()
-            self.swap2taxcode = use_taxcodes
+            #self.tree_string = self.tree_ete3.write(format=0)
 
+        self.swap2taxcode = use_taxcodes
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
@@ -118,7 +132,16 @@ class LSHBuilder:
             wmgout.write( pickle.dumps(wmg))
         self.wmg = wmg
         print( 'configuring pyham functions')
+
+        if self.swap2taxcode == True:
+            print('swapping ids')
+        else:
+            print('not swapping ids')
+        
+      
+
         if self.h5OMA:
+            
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  )
         else:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , orthoXML_as_string = False )     
@@ -133,7 +156,6 @@ class LSHBuilder:
             self.n_groups = len(self.fileglob)
         else:
             raise Exception( 'please specify an input file' )
-    
         self.hashes_path = self.saving_path + 'hashes.h5'
         self.lshpath = self.saving_path + 'newlsh.pkl'
         self.lshforestpath = self.saving_path + 'newlshforest.pkl'
@@ -155,7 +177,7 @@ class LSHBuilder:
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
             self.rows = len(self.groups)
-            for i, row in tqdm.tqdm(enumerate(self.groups)):
+            for i, row in enumerate(self.groups):
                 if i > start:
                     fam = row[0]
                     ortho_fam = self.READ_ORTHO(fam)
@@ -344,8 +366,10 @@ class LSHBuilder:
             for key in work_processes:
                 for process in work_processes[key]:
                     process.start()
-            for data in data_generator:
+            
+            for data in tqdm.tqdm(data_generator):
                 q.put(data)
+            
             print('done spooling data')
             for key in work_processes:
                 for i in range(2):
@@ -452,12 +476,16 @@ def main():
     else:
         duplonly = False
 
-    if args['taxcodes']:
-        taxcodes = args['taxcodes']     
-    else:   
-        taxcodes = False
 
-    if args['verbose']:
+
+    if args['taxcodes'] == 'True':
+        taxcodes = True
+    else:
+        taxcodes = False
+    
+    print('taxcodes', taxcodes)
+
+    if args['verbose'] == 'True':
         verbose = args['verbose']
     else:   
         verbose = False
@@ -485,7 +513,6 @@ def main():
     else:
         mastertree=None
     start = time.time()
-
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
