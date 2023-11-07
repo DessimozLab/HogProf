@@ -33,6 +33,7 @@ def switch_name_ncbi_id(orthoxml , mapdict = None  ):
         
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml
+
 def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True , orthoXML_as_string = True ):
     fam, orthoxml = row
     if orthoxml:
@@ -43,11 +44,14 @@ def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True , orthoX
             else:
                 quoted = True
             ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = 'newick_string'  ,use_internal_name=True, orthoXML_as_string=orthoXML_as_string )
+            
             tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])        
             return tp.treemap
         except:
             print('error' , traceback.format_exc()) 
             return None 
+
+
 def yield_families(h5file, start_fam):
     """
     Given a h5file containing OMA server, returns an iterator over the families

@@ -417,7 +417,7 @@ def main():
     parser.add_argument('--outfolder', help='folder for storing hash, db and tree objects' , type = str)
     parser.add_argument('--lossonly', help='only compile loss events' , type = bool)
     parser.add_argument('--duplonly', help='only compile duplication events' , type = bool)
-    parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
+    parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = str)
     parser.add_argument('--verbose', help='print verbose output' , type = bool)
     dbdict = {
         'all': { 'taxfilter': None , 'taxmask': None },
@@ -475,10 +475,8 @@ def main():
         duplonly = args['duplonly']
     else:
         duplonly = False
-
-
-
-    if args['taxcodes'] == 'True':
+    
+    if args['taxcodes']=='True':
         taxcodes = True
     else:
         taxcodes = False
