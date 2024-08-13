@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "HogProf"
 dynamic = ["entry-points"]
-version = "0.0.9"
+version = "0.0.10"
 authors = [
   { name="Dave Moi", email="dmoi@unil.ch" },
 ]
