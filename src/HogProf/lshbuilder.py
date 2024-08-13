@@ -40,7 +40,7 @@ class LSHBuilder:
     with a list of taxonomic codes for all the species in your db
     """
 
-    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now()):
+    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -67,11 +67,14 @@ class LSHBuilder:
             self.db_obj = None
             self.oma_id_obj = None
         
+        self.reformat_names = reformat_names
         self.tax_filter = taxfilter
         self.tax_mask = taxmask
         self.verbose = verbose
         self.datetime = datetime
+        self.use_phyloxml = False
         self.fileglob = fileglob
+        self.idmapper = None
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
         if saving_name:
             self.saving_name= saving_name 
@@ -82,6 +85,7 @@ class LSHBuilder:
                 os.mkdir(path=self.saving_path)
         else:
             raise Exception( 'please specify an output location' )
+        self.errorfile = self.saving_path + 'errors.txt'
         
         if masterTree is None:
             if h5_oma:
@@ -102,19 +106,37 @@ class LSHBuilder:
                 trees = [t for t in  project.get_phylogeny()]
                 self.tree_ete3 = [ n for n in trees[0] ][0]
                 print( self.tree_ete3 )
-
+                self.use_phyloxml = True
+                print('using phyloxml')
+                print( self.tree_ete3 )
+                self.tree_string = masterTree
             else:
-
                 try:
                     self.tree_ete3 = ete3.Tree(masterTree, format=1 , quoted_node_names= True)
                     print( self.tree_ete3 )
                 except:
                     self.tree_ete3 = ete3.Tree(masterTree, format=0)
-            
             with open(masterTree) as treein:
                 self.tree_string = treein.read()
             #self.tree_string = self.tree_ete3.write(format=0)
-
+        else:
+            raise Exception( 'please specify a tree' )
+        
+        if self.reformat_names:
+            self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
+            with open( self.saving_path + 'reformatted_tree.nw', 'w') as treeout:
+                treeout.write(self.tree_ete3.write(format=0 ))
+            with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
+                idout.write( pickle.dumps(self.idmapper))
+            print('reformatted tree')
+            print( self.tree_ete3 )
+            self.tree_string = self.tree_ete3.write(format=1) 
+            #remap taxfilter and taxmask
+            if taxfilter:
+                self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
+            if taxmask:
+                self.tax_mask = self.idmapper[taxmask]
+        
         self.swap2taxcode = use_taxcodes
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
@@ -137,14 +159,21 @@ class LSHBuilder:
             print('swapping ids')
         else:
             print('not swapping ids')
-        
-      
-
-        if self.h5OMA:
             
-            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  )
+        print( 'configuring pyham functions')
+        print( 'swap ids', self.swap2taxcode)
+        print( 'reformat names', self.reformat_names)
+        print( 'use phyloxml', self.use_phyloxml)
+        print( 'use taxcodes', self.swap2taxcode)
+                
+        if self.h5OMA:
+            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
+                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper ) 
         else:
-            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , orthoXML_as_string = False )     
+            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
+                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper )         
+            
+
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
 
@@ -236,9 +265,18 @@ class LSHBuilder:
         while True:
             df = q.get()
             if df is not None :
-                df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-                df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
-                retq.put(df[['Fam', 'hash']])
+                
+                try:
+                    df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                    df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+                    retq.put(df[['Fam', 'hash']])
+                except Exception as e:
+                    print('error in worker' + str(i))
+                    print(e)
+                    with open(self.errorfile, 'a') as errorfile:
+                        errorfile.write(str(e))
+                        errorfile.write(str(df))
+                    
                 #matq.put(df[['Fam', 'rows']])
             else:
                 if self.verbose == True:
@@ -287,8 +325,9 @@ class LSHBuilder:
                                 h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
                                 count += 1
                             if t.time() - save_start > 200:
-                                print( t.time() - global_time )
+                                print( 'saving at :' , t.time() - global_time )
                                 forest.index()
+                                print( 'testing forest' )
                                 print(forest.query( hashes[fam] , k = 10 ) )
                                 h5flush()
                                 save_start = t.time()
@@ -412,13 +451,14 @@ def main():
     parser.add_argument('--OrthoGlob', help='a glob expression for orthoxml files ' , type = str)
     parser.add_argument('--tarfile', help='use tarfile with orthoxml data ' , type = str)
     parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = int)
-    parser.add_argument('--mastertree', help='master taxonomic tree. should use ncbi taxonomic id numbers as leaf names' , type = str)
+    parser.add_argument('--mastertree', help='master taxonomic tree. nodes should correspond to orthoxml' , type = str)
+    
     parser.add_argument('--nthreads', help='nthreads for multiprocessing' , type = int)
-    parser.add_argument('--outfolder', help='folder for storing hash, db and tree objects' , type = str)
     parser.add_argument('--lossonly', help='only compile loss events' , type = bool)
     parser.add_argument('--duplonly', help='only compile duplication events' , type = bool)
     parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = str)
     parser.add_argument('--verbose', help='print verbose output' , type = bool)
+    parser.add_argument('--reformat_names', help='try to correct broken species trees by replacing all names with numbers.' , type = bool)
     dbdict = {
         'all': { 'taxfilter': None , 'taxmask': None },
         'plants': { 'taxfilter': None , 'taxmask': 33090 },
@@ -439,10 +479,10 @@ def main():
 
     if 'OrthoGlob' in args:
         if args['OrthoGlob']:
-            orthoglob = glob.glob(args['OrthoGlob']+ '*')
+            orthoglob = glob.glob(args['OrthoGlob'])
         else:   
             orthoglob = None
-    
+
     if 'outpath' in args:
         dbname = args['outpath']
     else:
@@ -467,6 +507,9 @@ def main():
     else:
         raise Exception(' please specify input data ')
     
+    
+
+
     if args['lossonly']:
         lossonly = args['lossonly']
     else:
@@ -488,7 +531,10 @@ def main():
     else:   
         verbose = False
 
-
+    if args['reformat_names']:
+        reformat_names = True
+    else:
+        reformat_names = False
 
     threads = 4
     if args['nthreads']:
@@ -514,11 +560,13 @@ def main():
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
-            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , verbose=verbose)
+            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , 
+            lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose )
             lsh_builder.run_pipeline(threads)
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
-        treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , verbose=verbose)
+        treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
+          masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose)
         lsh_builder.run_pipeline(threads)
     print(time.time() - start)
     print('DONE')

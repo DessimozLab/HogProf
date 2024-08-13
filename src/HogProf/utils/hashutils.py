@@ -50,6 +50,8 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     :return weighted_hash: a weighted minhash of a HOG
 
     """
+    if not tp:
+        return None, None
 
     hog_matrix_weighted = np.zeros((1, 3*len(taxaIndex)))
     hog_matrix_binary = np.zeros((1, 3*len(taxaIndex)))
