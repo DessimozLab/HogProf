@@ -43,12 +43,7 @@ $ mkdir YourHogProfDirectory
 
 Ok. We're ready! Now let's compile a database containing all HOGs and our desired taxonomic levels using default settings. Launch the lshbuilder.
 dbtypes available on the command line are : all , plants , archaea, bacteria , eukarya , protists , fungi , metazoa and vertebrates. These will use the NCBI taxonomy as a tree to annotate events in different gene family's histories.
-If you are using OMA releases after 2022 we will also be downloading the OMA taxonomic tree since it is more accurate than the NCBI tree. This will be used to annotate the events in the gene family histories.
 
-```
-wget https://omabrowser.org/All/speciestree.nwk
-
-```
 
 If you are using an OMA release before 2022 you will need to use the NCBI tree. This is the default tree used by HogProf.
 
@@ -59,11 +54,18 @@ $python lshbuilder.py --outpath YourHogProfDirectory --dbtype all --OMA YourOmaD
 
 ```
 
-Otherwise we can use the custom tree we downloaded.
+If you are using OMA releases after 2022 we will also be downloading the OMA taxonomic tree since it is more accurate than the NCBI tree. This will be used to annotate the events in the gene family histories.
+
+```
+wget https://omabrowser.org/All/speciestree.nwk
+
+```
+
+Ok now we're ready to use the OMA tree to build our database.
 
 ``` 
 
-$python lshbuilder.py --outpath YourHogProfDirectory --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores --mastertree speciestree.nwk --reformat_names True
+$python lshbuilder.py --outpath YourHogProfDirectory --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores --mastertree YourOmaDirectory/speciestree.nwk --reformat_names True
 
 ```
 
