@@ -77,7 +77,7 @@ class Profiler:
 		if oma:
 			h5_oma = open_file(oma, mode="r")
 			self.db_obj = db.Database(h5_oma)
-			self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
+			#self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
 			self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma	, db_obj=self.db_obj)
 			self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
 			self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )

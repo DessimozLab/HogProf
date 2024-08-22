@@ -20,8 +20,9 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
     :param taxmask: if this is not NONE taxmask, the DB is constructed with this subtree
     :return: weights: a vector of weights for each tax level
     """
-
-    weights = np.zeros((3*len(taxaIndex),1))
+    #get max of taxa index
+    taxmax = max(taxaIndex.values())
+    weights = np.zeros((3*len(taxmax),1))
     print(len(taxaIndex))
     newtree = mastertree
     for event in weights:
@@ -35,7 +36,7 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
                     n.delete()
     for i in range(3):
         for n in newtree.traverse():
-            weights[len(taxaIndex)*i + taxaIndex[n.name] ] = 1
+            weights[len(taxmax)*i + taxaIndex[n.name] ] = 1
     return weights
 
 def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly = False ):
