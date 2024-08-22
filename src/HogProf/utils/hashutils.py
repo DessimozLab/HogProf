@@ -21,8 +21,8 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
     :return: weights: a vector of weights for each tax level
     """
     #get max of taxa index
-    taxmax = max(taxaIndex.values())
-    weights = np.zeros((3*len(taxmax),1))
+    taxmax = max(taxaIndex.values())+1
+    weights = np.zeros((3*taxmax,1))
     print(len(taxaIndex))
     newtree = mastertree
     for event in weights:
@@ -36,7 +36,7 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
                     n.delete()
     for i in range(3):
         for n in newtree.traverse():
-            weights[len(taxmax)*i + taxaIndex[n.name] ] = 1
+            weights[taxmax*i + taxaIndex[n.name] ] = 1
     return weights
 
 def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly = False ):

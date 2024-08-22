@@ -73,7 +73,8 @@ class Profiler:
 		else:
 			raise Exception( 'please provide a pickled ete3 tree or a newick file' )
 		self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
-			
+		
+		self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
 		if oma:
 			h5_oma = open_file(oma, mode="r")
 			self.db_obj = db.Database(h5_oma)

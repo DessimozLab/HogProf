@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: HogProf
-Version: 0.0.9
+Version: 0.0.10
 Summary: Phylogenetic Profiling with OMA and minhashing
 Author-email: Dave Moi <dmoi@unil.ch>
 License: MIT License
@@ -104,10 +104,32 @@ $ mkdir YourHogProfDirectory
 
 Ok. We're ready! Now let's compile a database containing all HOGs and our desired taxonomic levels using default settings. Launch the lshbuilder.
 dbtypes available on the command line are : all , plants , archaea, bacteria , eukarya , protists , fungi , metazoa and vertebrates. These will use the NCBI taxonomy as a tree to annotate events in different gene family's histories.
+
+
+If you are using an OMA release before 2022 you will need to use the NCBI tree. This is the default tree used by HogProf.
+
+
+
 ```
 $python lshbuilder.py --outpath YourHogProfDirectory --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores         
 
 ```
+
+If you are using OMA releases after 2022 we will also be downloading the OMA taxonomic tree since it is more accurate than the NCBI tree. This will be used to annotate the events in the gene family histories.
+
+```
+wget https://omabrowser.org/All/speciestree.nwk
+
+```
+
+Ok now we're ready to use the OMA tree to build our database.
+
+``` 
+
+$python lshbuilder.py --outpath YourHogProfDirectory --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores --mastertree YourOmaDirectory/speciestree.nwk --reformat_names True
+
+```
+
 This should build a taxonomic tree for the genomes contained in the release and then calculate enhanced phylogenies for all HOGs in OMA.
 
 Once the database is completed it can be interogated using a profiler object. Construction and usage of this object should be done using a python script or notebook. This shown in the example notebook searchenrich.ipynb found in the examples. Please feel free to modify it to suit the needs of your own research.
