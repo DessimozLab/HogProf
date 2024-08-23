@@ -16,6 +16,7 @@ import numpy as np
 import time
 import gc
 import logging
+import os
 from pyoma.browser import db
 np.random.seed(0)
 random.seed(0)
@@ -25,7 +26,7 @@ class Profiler:
 	A profiler object allows the user to query the LSH with HOGs and get a list of result HOGs back
 
 	"""
-	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False , nsamples = 256 , mastertree = None ):
+	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False , nsamples = 256 , mastertree = None , reformat_names = False , swap2taxcode = False , use_phyloxml = False , taxfilter = None , taxmask = None ):
 		"""
 		The Profiler class initializes a profiler object for querying the LSH with HOGs and returning a list of result HOGs.
 
@@ -52,36 +53,73 @@ class Profiler:
 		nsamples (int, optional): Number of samples to use. Defaults to 256.
 		mastertree (str, optional): Path to the master tree file.
 		"""
-
 		print('loading lsh')
 		with open(lshforestpath, 'rb') as lshpickle:
 			self.lshobj = pickle.loads(lshpickle.read())
 			print('indexing lsh')
 			self.lshobj.index()
-
 		self.hashes_h5 = h5py.File(hashes_h5, mode='r')
 		print('h5' , self.hashes_h5 , self.hashes_h5.keys())
 		self.nsamples = nsamples
-		if mastertree.split('.')[-1] == 'pkl':
-				with open( mastertree , 'rb') as pklin:
-					self.tree = pickle.loads(pklin.read())
-					self.tree_string = self.tree.write(format=1)
-		elif mastertree.split('.')[-1] == 'nwk':
-			self.tree = ete3.Tree(mastertree,format=1)
-			self.tree_string = self.tree.write(format=1)
-		
+		if 'xml' in mastertree.lower():
+			project = Phyloxml()
+			project.build_from_file(mastertree)
+			trees = [t for t in  project.get_phylogeny()]
+			self.tree = [ n for n in trees[0] ][0]
+			self.use_phyloxml = True
+			print('using phyloxml')
+			print( 'loaded tree:' , self.tree )
+			self.tree_string = mastertree
 		else:
-			raise Exception( 'please provide a pickled ete3 tree or a newick file' )
-		self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
-		
-		self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
+			try:
+				self.tree = ete3.Tree(mastertree, format=1 , quoted_node_names= True)
+				print( 'loaded tree:', self.tree )
+			except:
+				self.tree = ete3.Tree(mastertree, format=0)
+		with open(mastertree) as treein:
+			self.tree_string = treein.read()
+		#self.tree_string = self.tree_ete3.write(format=0)
+        
 		if oma:
+			self.reformat_names = reformat_names
+			self.saving_path = mat_path
+			if not os.path.exists(self.saving_path):
+				os.makedirs(self.saving_path)
+			
+			if self.reformat_names:
+				self.tree, self.idmapper = pyhamutils.tree2numerical(self.tree)
+				self.tree_string = self.tree.write(format=1)
+				with open( self.saving_path + 'reformatted_tree.nwk', 'w') as treeout:
+					treeout.write(self.tree.write(format=0 ))
+				with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
+					idout.write( pickle.dumps(self.idmapper))
+				print('reformatted tree')
+				print( self.tree )
+				self.tree_string = self.tree.write(format=1) 
+				#remap taxfilter and taxmask
+				if taxfilter:
+					self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
+				if taxmask:
+					self.tax_mask = self.idmapper[taxmask]
+			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
+			self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
+			self.swap2taxcode = swap2taxcode
+			self.use_phyloxml = use_phyloxml
+			self.tax_filter = None
+			self.tax_mask = None
+			
+
 			h5_oma = open_file(oma, mode="r")
 			self.db_obj = db.Database(h5_oma)
 			#self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
-			self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma	, db_obj=self.db_obj)
-			self.HAM_PIPELINE = functools.partial(pyhamutils.get_ham_treemap_from_row, tree=self.tree_string )
+			self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
+			
+			self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
+												  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper ) 
+
 			self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )
+		
+		self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
 
 		print('DONE')
 

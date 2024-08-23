@@ -245,7 +245,6 @@ class LSHBuilder:
                     pd_dataframe['Fam'] = pd_dataframe.index
                     pd_dataframe.to_csv(self.saving_path + 'fam2orthoxml.csv')
 
-
     def universe_saver(self, i, q, retq, matq,univerq, l):
         #only useful to save all prots within a taxonomic range as db is being compiled
         allowed = set( [ n.name for n in self.tree_ete3.get_leaves() ] )
