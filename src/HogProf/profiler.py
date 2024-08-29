@@ -101,6 +101,13 @@ class Profiler:
 					self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
 				if taxmask:
 					self.tax_mask = self.idmapper[taxmask]
+			else:
+				self.idmapper = None
+				self.tax_filter = taxfilter
+				self.tax_mask = taxmask
+				self.tree_string = self.tree.write(format=1)
+			
+
 			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
 			self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
 			self.swap2taxcode = swap2taxcode
