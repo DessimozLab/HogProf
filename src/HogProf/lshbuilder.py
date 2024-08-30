@@ -86,7 +86,6 @@ class LSHBuilder:
         else:
             raise Exception( 'please specify an output location' )
         self.errorfile = self.saving_path + 'errors.txt'
-        
         if masterTree is None:
             if h5_oma:
                 genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
@@ -120,11 +119,11 @@ class LSHBuilder:
                 self.tree_string = treein.read()
             #self.tree_string = self.tree_ete3.write(format=0)
         else:
-            raise Exception( 'please specify a tree' )
+            raise Exception( 'please specify a tree in either phylo xml or nwk format' )
         
         if self.reformat_names:
             self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
-            with open( self.saving_path + 'reformatted_tree.nw', 'w') as treeout:
+            with open( self.saving_path + 'reformatted_tree.nwk', 'w') as treeout:
                 treeout.write(self.tree_ete3.write(format=0 ))
             with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
                 idout.write( pickle.dumps(self.idmapper))
@@ -175,15 +174,17 @@ class LSHBuilder:
         
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
-
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
        
         if self.h5OMA:
             self.n_groups  = len(self.h5OMA.root.OrthoXML.Index)
+            print( 'reading oma hdf5 with n groups:', self.n_groups)
         elif self.fileglob:
+            print('reading orthoxml files:' , len(self.fileglob))
             self.n_groups = len(self.fileglob)
         else:
             raise Exception( 'please specify an input file' )
+        
         self.hashes_path = self.saving_path + 'hashes.h5'
         self.lshpath = self.saving_path + 'newlsh.pkl'
         self.lshforestpath = self.saving_path + 'newlshforest.pkl'
@@ -258,7 +259,6 @@ class LSHBuilder:
         while True:
             df = q.get()
             if df is not None :
-                
                 try:
                     df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
                     df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
@@ -298,6 +298,7 @@ class LSHBuilder:
         with open(self.errorfile, 'w') as hashes_error_files:
             with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
                 datasets = {}
+
                 if taxstr not in h5hashes.keys():
                     if self.verbose == True:
                         print('creating dataset')
@@ -325,8 +326,7 @@ class LSHBuilder:
                                 if savedf is None:
                                     savedf = this_dataframe[['Fam', 'ortho']]
                                 else:
-                                    savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )
-                                    
+                                    savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )  
                             if t.time() - save_start > 200:
                                 print( 'saving at :' , t.time() - global_time )
                                 forest.index()
@@ -341,6 +341,7 @@ class LSHBuilder:
                                     #save the mapping of fam to orthoxml
                                     print('saving orthoxml to fam mapping')
                                     print(savedf)
+
                                     savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
                                 save_start = t.time()
                         else:

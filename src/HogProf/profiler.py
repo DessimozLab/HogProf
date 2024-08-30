@@ -107,7 +107,6 @@ class Profiler:
 				self.tax_mask = taxmask
 				self.tree_string = self.tree.write(format=1)
 			
-
 			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
 			self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
 			self.swap2taxcode = swap2taxcode
@@ -176,7 +175,6 @@ class Profiler:
 		losses = set([ n.name  for n in tp.traverse() if n.lost and n.name in self.taxaIndex  ])
 		#these are the roots of the fams we are looking for
 		#we just assume no duplications or losses from this point
-
 		ancestral_nodes = ([ n for n in profiler.tree.traverse() if n.name in losses])
 		losses=[]
 		dupl=[]

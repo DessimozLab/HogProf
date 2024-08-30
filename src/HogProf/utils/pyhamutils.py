@@ -15,6 +15,7 @@ def get_orthoxml_tar(fam, tar):
     else:
         raise Exception( member + ' : not found in tarfile ')
     return orthoxml
+
 def get_species_from_orthoxml(orthoxml):
     NCBI_taxid2name = {}
     root = ET.fromstring(orthoxml)
@@ -22,6 +23,7 @@ def get_species_from_orthoxml(orthoxml):
         if 'species' in child.tag:
             NCBI_taxid2name[child.attrib['NCBITaxId']] = child.attrib['name']
     return NCBI_taxid2name
+
 def switch_name_ncbi_id(orthoxml , mapdict = None  ):
     #swap ncbi taxid for species name to avoid ambiguity
     #mapdict should be a mapping from species name to taxid if the info isnt in the orthoxmls
@@ -38,7 +40,6 @@ def switch_name_ncbi_id(orthoxml , mapdict = None  ):
 def reformat_treenames( tree , mapdict = None  ):   
     #tree is an ete3 tree instance
     #replace ( ) - / . and spaces with underscores
-    
     #iterate over all nodes
     for node in tree.traverse():
         if mapdict:
@@ -82,8 +83,6 @@ def orthoxml2numerical(orthoxml , mapper):
             child.attrib['name'] = mapper[child.attrib['name']]
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml 
-
-
 
 def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= False, orthomapper = None ):  
     fam, orthoxml = row
