@@ -333,14 +333,19 @@ class LSHBuilder:
                         else:
                             print(this_dataframe)
                     else:
-                        if self.verbose == True:
-                            print('wrap it up')
+                        print('wrapping up the run')
+                        print('saving at :' , t.time() - global_time )
+                        forest.index()
                         with open(self.lshforestpath , 'wb') as forestout:
                             forestout.write(pickle.dumps(forest, -1))
                         h5flush()
-                        if self.verbose == True:
-                            print('DONE SAVER' + str(i))
+                        if self.fileglob:
+                            print('saving orthoxml to fam mapping')
+                            savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
+                        
+                        print('DONE SAVER' + str(i))
                         break
+                
 
     def matrix_updater(self, iprocess , q, retq, matq, l):
         print('hogmat saver init ' + str(iprocess))
