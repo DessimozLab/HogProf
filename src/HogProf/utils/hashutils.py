@@ -24,7 +24,7 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
     #get max of taxa index
     taxmax = max(taxaIndex.values())+1
     weights = np.zeros((3*taxmax,1))
-    print('making tree weights w n taxa = ':len(taxaIndex))
+    print('making tree weights w n taxa = :',len(taxaIndex))
     newtree = mastertree
     for event in weights:
         for n in newtree.traverse():
