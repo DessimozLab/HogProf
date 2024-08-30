@@ -172,8 +172,7 @@ class LSHBuilder:
         else:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
                                                   orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper )         
-            
-
+        
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
 
@@ -323,7 +322,7 @@ class LSHBuilder:
                                 h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
                                 count += 1
                             if self.fileglob:
-                                if not savedf:
+                                if savedf is not None:
                                     savedf = this_dataframe[['Fam', 'ortho']]
                                 else:
                                     savedf = savedf.append(this_dataframe[['Fam', 'ortho']])
@@ -343,9 +342,6 @@ class LSHBuilder:
                                     print(savedf)
                                     savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
                                 save_start = t.time()
-
-
-
                         else:
                             print(this_dataframe)
                     else:

@@ -83,7 +83,9 @@ def orthoxml2numerical(orthoxml , mapper):
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml 
 
-def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= False, orthomapper = None ):    
+
+
+def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= False, orthomapper = None ):  
     fam, orthoxml = row
     format = 'newick_string'
     if use_phyloxml:
