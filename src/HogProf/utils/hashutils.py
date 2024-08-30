@@ -55,8 +55,8 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
         return None, None
 
     taxaIndex_max = max(taxaIndex.values())+1
-    hog_matrix_weighted = np.zeros((1, 3*len(taxaIndex_max)))
-    hog_matrix_binary = np.zeros((1, 3*len(taxaIndex_max)))
+    hog_matrix_weighted = np.zeros((1, 3*taxaIndex_max))
+    hog_matrix_binary = np.zeros((1, 3*taxaIndex_max))
     if tp:
         losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
         dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
