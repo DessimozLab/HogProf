@@ -325,7 +325,8 @@ class LSHBuilder:
                                 if savedf is None:
                                     savedf = this_dataframe[['Fam', 'ortho']]
                                 else:
-                                    savedf = savedf.append(this_dataframe[['Fam', 'ortho']])
+                                    savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )
+                                    
                             if t.time() - save_start > 200:
                                 print( 'saving at :' , t.time() - global_time )
                                 forest.index()
