@@ -10,7 +10,8 @@ import pandas as pd
 
 
 def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
-    #weighing function for tax level, masking levels etc. sets all weights to 1
+    #weighing function for tax level, masking levels etc. sets all weights to 1 if they are in taxmask or filter
+    #custom weights can also be used here
     """
     Generate the weights of each taxonomic level to be applied during the
     constructin of weighted minhashes
@@ -23,7 +24,7 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
     #get max of taxa index
     taxmax = max(taxaIndex.values())+1
     weights = np.zeros((3*taxmax,1))
-    print(len(taxaIndex))
+    print('making tree weights w n taxa = ':len(taxaIndex))
     newtree = mastertree
     for event in weights:
         for n in newtree.traverse():
@@ -57,6 +58,7 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     taxaIndex_max = max(taxaIndex.values())+1
     hog_matrix_weighted = np.zeros((1, 3*taxaIndex_max))
     hog_matrix_binary = np.zeros((1, 3*taxaIndex_max))
+
     if tp:
         losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
         dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
@@ -64,15 +66,23 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
         indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
         for i,event in enumerate(indices):
             if len(indices[event])>0:
-                taxindex = np.asarray(indices[event])
-                hogindex = np.asarray(indices[event])+i*taxaIndex_max
-                hog_matrix_weighted[:,hogindex] = treeweights[hogindex , : ].ravel()
-                if lossonly == True and event == 'loss':
-                    hog_matrix_weighted[:,hogindex] = 1
-                if duplonly == True and event == 'dup':
-                    hog_matrix_weighted[:,hogindex] = 1
-                if lossonly == False and duplonly == False:
-                    hog_matrix_binary[:,hogindex] = 1
+                try:
+                    hogindex = np.asarray(indices[event])+i*taxaIndex_max
+                    
+                    hog_matrix_weighted[:,hogindex] = treeweights[hogindex , : ].ravel()
+                    
+                    if lossonly == True and event == 'loss':
+                        hog_matrix_weighted[:,hogindex] = 1
+                    if duplonly == True and event == 'dup':
+                        hog_matrix_weighted[:,hogindex] = 1
+                    if lossonly == False and duplonly == False:
+                        hog_matrix_binary[:,hogindex] = 1
+                except:
+                    print( 'error in hash_tree')
+                    print( 'event', event)
+                    print( 'indices', indices[event])
+                    print( 'hogindex', hogindex)
+
     else:
         #throwaway vector... 
         hog_matrix_weighted[0,0] = 1

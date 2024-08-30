@@ -10,7 +10,7 @@ import pickle
 import xml.etree.cElementTree as ET
 from ete3 import Phyloxml
 
-
+import traceback
 from datasketch import MinHashLSHForest , WeightedMinHashGenerator
 from datetime import datetime
 import h5py
@@ -147,7 +147,6 @@ class LSHBuilder:
         else:
             #load machine learning weights
             self.treeweights = treeweights
-        print(self.treeweights)
         wmg = WeightedMinHashGenerator(3*len(self.taxaIndex), sample_size = numperm , seed=1)
         with open( self.saving_path  + 'wmg.pkl', 'wb') as wmgout:
             wmgout.write( pickle.dumps(wmg))
@@ -259,21 +258,13 @@ class LSHBuilder:
         while True:
             df = q.get()
             if df is not None :
-                try:
-                    df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-                    df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
-                    if self.fileglob:
-                        retq.put(df[['Fam', 'hash', 'ortho']])
-                    else:
-                        retq.put(df[['Fam', 'hash']])
-                except Exception as e:
-                    print('error in worker' + str(i))
-                    print(e)
-                    with open(self.errorfile, 'a') as errorfile:
-                        errorfile.write(str(e))
-                        errorfile.write(str(df))
-                    
-                #matq.put(df[['Fam', 'rows']])
+                df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+                if self.fileglob:
+                    retq.put(df[['Fam', 'hash', 'ortho']])
+                else:
+                    retq.put(df[['Fam', 'hash']])
+            
             else:
                 if self.verbose == True:
                     print('Worker done' + str(i))
