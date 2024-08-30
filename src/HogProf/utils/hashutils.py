@@ -64,10 +64,9 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
         indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
         for i,event in enumerate(indices):
             if len(indices[event])>0:
-
                 taxindex = np.asarray(indices[event])
                 hogindex = np.asarray(indices[event])+i*taxaIndex_max
-                hog_matrix_weighted[:,hogindex] = treeweights[hogindex,:].ravel()
+                hog_matrix_weighted[:,hogindex] = treeweights[hogindex , : ].ravel()
                 if lossonly == True and event == 'loss':
                     hog_matrix_weighted[:,hogindex] = 1
                 if duplonly == True and event == 'dup':
