@@ -147,7 +147,8 @@ class LSHBuilder:
         else:
             #load machine learning weights
             self.treeweights = treeweights
-        wmg = WeightedMinHashGenerator(3*len(self.taxaIndex), sample_size = numperm , seed=1)
+        tax_max = max(self.taxaIndex.values())+1
+        wmg = WeightedMinHashGenerator(3*tax_max, sample_size = numperm , seed=1)
         with open( self.saving_path  + 'wmg.pkl', 'wb') as wmgout:
             wmgout.write( pickle.dumps(wmg))
         self.wmg = wmg
