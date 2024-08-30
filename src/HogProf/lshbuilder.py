@@ -238,12 +238,7 @@ class LSHBuilder:
                     pd_dataframe['Fam'] = pd_dataframe.index
                     yield pd_dataframe
                     families = {}
-                if i%10000 == 0:
-                    print(i)
-                    #save the mapping of fam to orthoxml
-                    pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                    pd_dataframe['Fam'] = pd_dataframe.index
-                    pd_dataframe.to_csv(self.saving_path + 'fam2orthoxml.csv')
+                
 
     def universe_saver(self, i, q, retq, matq,univerq, l):
         #only useful to save all prots within a taxonomic range as db is being compiled
@@ -290,6 +285,7 @@ class LSHBuilder:
         count = 0
         forest = MinHashLSHForest(num_perm=self.numperm)
         taxstr = ''
+        savedf = None
         if self.tax_filter is None:
             taxstr = 'NoFilter'
         if self.tax_mask is None:
@@ -323,17 +319,30 @@ class LSHBuilder:
                                     h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
                                 h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
                                 count += 1
+                            if self.fileglob:
+                                if not savedf:
+                                    savedf = this_dataframe[['Fam', 'ortho']]
+                                else:
+                                    savedf = savedf.append(this_dataframe[['Fam', 'ortho']])
                             if t.time() - save_start > 200:
                                 print( 'saving at :' , t.time() - global_time )
                                 forest.index()
                                 print( 'testing forest' )
                                 print(forest.query( hashes[fam] , k = 10 ) )
                                 h5flush()
-                                save_start = t.time()
                                 with open(self.lshforestpath , 'wb') as forestout:
                                     forestout.write(pickle.dumps(forest, -1))
                                 if self.verbose == True:
                                     print('save done at' + str(t.time() - global_time))
+                                if self.fileglob:
+                                    #save the mapping of fam to orthoxml
+                                    print('saving orthoxml to fam mapping')
+                                    print(savedf)
+                                    savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
+                                save_start = t.time()
+
+
+
                         else:
                             print(this_dataframe)
                     else:
