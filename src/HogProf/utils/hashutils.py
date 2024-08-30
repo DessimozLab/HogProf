@@ -66,7 +66,7 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
             if len(indices[event])>0:
 
                 taxindex = np.asarray(indices[event])
-                hogindex = np.asarray(indices[event])+i*len(taxaIndex)
+                hogindex = np.asarray(indices[event])+i*taxaIndex_max
                 hog_matrix_weighted[:,hogindex] = treeweights[hogindex,:].ravel()
                 if lossonly == True and event == 'loss':
                     hog_matrix_weighted[:,hogindex] = 1
