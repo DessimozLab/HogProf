@@ -85,7 +85,7 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     input_vec = list(hog_matrix_weighted.flatten())
 
     if wmg.dim == len(input_vec):
-        weighted_hash = wmg.minhash()
+        weighted_hash = wmg.minhash(input_vec)
         return  hog_matrix_binary , weighted_hash
 
     else:
