@@ -322,7 +322,7 @@ class LSHBuilder:
                                 h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
                                 count += 1
                             if self.fileglob:
-                                if savedf is not None:
+                                if savedf is None:
                                     savedf = this_dataframe[['Fam', 'ortho']]
                                 else:
                                     savedf = savedf.append(this_dataframe[['Fam', 'ortho']])
