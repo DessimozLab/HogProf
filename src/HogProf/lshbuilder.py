@@ -263,7 +263,10 @@ class LSHBuilder:
                 try:
                     df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
                     df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
-                    retq.put(df[['Fam', 'hash']])
+                    if self.fileglob:
+                        retq.put(df[['Fam', 'hash', 'ortho']])
+                    else:
+                        retq.put(df[['Fam', 'hash']])
                 except Exception as e:
                     print('error in worker' + str(i))
                     print(e)
