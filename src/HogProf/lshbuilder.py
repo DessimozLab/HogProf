@@ -152,13 +152,7 @@ class LSHBuilder:
         with open( self.saving_path  + 'wmg.pkl', 'wb') as wmgout:
             wmgout.write( pickle.dumps(wmg))
         self.wmg = wmg
-        print( 'configuring pyham functions')
 
-        if self.swap2taxcode == True:
-            print('swapping ids')
-        else:
-            print('not swapping ids')
-            
         print( 'configuring pyham functions')
         print( 'swap ids', self.swap2taxcode)
         print( 'reformat names', self.reformat_names)
