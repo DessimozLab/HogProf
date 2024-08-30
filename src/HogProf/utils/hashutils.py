@@ -59,39 +59,42 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     hog_matrix_weighted = np.zeros((1, 3*taxaIndex_max))
     hog_matrix_binary = np.zeros((1, 3*taxaIndex_max))
 
-    if tp:
-        losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
-        dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
-        presence = [ taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in taxaIndex ]
-        indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
-        for i,event in enumerate(indices):
-            if len(indices[event])>0:
-                try:
-                    hogindex = np.asarray(indices[event])+i*taxaIndex_max
-                    
-                    hog_matrix_weighted[:,hogindex] = treeweights[hogindex , : ].ravel()
-                    
-                    if lossonly == True and event == 'loss':
-                        hog_matrix_weighted[:,hogindex] = 1
-                    if duplonly == True and event == 'dup':
-                        hog_matrix_weighted[:,hogindex] = 1
-                    if lossonly == False and duplonly == False:
-                        hog_matrix_binary[:,hogindex] = 1
-                except:
-                    print( 'error in hash_tree')
-                    print( 'event', event)
-                    print( 'indices', indices[event])
-                    print( 'hogindex', hogindex)
+    losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
+    dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
+    presence = [ taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in taxaIndex ]
+    indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
+    for i,event in enumerate(indices):
+        if len(indices[event])>0:
+            try:
+                hogindex = np.asarray(indices[event])+i*taxaIndex_max
+                
+                hog_matrix_weighted[:,hogindex] = treeweights[hogindex , : ].ravel()
+                
+                if lossonly == True and event == 'loss':
+                    hog_matrix_weighted[:,hogindex] = 1
+                if duplonly == True and event == 'dup':
+                    hog_matrix_weighted[:,hogindex] = 1
+                if lossonly == False and duplonly == False:
+                    hog_matrix_binary[:,hogindex] = 1
+            except:
+                print( 'error in hash_tree')
+                print( 'event', event)
+                print( 'indices', indices[event])
+                print( 'hogindex', hogindex)
+
+    input_vec = list(hog_matrix_weighted.flatten())
+
+    if wmg.dim == len(input_vec):
+        weighted_hash = wmg.minhash()
+        return  hog_matrix_binary , weighted_hash
 
     else:
-        #throwaway vector... 
-        hog_matrix_weighted[0,0] = 1
-    if np.sum(hog_matrix_weighted) == 0:
-        hog_matrix_weighted[0,0] = 1
+        print('error in hash_tree')
+        print('wmg.dim', wmg.dim)
+        print('len(input_vec)', len(input_vec))
+        print( input_vec)
+        return None, None
     
-    weighted_hash = wmg.minhash(list(hog_matrix_weighted.flatten()))
-    return  hog_matrix_binary , weighted_hash
-
 def tree2str_DCA(tp , taxaIndex ):
     """
     Generate a string where each column is a tax level
