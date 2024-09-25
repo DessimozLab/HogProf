@@ -364,7 +364,7 @@ class Profiler:
 		sortedhogs = [(k, v) for k, v in hogdict.items()]
 		sortedhogs = sorted(student_tuples, key=lambda x: x[1])
 		sortedhogs = [ h[0] for h in sortehogs.reverse() ]
-		return hogdict
+		return hogdict , sortedhogs
 
 	def pull_hashes(self , hoglist):
 

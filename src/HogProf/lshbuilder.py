@@ -336,7 +336,7 @@ class LSHBuilder:
                                 save_start = t.time()
                         else:
                             print(this_dataframe)
-                    else:
+                    else
                         print('wrapping up the run')
                         print('saving at :' , t.time() - global_time )
                         forest.index()
