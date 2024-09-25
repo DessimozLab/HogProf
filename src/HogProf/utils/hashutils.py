@@ -133,6 +133,7 @@ def row2hash(row , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     #convert a dataframe row to a weighted minhash
     fam, treemap = row.tolist()
     hog_matrix,weighted_hash = hash_tree(treemap , taxaIndex , treeweights , wmg , lossonly = lossonly , duplonly = duplonly)
+    
     return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows'])
 
 def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):

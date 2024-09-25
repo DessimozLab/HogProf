@@ -161,10 +161,10 @@ class LSHBuilder:
                 
         if self.h5OMA:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper ) 
+                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None ) 
         else:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
-                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper )         
+                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None )         
         
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
@@ -254,6 +254,10 @@ class LSHBuilder:
             df = q.get()
             if df is not None :
                 df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
+                #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
+                #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
+
                 df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
                 if self.fileglob:
                     retq.put(df[['Fam', 'hash', 'ortho']])

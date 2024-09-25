@@ -84,7 +84,7 @@ def orthoxml2numerical(orthoxml , mapper):
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml 
 
-def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= False, orthomapper = None ):  
+def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= False, orthomapper = None ):  
     fam, orthoxml = row
     format = 'newick_string'
     if use_phyloxml:
@@ -99,8 +99,10 @@ def get_ham_treemap_from_row(row, tree , level = None , swap_ids = True , orthoX
         else:
             quoted = True
         try:
+            # return multiple treemaps corresponding to slices at different levels
             ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string )            
-            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])        
+            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
+            #check for losses / events and n leaves 
             return tp.treemap
         except Exception as e:
             # Capture the exception and format the traceback
