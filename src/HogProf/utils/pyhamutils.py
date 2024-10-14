@@ -4,6 +4,7 @@ import ete3
 import pickle
 import traceback
 import random
+import os
 
 def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()    
@@ -85,11 +86,74 @@ def orthoxml2numerical(orthoxml , mapper):
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml 
 
+'''Added on 14.10.2024 by Athina to try to adjust the orthoxml to the tree'''
+def adjust_orthoxml_to_tree(xml_string, newick_str):
+    #print(xml_string)
+    def get_tree_nodes(newick_str):
+        # Create a Tree object from the Newick string
+        tree = ete3.Tree(newick_str, format=1)
+        # Extract node names into a list
+        node_list = [node.name for node in tree.traverse()]
+        return node_list
+    
+    tree_nodes = get_tree_nodes(newick_str)
+    #print("Tree nodes:", tree_nodes)  # Debugging output
+    # Parse the XML
+    root = ET.fromstring(xml_string)
+    
+    # Create sets for fast lookup
+    valid_species_names = {node for node in tree_nodes}
+    valid_ortholog_group_ids = {node for node in tree_nodes}  # Assuming taxonId should match node names
+
+    # Variables to count found members
+    species_found_count = 0
+    ortholog_groups_found_count = 0
+
+    # Check species in the tree and count them
+    for species in root.findall("{http://orthoXML.org/2011/}species"):
+        name = species.get("name")
+        if name in valid_species_names:
+            species_found_count += 1
+        else:
+            root.remove(species)
+
+    #print(f"Species found in both: {species_found_count}")      ### this works, e.g. with 3302 (check first one in xml file)
+
+    # Check ortholog groups in the tree and count them
+    groups_element = root.find("{http://orthoXML.org/2011/}groups")
+    if groups_element is not None:  # Check if groups element exists
+        for ortholog_group in list(groups_element.findall("{http://orthoXML.org/2011/}orthologGroup")):
+            taxonId = ortholog_group.get("taxonId")
+            if taxonId in valid_ortholog_group_ids:
+                ortholog_groups_found_count += 1
+            else:
+                groups_element.remove(ortholog_group)
+
+    #print(f"Ortholog groups found in both: {ortholog_groups_found_count}")
+
+    # Convert back to string
+    filtered_xml_string = ET.tostring(root, encoding='utf-8').decode('utf-8')
+    return filtered_xml_string
+
+
 def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= False, orthomapper = None ):  
     fam, orthoxml = row
     format = 'newick_string'
+    
+    '''
+     # Print all the arguments (both positional and keyword arguments)
+    print("\nFunction arguments:")
+    for arg_name, arg_value in locals().items():
+        print(f"{arg_name}: {arg_value}")
+    '''
     #print('tree',tree)
-    #print('orthoxml',orthoxml)
+    
+    '''
+    treeete = ete3.Tree(tree, format=1)
+    # Count the total number of nodes in the tree (including root)
+    total_nodes = len([node for node in treeete.traverse()])
+    print('Total number of nodes in the tree:', total_nodes)
+    '''
     if use_phyloxml:
         format = 'phyloxml'
     if orthoxml:
@@ -102,11 +166,36 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
             quoted = False
         else:
             quoted = True
+        #print('orthoxml',orthoxml)
+        ### 14.10.2024: added update orthoxml to match the input tree
+        orthoxml = adjust_orthoxml_to_tree(orthoxml, tree)
+        #print('orthoxml after adjustment:', orthoxml)
         #print(orthoxml)
         try:
             # return multiple treemaps corresponding to slices at different levels
-            ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string )            
-            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
+            ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, 
+                                orthoXML_as_string=orthoXML_as_string )   
+            if ham_obj.get_list_top_level_hogs() == []:
+                #print('No top level hogs found')
+                return None
+            # Parse the tree_string back into an ete3 Tree object
+            treeete = ete3.Tree(tree, format=1)
+            # Count the total number of nodes in the tree (including root)
+            total_nodes = len([node for node in treeete.traverse()])
+            print('Total number of nodes in the tree:', total_nodes)        
+            print('HAM obj',ham_obj)
+            #print('orthoxml',orthoxml)
+            if not os.path.exists('ham_obj.html'):
+                current_directory = os.getcwd()
+                print(f"Current working directory: {current_directory}")
+                print('creating ham obj at', 'ham_obj.html')
+                print(ham_obj.get_list_top_level_hogs())
+                ham_obj.create_iHam(hog=ham_obj.get_list_top_level_hogs()[0], outfile='ham_obj.html')
+            #print('HAM leaves',len(ham_obj.taxonomy.leaves))
+            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])  
+            if not os.path.exists('tp.html'):
+                print('creating tp at', 'tp.html')
+                ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0],outfile='tp.html',as_html=True)
             #check for losses / events and n leaves 
             return tp.treemap
         except Exception as e:
@@ -191,7 +280,8 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
                 ham_obj = pyham.Ham(tree.write(format=1), orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string )
                 #ham_obj = pyham.Ham(tree.write(format=1), orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string, species_resolve_mode="OMA")
                 #'''
-                tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
+                tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])  #### possibly where multi levels should be introduced!!!!!!
+                
                 return tp.treemap
             else:
                 print('error' , full_error_message)

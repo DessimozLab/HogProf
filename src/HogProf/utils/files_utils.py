@@ -53,6 +53,7 @@ def get_tree(taxa , genomes ,  outdir = None):
     return tree_string, tree
 
 def generate_taxa_index(tree , taxfilter= None, taxmask=None):
+    #print('generating taxa index: taxfilter', taxfilter, 'taxmask', taxmask)
     """
     Generates an index for the global taxonomic tree for all OMA
     :param tree: ete3 tree
@@ -60,9 +61,18 @@ def generate_taxa_index(tree , taxfilter= None, taxmask=None):
         taxaIndexReverse: dictionary key: index: value: species name
     """
     newtree = copy.deepcopy(tree)
+    ### print first 10 nodes of the tree
+    #all_nodes = list(newtree.traverse())  # Traverse through all nodes
+    # Print the first 10 nodes
+    #print([taxmask])
+    #print("First 10 nodes of the tree:")
+    #for node in all_nodes[:10]:  # Slicing to get the first 10 nodes
+    #    print([node.name])
+    ### continue as intended
     for n in newtree.traverse():
         if taxmask:
             if str(n.name) == str(taxmask):
+                #print('considering only the branch ', n.name)
                 newtree = n
                 break
         if taxfilter:
@@ -71,11 +81,16 @@ def generate_taxa_index(tree , taxfilter= None, taxmask=None):
                 n.delete()
     taxa_index = {}
     taxa_index_reverse = {}
-    for i, n in enumerate(tree.traverse()):
+    #for i, n in enumerate(tree.traverse()): #this is the original line
+    for i, n in enumerate(newtree.traverse()):
         taxa_index_reverse[i] = n.name
         taxa_index[n.name] = i-1
 
-    return taxa_index, taxa_index_reverse
+    #total_nodes_after_change = len(newtree.get_leaves())
+    #print('total nodes after change', total_nodes_after_change)
+    
+    ### return the new tree too
+    return newtree, taxa_index, taxa_index_reverse
 
 
 def add_orphans(orphan_info, tree, genome_ids_list, verbose=False):

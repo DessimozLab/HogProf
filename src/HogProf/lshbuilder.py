@@ -58,6 +58,7 @@ class LSHBuilder:
             - verbose (bool): whether to print verbose output (default: False)
 
         """
+        print("initializing LSHBuilder")
         if h5_oma:
             self.h5OMA = h5_oma
             self.db_obj = db.Database(h5_oma)
@@ -145,10 +146,29 @@ class LSHBuilder:
                 '''
                 
                 self.tax_mask = self.idmapper[taxmask]
-        
+        #print('tree string',self.tree_string)
         self.swap2taxcode = use_taxcodes
+        # Assuming self.tree_ete3 contains all the original nodes before filtering
+        total_nodes_before_change = len(self.tree_ete3.get_descendants()) + 1
         ### generate a taxa index for the tree based on the taxonomic filter and mask
-        self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
+        #self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask) # this is the original line
+        self.tree_ete3, self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
+        self.tree_string = self.tree_ete3.write(format=1) # this was not here originally
+        print('changed tree string',self.tree_string)
+        '''
+        # Parse the tree_string back into an ete3 Tree object
+        tree = ete3.Tree(self.tree_string, format=1)
+        # Count the total number of nodes in the tree (including root)
+        total_nodes = len([node for node in tree.traverse()])
+        print('Total number of nodes in the tree:', total_nodes)
+        '''
+        # Number of taxa after applying the filter and mask
+        #num_taxa_after_change = len(self.taxaIndex)
+        # Print the numbers
+        print(f"Number of nodes before change: {total_nodes_before_change}")
+        #print(f"Number of taxa after applying filter/mask: {num_taxa_after_change}")
+
+
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
         self.numperm = numperm
@@ -164,13 +184,13 @@ class LSHBuilder:
             wmgout.write( pickle.dumps(wmg))
         self.wmg = wmg
 
-        print( 'configuring pyham functions')
+        print( '\nconfiguring pyham functions')
         print( 'swap ids', self.swap2taxcode)
         print( 'reformat names', self.reformat_names)
         print( 'use phyloxml', self.use_phyloxml)
         print( 'use taxcodes', self.swap2taxcode)
 
-        ### here simplify into one for testing?????????
+        ### functions to be used in the pipeline    ### row will include Fam, orthoxml as string
         if self.h5OMA:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names ,
                                                   orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None )
@@ -182,9 +202,7 @@ class LSHBuilder:
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
 
-        ### we need the self.READ_ORTHO and the HAM_PIPELINE defined, so load_one should be after it!!!!!!!!!!!!!!!!!
-        ### but the hash function is a bit different
-
+        ### get the number of groups
         if self.h5OMA:
             self.n_groups  = len(self.h5OMA.root.OrthoXML.Index)
             print( 'reading oma hdf5 with n groups:', self.n_groups)
@@ -194,6 +212,7 @@ class LSHBuilder:
         else:
             raise Exception( 'please specify an input file' )
         
+        ### set up the paths for the output files
         self.hashes_path = self.saving_path + 'hashes.h5'
         self.lshpath = self.saving_path + 'newlsh.pkl'
         self.lshforestpath = self.saving_path + 'newlshforest.pkl'
@@ -203,6 +222,7 @@ class LSHBuilder:
         print('done\n')
 
     def load_one(self, fam):
+        print('loading one')
         #test function to try out the pipeline on one orthoxml
         ortho_fam = self.READ_ORTHO(fam)
         pyham_tree = self.HAM_PIPELINE([fam, ortho_fam])
@@ -212,6 +232,7 @@ class LSHBuilder:
         return ortho_fam , pyham_tree, weighted_hash,hog_matrix
 
     def generates_dataframes(self, size=100, minhog_size=10, maxhog_size=None ):
+        print('generating dataframes')
         families = {}
         start = -1
         if self.h5OMA:
