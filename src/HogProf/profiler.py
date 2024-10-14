@@ -26,7 +26,10 @@ class Profiler:
 	A profiler object allows the user to query the LSH with HOGs and get a list of result HOGs back
 
 	"""
-	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False , nsamples = 256 , mastertree = None , reformat_names = False , swap2taxcode = False , use_phyloxml = False , taxfilter = None , taxmask = None ):
+	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False , 
+			  nsamples = 256 , mastertree = None , reformat_names = False , 
+			  swap2taxcode = False , use_phyloxml = False , taxfilter = None , 
+			  taxmask = None ):
 		"""
 		The Profiler class initializes a profiler object for querying the LSH with HOGs and returning a list of result HOGs.
 
@@ -68,13 +71,15 @@ class Profiler:
 			self.tree = [ n for n in trees[0] ][0]
 			self.use_phyloxml = True
 			print('using phyloxml')
-			print( 'loaded tree:' , self.tree )
+			#print( 'loaded tree:' , self.tree )
 			self.tree_string = mastertree
 		else:
 			try:
 				self.tree = ete3.Tree(mastertree, format=1 , quoted_node_names= True)
-				print( 'loaded tree:', self.tree )
+				#print( 'loaded tree:', self.tree )
+				print('using newick')
 			except:
+				print('using newick')
 				self.tree = ete3.Tree(mastertree, format=0)
 		with open(mastertree) as treein:
 			self.tree_string = treein.read()

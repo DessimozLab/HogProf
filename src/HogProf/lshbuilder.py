@@ -17,7 +17,7 @@ import h5py
 import time
 import gc
 from pyoma.browser import db
-from HogProf.utils import pyhamutils, hashutils , files_utils
+from utils import pyhamutils, hashutils , files_utils
 import numpy as np
 import tqdm
 import random
@@ -104,15 +104,15 @@ class LSHBuilder:
                 project.build_from_file(masterTree)
                 trees = [t for t in  project.get_phylogeny()]
                 self.tree_ete3 = [ n for n in trees[0] ][0]
-                print( self.tree_ete3 )
+                #print( self.tree_ete3 )
                 self.use_phyloxml = True
                 print('using phyloxml')
-                print( self.tree_ete3 )
+                #print( self.tree_ete3 )
                 self.tree_string = masterTree
             else:
                 try:
                     self.tree_ete3 = ete3.Tree(masterTree, format=1 , quoted_node_names= True)
-                    print( self.tree_ete3 )
+                    #print( self.tree_ete3 )
                 except:
                     self.tree_ete3 = ete3.Tree(masterTree, format=0)
             with open(masterTree) as treein:
@@ -128,15 +128,26 @@ class LSHBuilder:
             with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
                 idout.write( pickle.dumps(self.idmapper))
             print('reformatted tree')
-            print( self.tree_ete3 )
+            #print( self.tree_ete3 )
             self.tree_string = self.tree_ete3.write(format=1) 
             #remap taxfilter and taxmask
             if taxfilter:
                 self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
             if taxmask:
+                print('taxmask', taxmask)
+                #print(self.idmapper)
+                ### this is a hack to fix the taxmask for Toxicofera if reformat_names is True
+                '''
+                for key, value in self.idmapper.items():
+                    #print(key)
+                    if key == "Toxicofera":
+                        print('fix taxmask:', value)
+                '''
+                
                 self.tax_mask = self.idmapper[taxmask]
         
         self.swap2taxcode = use_taxcodes
+        ### generate a taxa index for the tree based on the taxonomic filter and mask
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
@@ -158,18 +169,22 @@ class LSHBuilder:
         print( 'reformat names', self.reformat_names)
         print( 'use phyloxml', self.use_phyloxml)
         print( 'use taxcodes', self.swap2taxcode)
-                
+
+        ### here simplify into one for testing?????????
         if self.h5OMA:
-            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None ) 
+            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names ,
+                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None )
         else:
-            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
-                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None )         
+            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , reformat_names = self.reformat_names ,
+                                                  orthoXML_as_string = False , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None )
         
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
-       
+
+        ### we need the self.READ_ORTHO and the HAM_PIPELINE defined, so load_one should be after it!!!!!!!!!!!!!!!!!
+        ### but the hash function is a bit different
+
         if self.h5OMA:
             self.n_groups  = len(self.h5OMA.root.OrthoXML.Index)
             print( 'reading oma hdf5 with n groups:', self.n_groups)
@@ -185,13 +200,15 @@ class LSHBuilder:
         self.mat_path = self.saving_path+ 'hogmat.h5'
         self.columns = len(self.taxaIndex)
         self.verbose = verbose
-        print('done')
+        print('done\n')
 
     def load_one(self, fam):
         #test function to try out the pipeline on one orthoxml
         ortho_fam = self.READ_ORTHO(fam)
         pyham_tree = self.HAM_PIPELINE([fam, ortho_fam])
         hog_matrix,weighted_hash = hashutils.hash_tree(pyham_tree , self.taxaIndex , self.treeweights , self.wmg)
+        #### NOTE: normally row2hash has: return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows'])
+        #### but just so the worker can get one row from the table later
         return ortho_fam , pyham_tree, weighted_hash,hog_matrix
 
     def generates_dataframes(self, size=100, minhog_size=10, maxhog_size=None ):
@@ -278,14 +295,28 @@ class LSHBuilder:
         forest = MinHashLSHForest(num_perm=self.numperm)
         taxstr = ''
         savedf = None
+        '''
         if self.tax_filter is None:
             taxstr = 'NoFilter'
         if self.tax_mask is None:
             taxstr+= 'NoMask'
         else:
             taxstr = str(self.tax_filter)
+        '''
+        # Check and set taxstr based on tax_filter and tax_mask
+        if self.tax_filter is None:
+            taxstr = 'NoFilter'
+        else:
+            taxstr = str(self.tax_filter)
+        # Ensure tax_mask is included in taxstr when it's not None
+        if self.tax_mask is None:
+            taxstr += 'NoMask'
+        else:
+            taxstr += '_Mask' + str(self.tax_mask)
+
         self.errorfile = self.saving_path + 'errors.txt'
         with open(self.errorfile, 'w') as hashes_error_files:
+            ### start writing h5 file with hashes
             with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
                 datasets = {}
 
@@ -293,6 +324,7 @@ class LSHBuilder:
                     if self.verbose == True:
                         print('creating dataset')
                         print('filtered at taxonomic level: '+taxstr)
+                    ### create a dataset for each taxonomic filter with initial shape
                     h5hashes.create_dataset(taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
                     if self.verbose == True:
                         print(datasets)
@@ -398,6 +430,7 @@ class LSHBuilder:
             retq = mp.Queue(maxsize=cores * 10)
             matq = mp.Queue(maxsize=cores * 10)
             work_processes = {}
+            ### somewhere here use load_one instead
             print('start workers')
             for key in functypes:
                 worker_function, number_workers, joinval = functypes[key]
@@ -437,7 +470,7 @@ class LSHBuilder:
                         process.join()
             gc.collect()
             print('DONE!')
-
+        ### or this may be the point where load_one is needed??????????????????????????
         mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(100))
         return self.hashes_path, self.lshforestpath , self.mat_path
 
@@ -495,9 +528,9 @@ def main():
         taxfilter = dbdict[args['dbtype']]['taxfilter']
         taxmask = dbdict[args['dbtype']]['taxmask']
     if args['taxmask']:
-        taxfilter = args['taxfilter']
-    if args['taxfilter']:
         taxmask = args['taxmask']
+    if args['taxfilter']:
+        taxfilter = args['taxfilter']
     if args['nperm']:
         nperm = int(args['nperm'])
     else:
@@ -566,6 +599,7 @@ def main():
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
             treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , 
             lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose )
+            #### maybe here is where load_one and saver are needed instaed of the run_pipeline!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             lsh_builder.run_pipeline(threads)
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
