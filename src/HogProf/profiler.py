@@ -63,6 +63,7 @@ class Profiler:
 			self.lshobj.index()
 		self.hashes_h5 = h5py.File(hashes_h5, mode='r')
 		print('h5' , self.hashes_h5 , self.hashes_h5.keys())
+		print('first dataset in h5 file has shape', self.hashes_h5[list(self.hashes_h5.keys())[0]].shape)
 		self.nsamples = nsamples
 		if 'xml' in mastertree.lower():
 			project = Phyloxml()
@@ -112,7 +113,8 @@ class Profiler:
 				self.tax_mask = taxmask
 				self.tree_string = self.tree.write(format=1)
 			
-			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
+			###original line did not have newtree
+			newtree, self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
 			self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
 			self.swap2taxcode = swap2taxcode
 			self.use_phyloxml = use_phyloxml
@@ -130,7 +132,8 @@ class Profiler:
 
 			self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )
 		
-		self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
+		### original line did not have newtree
+		newtree, self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
 
 		print('DONE')
 

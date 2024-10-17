@@ -239,6 +239,11 @@ class LSHBuilder:
             self.groups  = self.h5OMA.root.OrthoXML.Index
             self.rows = len(self.groups)
             for i, row in enumerate(self.groups):
+                #print('row')
+                # Assuming 'row' is your tables.tableextension.Row object
+                #table = row.table  # Get the parent table of the row
+                #for colname in table.colnames:
+                #    print(f"{colname}: {row[colname]}")
                 if i > start:
                     fam = row[0]
                     ortho_fam = self.READ_ORTHO(fam)
@@ -373,8 +378,9 @@ class LSHBuilder:
                             if t.time() - save_start > 200:
                                 print( 'saving at :' , t.time() - global_time )
                                 forest.index()
-                                print( 'testing forest' )
-                                print(forest.query( hashes[fam] , k = 10 ) )
+                                ### this test was originally uncommented 
+                                #print( 'testing forest' )
+                                #print(forest.query( hashes[fam] , k = 10 ) )
                                 h5flush()
                                 with open(self.lshforestpath , 'wb') as forestout:
                                     forestout.write(pickle.dumps(forest, -1))
