@@ -102,48 +102,195 @@ def remove_namespace(xml_string):
     # Convert back to string (preserving formatting)
     return ET.tostring(it.root, encoding='unicode')
 
-'''Added on 14.10.2024 by Athina to try to adjust the orthoxml to the tree'''
+
 def adjust_orthoxml_to_tree(xml_string, newick_str):
     # Helper function to get tree nodes
     def get_tree_nodes(newick_str):
-        # Create a Tree object from the Newick string
         tree = ete3.Tree(newick_str, format=1)
-        # Extract node names into a list
-        node_list = [node.name for node in tree.traverse()]
-        return node_list
+        return [node.name for node in tree.traverse()]
+    ### Helper function to get the taxon ID of the target group
+    def find_outermost_ortholog_with_generef(root):
+        # Traverse all orthologGroup elements
+        for ortholog_group in root.findall(".//orthologGroup"):
+            # Check if the orthologGroup contains a geneRef directly
+            gene_refs = ortholog_group.findall(".//geneRef")
+            if gene_refs:
+                return ortholog_group  # Return this orthologGroup if it contains a geneRef directly
+
+            # Check if the orthologGroup contains a geneRef inside a paralogGroup
+            paralog_groups = ortholog_group.findall(".//paralogGroup")
+            for paralog_group in paralog_groups:
+                gene_refs_in_paralog = paralog_group.findall(".//geneRef")
+                if gene_refs_in_paralog:
+                    return ortholog_group  # Return the outermost orthologGroup containing a geneRef
+
+        return None  # Return None if no orthologGroup contains a geneRef
+    
+    ### Helpefr function to move HOG id to the outermost orthologGroup
+    def move_hog_id(xml_string, target_taxon_id):
+        root = ET.fromstring(xml_string)
+
+        # Find the orthologGroup that has an id (we assume there's only one)
+        source_group = root.find(".//orthologGroup[@id]")
+        
+        if source_group is not None:
+            # Get the HOG ID (we don't know its exact value, so we extract it from the source group)
+            hog_id = source_group.attrib.get("id")
+            
+            # Remove the HOG ID from the source group
+            source_group.attrib.pop('id', None)  # Safely remove the id attribute
+
+            # Find the target orthologGroup by taxonId
+            target_group = root.find(f".//orthologGroup[@taxonId='{target_taxon_id}']")
+            
+            if target_group is not None:
+                # Assign the HOG ID to the target group
+                target_group.set("id", hog_id)
+
+        # Return the updated XML as a string
+        updated_xml_string = ET.tostring(root, encoding='utf-8').decode('utf-8')
+        return updated_xml_string
+
+    ### Helper function to remove HOG ID from an orthologGroup
+    def remove_id_from_orthologgroup(root):
+    # Find the orthologGroup with the id attribute
+        ortholog_group = root.find(".//{http://orthoXML.org/2011/}orthologGroup[@id]")
+
+        if ortholog_group is not None:
+            # Remove the id attribute
+            ortholog_group.attrib.pop('id', None)  # Safely remove the id attribute
+
+        # Return the modified XML as a string
+        updated_xml_string = ET.tostring(root, encoding='utf-8').decode('utf-8')
+        return updated_xml_string
     
     tree_nodes = get_tree_nodes(newick_str)
-    # Parse the XML
     root = ET.fromstring(xml_string)
-    
-    # Create sets for fast lookup
+
     valid_species_names = {node for node in tree_nodes}
-    valid_ortholog_group_ids = {node for node in tree_nodes}
-
-    # Variables to count found members
+    gene_id_set = set()
     species_found_count = 0
-    species_removed_count = 0
     
-
-    # Check species in the tree and count them
+    # Collect gene IDs from all species
     for species in root.findall("{http://orthoXML.org/2011/}species"):
         name = species.get("name")
         if name in valid_species_names:
+            genes = species.findall(".//{http://orthoXML.org/2011/}gene")
+            for gene in genes:
+                gene_id_set.add(gene.get("id"))
             species_found_count += 1
         else:
             root.remove(species)
-            species_removed_count += 1
-    ### return None if empty anyway
+    
     if species_found_count == 0:
         return None
+    
+    parent_map = {child: parent for parent in root.iter() for child in parent}
 
-    # Convert back to string
+    ### move the HOG ID and remove geneRefs when irelevant
+    groups_element = root.find("{http://orthoXML.org/2011/}groups")
+    if groups_element is not None:
+        ortholog_groups_to_remove = []
+        firstgroup=True
+        checkiffirstwithgeneref = True
+        for ortholog_group in groups_element.findall(".//{http://orthoXML.org/2011/}orthologGroup"):
+            if firstgroup:
+                print('first ortholog group', ortholog_group.find('.//{http://orthoXML.org/2011/}property').get('value'))
+                hogid = ortholog_group.get('id')
+                ortholog_group.attrib.pop('id', None)
+                firstgroup=False
+                #print(ortholog_group.get('id'))
+            ### exact syntax for lookin in this group only - no children
+            gene_refs = ortholog_group.findall("./{http://orthoXML.org/2011/}geneRef")
+            
+            # Remove invalid geneRefs
+            for gene_ref in gene_refs:
+                gene_id = gene_ref.get("id")
+                #print('gene_id',gene_id)
+                if gene_id not in gene_id_set:
+                    parent = parent_map[gene_ref]
+                    #print(f"Removing geneRef {gene_id} from orthologGroup {ortholog_group.find('.//{http://orthoXML.org/2011/}property').get('value')}")
+                    parent.remove(gene_ref)
+                else:
+                    if checkiffirstwithgeneref:
+                        ortholog_group.set('id', hogid)
+                        checkiffirstwithgeneref = False
+                        print('highest populated group', ortholog_group.find('.//{http://orthoXML.org/2011/}property').get('value'))
+            #print('next')
+
+
+
+    
+    # Find the orthologGroup that has an id (we assume there's only one)
+    #source_group = root.find(".//orthologGroup[@id]")
+    #target_group = find_outermost_ortholog_with_generef(root)
+    #if target_group is None:
+    #    print('No target group found')
+    #    print(ET.tostring(root, encoding='utf-8').decode('utf-8'))
+    #target_group_taxonid = target_group.get("taxonId")
+    #move_hog_id(xml_string, target_group_taxonid)
+
+
+
+            # Collapse ortholog groups cautiously, keeping top-level groups intact
+            #collapse_ortholog_groups(ortholog_group, gene_id_set)
+
+        #for ortholog_group in ortholog_groups_to_remove:
+        #    parent = parent_map.get(ortholog_group)
+        #    if parent is not None and ortholog_group in parent:
+        #        parent.remove(ortholog_group)
+
     filtered_xml_string = ET.tostring(root, encoding='utf-8').decode('utf-8')
-
-    # Remove the namespace if needed
     filtered_xml_string = remove_namespace(filtered_xml_string)
     
     return filtered_xml_string
+
+
+def collapse_ortholog_groups(ortholog_group, gene_id_set):
+    # Track innermost group, deepest taxonId, and property
+    current_group = ortholog_group
+    last_valid_taxon_id = None
+    last_valid_property = None
+
+    while True:
+        sub_groups = current_group.findall("{http://orthoXML.org/2011/}orthologGroup")
+        print('sub_groups',sub_groups)
+        if not sub_groups:
+            break
+        current_group = sub_groups[0]  # Collapse into the first sub-group
+        
+        # Update the deepest taxonId and property if they exist
+        taxon_id = current_group.get("taxonId")
+        if taxon_id:
+            last_valid_taxon_id = taxon_id
+        property_element = current_group.find("{http://orthoXML.org/2011/}property")
+        if property_element is not None:
+            last_valid_property = property_element
+
+    # Set the outermost group's taxonId to the deepest valid taxonId
+    if last_valid_taxon_id is not None:
+        ortholog_group.set("taxonId", last_valid_taxon_id)
+
+    # Remove all inner ortholog groups, only if no valid geneRefs exist
+    for sub_group in ortholog_group.findall("{http://orthoXML.org/2011/}orthologGroup"):
+        if not sub_group.findall(".//{http://orthoXML.org/2011/}geneRef"):
+            ortholog_group.remove(sub_group)
+
+    # Replace the property of the outer group with the deepest valid one
+    if last_valid_property is not None:
+        existing_property = ortholog_group.find("{http://orthoXML.org/2011/}property")
+        if existing_property is not None:
+            ortholog_group.remove(existing_property)
+        ortholog_group.append(last_valid_property)
+
+
+
+
+
+
+
+
+
 
 
 
