@@ -104,6 +104,9 @@ def remove_namespace(xml_string):
 
 
 def adjust_orthoxml_to_tree(xml_string, newick_str):
+    #print('adjusting orthoxml to tree')
+    #print('xml_string before change',xml_string)
+
     # Helper function to get tree nodes
     def get_tree_nodes(newick_str):
         tree = ete3.Tree(newick_str, format=1)
@@ -181,9 +184,23 @@ def adjust_orthoxml_to_tree(xml_string, newick_str):
             species_found_count += 1
         else:
             root.remove(species)
+    #print('species found count', species_found_count)
     
     if species_found_count == 0:
         return None
+    
+    ### testing non-empty only  -- ATHINA CHECKPOINT - 18.10.2024. I am using a mask for Toxicofera
+    ### and only one HOG so that lshbuilder runs fast. I am trying to adjust the orthoxml string to 
+    ### the changed tree so that the pyHam object can be created correctly. So far it does not work.
+    ### Also to consider: even if it does work, is there a chance that it will break lshbuilder later
+    ### at the hashing step? if things dont have the same length? keep it in mind.
+    #'''
+    test_xml_file = '/work/FAC/FBM/DBC/cdessim2/default/agavriilidou/venom_project/2a_hogprof_testing/orthoxml_fixed_manual.xml'
+    tree = ET.parse(test_xml_file)
+    root = tree.getroot()
+    updated_xml_string = ET.tostring(root, encoding='utf-8').decode('utf-8')
+    return updated_xml_string
+    #'''
     
     parent_map = {child: parent for parent in root.iter() for child in parent}
 
@@ -328,13 +345,14 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
         else:
             quoted = True
         #print('orthoxml',orthoxml)
-        if fam == 706758:
-            print('orthoxml before adjustment:', orthoxml)
+        #if fam == 706758:
+        #    print('orthoxml before adjustment:', orthoxml)
         ### 14.10.2024: added update orthoxml to match the input tree
         orthoxml = adjust_orthoxml_to_tree(orthoxml, tree)
         ### check if the orthoxml is None
         if orthoxml is None:
             return None
+        print('family', fam)
         if fam == 706758:
             print('orthoxml after adjustment:', orthoxml)
         #print(orthoxml)

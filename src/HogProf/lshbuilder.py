@@ -246,6 +246,15 @@ class LSHBuilder:
                 #    print(f"{colname}: {row[colname]}")
                 if i > start:
                     fam = row[0]
+                    ### athina testing - this indeed uses only the specified family 
+                    ### the run_pipeline is run for the target family only
+                    #print([fam])
+                    #'''
+                    if fam != 790033:
+                        continue
+                    else:
+                        print('found fam', fam)
+                    #'''
                     ortho_fam = self.READ_ORTHO(fam)
                     hog_size = ortho_fam.count('<species name=')
                     if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
