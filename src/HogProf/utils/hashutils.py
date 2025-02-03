@@ -94,7 +94,30 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
         print('len(input_vec)', len(input_vec))
         print( input_vec)
         return None, None
+
+
+
+
+def hash_trees_subhogs(hog_tps , taxaIndex , treeweights , wmg , lossonly = False , duplonly = False ):
+    """
+    Generate a weighted minhash and binary matrix row for multiple tree profiles within a HOG
+
+    :param tp: a pyham tree profile
+    :param taxaIndex: dict mapping taxa to columns
+    :param treeweights: a vector of weights for each tax levels
+    :param wmg: Datasketch weighted minhash generator
+    :return hog_matrix: a vector of weights for each tax level
+    :return weighted_hash: a weighted minhash of a HOG
+
+    """
+    #print(hog_tps.keys())
+    #print(hog_tps[['tree_dicts']].to_dict())
     
+    hashes_subhogs = {key:hash_tree(tp , taxaIndex , treeweights , wmg) for key,tp  in hog_tps['tree_dicts'].items() }
+    
+    return hashes_subhogs
+
+
 def tree2str_DCA(tp , taxaIndex ):
     """
     Generate a string where each column is a tax level
@@ -132,11 +155,13 @@ def row2hash(row , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     """
     #convert a dataframe row to a weighted minhash
     fam, treemap = row.tolist()
+    #print(f'Processing row in row2hash: fam={fam}, treemap={treemap}')
     hog_matrix,weighted_hash = hash_tree(treemap , taxaIndex , treeweights , wmg , lossonly = lossonly , duplonly = duplonly)
+    #print(f'Generated hog_matrix: {hog_matrix}, weighted_hash: {weighted_hash}')
     
     return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows'])
 
-def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):
+def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128, fam2orthoxmlpath = None):
     #read the stored hash values and return a weighted minhash
     """
     Read the stored hash values and return a weighted minhash
@@ -146,10 +171,30 @@ def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128  ):
     :return: minhash1: the weighted hash of your HOG
     """
     if dataset is None:
-        print('no dataset specified, using first dataset in the hdf5 file')
         dataset = list(hdf5.keys())[0]
-    #print(fam, dataset, hdf5[dataset])
-    hashvalues = np.asarray(hdf5[dataset][fam, :].reshape(nsamples,2 ))
+    ### Athina comment: this here below may need fixing for levels !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ### because fam works as an index only when slicesubhogs=False
+    ### otherwise we need to get to the id again
+    #print(hdf5[dataset][:])
+    #print(fam)
+    if fam2orthoxmlpath is None:
+        hashvalues = np.asarray(hdf5[dataset][fam, :].reshape(nsamples,2 ))
+    else:
+        id2famsubhog_df = pd.read_csv(fam2orthoxmlpath, index_col=0)
+        fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
+        #subhog_dict = id2famsubhog_df.set_index('subhog_id').to_dict(orient='index')
+        if isinstance(fam, int):
+            indices = fam_dict[fam]
+        elif isinstance(fam, list):
+            indices = fam
+        elif isinstance(fam, str):
+            fam_parts = fam.split('_')
+            fam_int = int(fam_parts[0])
+            subhog_str = '_'.join(fam_parts[1:])
+            indices = id2famsubhog_df[(id2famsubhog_df['fam'] == fam_int) & (id2famsubhog_df['subhog_id'] == subhog_str)].index.tolist() 
+        print('recursive call to fam2hash_hdf5')
+        return [fam2hash_hdf5(i, hdf5, dataset, nsamples) for i in indices]
+    #print(hashvalues)
     hashvalues = hashvalues.astype('int64')
     minhash1 = datasketch.WeightedMinHash( seed = 1, hashvalues=hashvalues)
     return minhash1
