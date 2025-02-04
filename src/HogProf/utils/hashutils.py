@@ -112,7 +112,8 @@ def hash_trees_subhogs(hog_tps , taxaIndex , treeweights , wmg , lossonly = Fals
     """
     #print(hog_tps.keys())
     #print(hog_tps[['tree_dicts']].to_dict())
-    
+    if hog_tps is None:
+        return None
     hashes_subhogs = {key:hash_tree(tp , taxaIndex , treeweights , wmg) for key,tp  in hog_tps['tree_dicts'].items() }
     
     return hashes_subhogs

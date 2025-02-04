@@ -154,10 +154,33 @@ class LSHBuilder:
             '''
 
             #remap taxfilter and taxmask 
+            self.dataset_nodes = None
             if taxfilter:
                 self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
+                unacceptable_nodes = []
+                for filterobj in self.tax_filter:
+                    try:
+                        filter_node = self.tree_ete3.search_nodes(name=filterobj)
+                        print('Found filter node:', filter_node)
+                        unacceptable_nodes.extend([node.name for node in filter_node[0].traverse()])
+                    except:
+                        print(f"Error searching for node with name: {filterobj}")
+                        print("Clade could not be excluded")
+                        continue
+                # update dataset_nodes to exclude the filtered nodes
+                self.dataset_nodes = [node.name for node in self.tree_ete3.traverse() if node.name not in unacceptable_nodes]
             if taxmask:
+                #print(self.idmapper)
                 self.tax_mask = self.idmapper[taxmask]
+                ### get acceptable ids here:
+                tax_mask_node = self.tree_ete3.search_nodes(name=self.tax_mask)
+                if tax_mask_node:
+                    tax_mask_node = tax_mask_node[0]
+                    print(f"Found tax_mask_node: {tax_mask_node.name}")
+                    self.dataset_nodes = [node.name for node in tax_mask_node.traverse()]
+                else:
+                    print(f"No node found with name: {tax_mask}")
+                    self.dataset_nodes = []
         
         self.swap2taxcode = use_taxcodes
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
@@ -191,11 +214,12 @@ class LSHBuilder:
         if self.h5OMA:
             self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
                                                   orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None,
-                                                  limit_species = self.limit_species, limit_events = self.limit_events ) 
+                                                  limit_species = self.limit_species, limit_events = self.limit_events , dataset_nodes = self.dataset_nodes) 
         else:
             self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
                                                   orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , 
-                                                  orthomapper = self.idmapper , levels = None, limit_species = self.limit_species, limit_events = self.limit_events )         
+                                                  orthomapper = self.idmapper , levels = None, limit_species = self.limit_species, limit_events = self.limit_events,
+                                                  dataset_nodes = self.dataset_nodes)         
         ### set up the hash pipeline
         self.HASH_PIPELINE = functools.partial( hashfunction , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         print("Setting up input data reader")
@@ -873,9 +897,9 @@ def main():
         taxfilter = dbdict[args['dbtype']]['taxfilter']
         taxmask = dbdict[args['dbtype']]['taxmask']
     if args['taxmask']:
-        taxfilter = args['taxfilter']
+        taxmask = args['taxmask']   
     if args['taxfilter']:
-        taxmask = args['taxmask']
+        taxfilter = args['taxfilter']
     if args['nperm']:
         nperm = int(args['nperm'])
     else:
@@ -952,9 +976,9 @@ def main():
           masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , 
           reformat_names=reformat_names, verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], 
           limit_events=args['eventslim'])
-        lsh_builder.run_pipeline(threads)
+        #lsh_builder.run_pipeline(threads)
         #print(f'Size of lsh_builder: {sys.getsizeof(lsh_builder)} bytes')
-        #lsh_builder.run_pipeline_single()
+        lsh_builder.run_pipeline_single()
     print(time.time() - start)
     print('DONE\n\n')
     #'''
@@ -981,12 +1005,14 @@ def main():
 
     ### Added step to call profiler - DEBUGING ONLY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     import profiler
-    p = profiler.Profiler(lshforestpath = '/home/agavriil/Documents/venom_project/2a_hogprof_testing/newlshforest.pkl' , 
-                          hashes_h5='/home/agavriil/Documents/venom_project/2a_hogprof_testing/hashes.h5' , 
-                          mat_path= '/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam2orthoxml.csv' ,
+    outputfolder = '/home/agavriil/Documents/venom_project/2a_hogprof_testing/curnagl_levels_single/'
+    inputfolder = '/home/agavriil/Documents/venom_project/hogprof_levels_scripts/test_data/'
+    p = profiler.Profiler(lshforestpath = outputfolder + 'newlshforest.pkl' , 
+                          hashes_h5=outputfolder + 'hashes.h5' , 
+                          mat_path= outputfolder + 'fam2orthoxml.csv' ,
                           oma = False , 
                           nsamples = 256 ,
-                          mastertree = "/home/agavriil/Documents/venom_project/hogprof_levels_scripts/test_data/Sauria_speciestree_edited.newick",
+                          mastertree = inputfolder + "Sauria_speciestree_edited.newick",
                           slicesubhogs = True
                           )
     #hogdict, sortedhogs = p.hog_query_sorted( hog_id= '0_0_0' , k = 20 )
@@ -995,13 +1021,13 @@ def main():
 #   hogdict, sortedhogs = p.hog_query( hog_id= 0 , k = 20 )
     #print(jkern)
     print()
-    if sortedhogs['hit_subhogid'].str.contains('0_0_0').any():
+    if sortedhogs['hit_subhogid'].str.contains('0_4_0').any(): ## for local was 0_0_0, for curnagl was 0_4_0
         print('got hit!\n')
     else:
         print('Warning! Did not find itself!\n')
 
     ### save the df
-    sortedhogs.to_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam_0_hits.csv', index=False)
+    #sortedhogs.to_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam_0_hits.csv', index=False)
     '''
     singledf1 = pd.read_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam_0_hits.csv')
     multidf2 = pd.read_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam_0_hits_multi.csv')
