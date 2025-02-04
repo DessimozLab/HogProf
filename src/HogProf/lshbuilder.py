@@ -390,8 +390,9 @@ class LSHBuilder:
                 newdf = pd.DataFrame.from_dict(newdf, orient='index')
                 #print(newdf)
                 empty_rows = df[df['tree_dicts'].apply(lambda x: len(x) == 0)]
-                print(f'{empty_rows.shape[0]} famililes failed the filter check')
-                print(empty_rows)
+                if self.verbose:
+                    print(f'{empty_rows.shape[0]} famililes failed the filter check')
+                    print(empty_rows)
 
                 return newdf
 
@@ -1003,6 +1004,7 @@ def main():
         pd.set_option('display.max_rows', None)
         print(difference)
 
+    '''
     ### Added step to call profiler - DEBUGING ONLY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     import profiler
     outputfolder = '/home/agavriil/Documents/venom_project/2a_hogprof_testing/curnagl_levels_single/'
@@ -1025,6 +1027,7 @@ def main():
         print('got hit!\n')
     else:
         print('Warning! Did not find itself!\n')
+    '''
 
     ### save the df
     #sortedhogs.to_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam_0_hits.csv', index=False)
