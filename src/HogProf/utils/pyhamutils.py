@@ -233,7 +233,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 return hogs            
             else:
                 print('error' , full_error_message)
-        return None
+        return {}#None
         #'''
 
 

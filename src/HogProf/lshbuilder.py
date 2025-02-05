@@ -137,22 +137,15 @@ class LSHBuilder:
         ### reformat names to avoid special characters
         if self.reformat_names:
             self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
+            ### ete3 formats here were tricky
             with open( self.saving_path + 'reformatted_tree.nwk', 'w') as treeout:
-                treeout.write(self.tree_ete3.write(format=3 , format_root_node=True )) # originally format=0 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                treeout.write(self.tree_ete3.write(format=3 , format_root_node=True )) 
             with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
                 idout.write( pickle.dumps(self.idmapper))
             print('reformatted tree')
             #print( self.tree_ete3 )
-            self.tree_string = self.tree_ete3.write(format=3, format_root_node=True ) #originally format=1 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            ### Athina change - we didnt have the root! (0) so we add it manually!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            '''
-            root_name = self.tree_ete3.get_tree_root().name
-            # Manually append the root name
-            if root_name:  # Ensure root_name is not None
-                if self.tree_string.endswith(';'):
-                    self.tree_string = f"{self.tree_string[:-1]}{root_name};"  # Add root name before the semicolon
-            '''
-
+            self.tree_string = self.tree_ete3.write(format=3, format_root_node=True ) 
+            
             #remap taxfilter and taxmask 
             self.dataset_nodes = None
             if taxfilter:
@@ -222,7 +215,7 @@ class LSHBuilder:
                                                   dataset_nodes = self.dataset_nodes)         
         ### set up the hash pipeline
         self.HASH_PIPELINE = functools.partial( hashfunction , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
-        print("Setting up input data reader")
+        print("\nSetting up input data reader")
         ### if the input is an OMA hdf5 file, set up the function to read the orthoxml data
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
@@ -532,7 +525,7 @@ class LSHBuilder:
                             with open(self.lshforestpath , 'wb') as forestout:
                                 forestout.write(pickle.dumps(forest, -1))
                             h5flush()
-                            if self.fileglob:
+                            if self.fileglob or self.slicesubhogs:
                                 print('saving orthoxml to fam mapping')
                                 savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
                             
@@ -843,7 +836,7 @@ class LSHBuilder:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
-    parser.add_argument('--taxmask', help='consider only one branch',type = str)
+    parser.add_argument('--taxmask', help='consider only one branch (e.g. Sauria)',type = str)
     parser.add_argument('--taxfilter', help='remove these taxa' , type = str)
     parser.add_argument('--outpath', help='name of the db (output folder where all files will be created)', type = str)
     parser.add_argument('--dbtype', help='preconfigured taxonomic ranges' , type = str)
@@ -980,7 +973,7 @@ def main():
         #lsh_builder.run_pipeline(threads)
         #print(f'Size of lsh_builder: {sys.getsizeof(lsh_builder)} bytes')
         lsh_builder.run_pipeline_single()
-    print(time.time() - start)
+    print("\nAnalysis took",time.time() - start, 'seconds')
     print('DONE\n\n')
     #'''
     '''
@@ -1007,14 +1000,14 @@ def main():
     '''
     ### Added step to call profiler - DEBUGING ONLY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     import profiler
-    outputfolder = '/home/agavriil/Documents/venom_project/2a_hogprof_testing/curnagl_levels_single/'
+    outputfolder = '/home/agavriil/Documents/venom_project/2a_hogprof_testing/levels_oma_taxcodes_maskfix/'
     inputfolder = '/home/agavriil/Documents/venom_project/hogprof_levels_scripts/test_data/'
     p = profiler.Profiler(lshforestpath = outputfolder + 'newlshforest.pkl' , 
                           hashes_h5=outputfolder + 'hashes.h5' , 
-                          mat_path= outputfolder + 'fam2orthoxml.csv' ,
+                          #mat_path= outputfolder + 'fam2orthoxml.csv' ,
                           oma = False , 
                           nsamples = 256 ,
-                          mastertree = inputfolder + "Sauria_speciestree_edited.newick",
+                          #mastertree = inputfolder + "Sauria_speciestree_edited.newick",
                           slicesubhogs = True
                           )
     #hogdict, sortedhogs = p.hog_query_sorted( hog_id= '0_0_0' , k = 20 )

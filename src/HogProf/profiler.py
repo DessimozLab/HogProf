@@ -7,6 +7,8 @@ from tables import *
 import numpy as np
 import random
 import ete3
+import argparse
+import sys
 #from validation import validation_semantic_similarity
 from HogProf.utils import hashutils , pyhamutils , files_utils
 from time import time
@@ -66,7 +68,7 @@ class Profiler:
 		hamfunction = pyhamutils.get_ham_treemap_from_row
 		hashfunction = hashutils.row2hash
 		### special operations for sliced subhogs
-		if self.slicesubhogs:
+		if self.slicesubhogs is True:
 			self.fam2orthoxmlpath = os.path.join(os.path.dirname(lshforestpath), 'fam2orthoxml.csv')
 			### adjust functions
 			hamfunction = pyhamutils.get_subhog_ham_treemaps_from_row
@@ -431,7 +433,7 @@ class Profiler:
 		:return: list containing the results of the LSH for the given query
 		"""
 		if hog_id is not None:
-			if not self.slicesubhogs:
+			if  self.slicesubhogs is False:
 				fam_id = self.hogid2fam(hog_id)
 			else:
 				### if a family is query
@@ -608,3 +610,44 @@ class Profiler:
 		hogsRanked = list( hogsRanked[ np.argsort(jaccard) ] )
 		jaccard = np.sort(jaccard)
 		return hogsRanked, jaccard
+
+def main():
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--lshforestpath', help='Path to the newlshforest.plk file',type = str)
+	parser.add_argument('--hashes_h5', help='Path to the hashes.h5 file',type = str)
+	parser.add_argument('--mat_path', help='Path to the fam2orthoxml.csv file' , type = str)
+	parser.add_argument('--OMA', help='Path to OmaServer.h5 file' , type = str)
+	parser.add_argument('--nsamples', help='no of samples' , type = int)
+	parser.add_argument('--slicesubhogs', help='Use slicesubhogs mode' , type = str)
+	parser.add_argument('--mastertree', help='master taxonomic tree. nodes should correspond to orthoxml' , type = str)
+	args = vars(parser.parse_args(sys.argv[1:]))
+	print("\nReading arguments")
+
+	if args['slicesubhogs'] == 'True':
+		args['slicesubhogs'] = True
+	elif args['slicesubhogs'] == 'False':
+		args['slicesubhogs'] = False
+
+	p = Profiler(lshforestpath=args['lshforestpath'],
+             hashes_h5=args['hashes_h5'],
+             mat_path=args['mat_path'],
+             oma=args['OMA'],
+             nsamples=args['nsamples'],
+			 slicesubhogs=args['slicesubhogs'],
+             mastertree=args['mastertree']
+			 
+			 )
+	print("\nProfiler object created")
+	#hogdict, sortedhogs = p.hog_query_sorted( hog_id= '0_0_0' , k = 20 )
+	#hogdict, sortedhogs = p.hog_query_sorted( hog_id= 0 , k = 20 )
+	hogdict, sortedhogs = p.hog_query_sorted( hog_id= "XP_015681225" , k = 20 )
+	print(sortedhogs)
+	print()
+	if sortedhogs['hit_subhogid'].str.contains('0_4_0').any(): ## for local was 0_0_0, for curnagl was 0_4_0
+		print('got hit!\n')
+	else:
+		print('Warning! Did not find itself!\n')
+
+
+if __name__ == '__main__':
+    main()
