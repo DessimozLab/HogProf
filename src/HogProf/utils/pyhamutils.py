@@ -3,6 +3,7 @@ import xml.etree.cElementTree as ET
 import ete3
 import pickle
 import traceback
+import sys
 
 def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()    
@@ -184,8 +185,14 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             ### save root name
             rootname = tp.treemap.name + '_0'
             ### get all subhogs
-            subhogs  = tp.hog.get_all_descendant_hogs()       
-            hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            subhogs  = tp.hog.get_all_descendant_hogs()
+            ### try to get the HOG id to use as part of the subhog name
+            try:  
+                hogs = { str(subhog.hog_id) + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            ### it wont be possible in some cases, so just use the genome name (taxnode )
+            except Exception as e:     
+                hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            #print(hogs)
 
             ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
             if dataset_nodes is not None:
@@ -211,7 +218,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             # Capture the exception and format the traceback
             full_error_message = str(e)
             if 'TypeError: species name ' in full_error_message and 'maps to an ancestral name, not a leaf' in full_error_message:
-                print('error' , full_error_message)
+                print('error' , full_error_message, file=sys.stderr)
                 #species name from bullshit error
                 #TypeError: species name '3515' maps to an ancestral name, not a leaf of the taxono
                 species = full_error_message.split('species name ')[1].split(' ')[0].replace('\'','')
@@ -243,7 +250,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                     #print('after',len(hogs.keys()))
                     if len(hogs) == 0:
                         return {}
-                #'''
+
                 ### first check rootHOG to see if there will be at least one hog returned
                 ### if dataset_nodes is specified, this step cannot be done
                 if dataset_nodes is None and not check_limits(hogs[rootname], limit_species, limit_events, 'root'):
@@ -251,10 +258,10 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
 
                 ### then check subhogs and remove the ones that do not meet the limits
                 hogs = {subhogname: hogs[subhogname] for subhogname in hogs if check_limits(hogs[subhogname], limit_species, limit_events, subhogname)}
-                #'''
+
                 return hogs            
             else:
-                print('error' , full_error_message)
+                print('error' , full_error_message, file=sys.stderr)
         return {}#None
         #'''
 

@@ -9,7 +9,7 @@ import time as t
 import pickle
 import xml.etree.cElementTree as ET
 from ete3 import Phyloxml
-
+import sys
 import traceback
 from datasketch import MinHashLSHForest , WeightedMinHashGenerator
 from datetime import datetime
@@ -130,7 +130,7 @@ class LSHBuilder:
                     self.tree_ete3 = ete3.Tree(masterTree, format=0)
             with open(masterTree) as treein:
                 self.tree_string = treein.read()
-                print(self.tree_string)
+                #print(self.tree_string)
             #self.tree_string = self.tree_ete3.write(format=0)
         else:
             raise Exception( 'please specify a tree in either phylo xml or nwk format' )
@@ -322,7 +322,7 @@ class LSHBuilder:
                         #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
                         #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
                         #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
-
+                        print(df.head())
                         df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
                         if self.fileglob:
                             retq.put(df[['Fam', 'hash', 'ortho']])
@@ -351,8 +351,8 @@ class LSHBuilder:
                     break
         except Exception as e:
             import traceback
-            print('Worker error')
-            print(f"Error in worker process: {traceback.format_exc()}")
+            print('Worker error', file=sys.stderr)
+            print(f"Error in worker process: {traceback.format_exc()}", file=sys.stderr)
 
     def worker_single(self, i, data, retq, matq, l):
         if self.verbose:
@@ -459,6 +459,7 @@ class LSHBuilder:
 
                                     if self.fileglob or self.slicesubhogs:
                                         if savedf is None:
+                                            df_cols = this_dataframe.columns
                                             savedf = this_dataframe[['ortho']]
                                         else:
                                             savedf = pd.concat([savedf, this_dataframe[['ortho']]])
