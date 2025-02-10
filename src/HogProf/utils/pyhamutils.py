@@ -143,10 +143,31 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                                      limit_species = 10, limit_events = 0, dataset_nodes = None):  
     fam, orthoxml = row
     format = 'newick_string'
+    def check_limits(treenode, limit_species, limit_events, subhogname):
+                ###removed because already covered in generates_dataframes!!!!!!!
+                leaves_num = sum(1 for node in treenode.traverse() if node.is_leaf())
+                if leaves_num < limit_species:
+                    #print(treenode.name,subhogname)
+                    return False
+                total_dupl = 0
+                total_loss = 0
+                for node in treenode.traverse():
+                    try:
+                        total_dupl += node.dupl
+                    except:
+                        total_dupl += 0
+                    try:
+                        total_loss += node.lost
+                    except:
+                        total_loss += 0
+                if total_dupl > limit_events or total_loss > limit_events:
+                    return True
+                #print(treenode.name,subhogname, total_dupl, total_loss)
+                return False
     if use_phyloxml:
         format = 'phyloxml'
     if orthoxml:
-        if swap_ids == True and orthoXML_as_string == True:
+        if swap_ids == True and orthoXML_as_string == True and reformat_names == False:
             orthoxml = switch_name_ncbi_id(orthoxml)
             quoted = False
         elif reformat_names == True:
@@ -174,29 +195,6 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 #print('after',len(hogs.keys()))
                 if len(hogs) == 0:
                     return {}
-
-            def check_limits(treenode, limit_species, limit_events, subhogname):
-                ###removed because already covered in generates_dataframes!!!!!!!
-                leaves_num = sum(1 for node in treenode.traverse() if node.is_leaf())
-                if leaves_num < limit_species:
-                    #print(treenode.name,subhogname)
-                    return False
-                total_dupl = 0
-                total_loss = 0
-                for node in treenode.traverse():
-                    try:
-                        total_dupl += node.dupl
-                    except:
-                        total_dupl += 0
-                    try:
-                        total_loss += node.lost
-                    except:
-                        total_loss += 0
-                if total_dupl > limit_events or total_loss > limit_events:
-                    return True
-                #print(treenode.name,subhogname, total_dupl, total_loss)
-                return False
-            
             #'''
             ### first check rootHOG to see if there will be at least one hog returned
             ### if dataset_nodes is specified, this step cannot be done
@@ -227,9 +225,33 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                     #delete all children
                     c.delete()
                 #rerun with trimmed tree    
-                ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string )            
-                hogs = { hog.level + '_' + str(i):  ham_obj.create_tree_profile(hog=hog).treemap for i,hog in enumerate(ham_obj.get_list_top_level_hogs()) } 
-                #check for losses / events and n leaves 
+                ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string ) 
+                #print(dir(ham_obj)) 
+                ### Create tree profile for the top-level HOG
+                tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
+                ### save root name
+                rootname = tp.treemap.name + '_0'
+                ### get all subhogs
+                subhogs  = tp.hog.get_all_descendant_hogs()       
+                hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+
+                ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
+                if dataset_nodes is not None:
+                    #print('fam', fam)
+                    #print('before',len(hogs.keys()))
+                    hogs = {subhogname: hogs[subhogname] for subhogname in hogs if subhogname.split('_')[0] in dataset_nodes}
+                    #print('after',len(hogs.keys()))
+                    if len(hogs) == 0:
+                        return {}
+                #'''
+                ### first check rootHOG to see if there will be at least one hog returned
+                ### if dataset_nodes is specified, this step cannot be done
+                if dataset_nodes is None and not check_limits(hogs[rootname], limit_species, limit_events, 'root'):
+                    return {}
+
+                ### then check subhogs and remove the ones that do not meet the limits
+                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if check_limits(hogs[subhogname], limit_species, limit_events, subhogname)}
+                #'''
                 return hogs            
             else:
                 print('error' , full_error_message)

@@ -130,6 +130,7 @@ class LSHBuilder:
                     self.tree_ete3 = ete3.Tree(masterTree, format=0)
             with open(masterTree) as treein:
                 self.tree_string = treein.read()
+                print(self.tree_string)
             #self.tree_string = self.tree_ete3.write(format=0)
         else:
             raise Exception( 'please specify a tree in either phylo xml or nwk format' )
@@ -328,9 +329,13 @@ class LSHBuilder:
                         else:
                             retq.put(df[['Fam', 'hash']])
                     else:
+                        #print(df.size)
                         df['tree_dicts'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
                         df['hash_dicts'] = df[['Fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
                         newdf ={}
+                        #print("worker df columns",df.columns)
+                        #for col in df.columns:
+                        #    print(df[[col]].head())
                         for i,row in df.iterrows():
                             for subhog in row['hash_dicts']:
                                 if self.fileglob:
@@ -452,7 +457,7 @@ class LSHBuilder:
                                 
                                     totals_subfams += nsubfams
 
-                                    if self.fileglob:
+                                    if self.fileglob or self.slicesubhogs:
                                         if savedf is None:
                                             savedf = this_dataframe[['ortho']]
                                         else:
@@ -465,7 +470,7 @@ class LSHBuilder:
                                         if len(h5hashes[taxstr]) < fam + 10:
                                             h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
                                         h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
-                                    if self.fileglob:
+                                    if self.fileglob or self.slicesubhogs:
                                         if savedf is None:
                                             savedf = this_dataframe[['Fam', 'ortho']]
                                         else:
@@ -511,12 +516,13 @@ class LSHBuilder:
                                     h5flush()
                                     with open(self.lshforestpath, 'wb') as forestout:
                                         forestout.write(pickle.dumps(forest, -1))
-                                    if self.fileglob:
-                                        print('Saving fam-to-orthoxml mapping')
+                                    if self.fileglob or self.slicesubhogs:
+                                        #print('Saving fam-to-orthoxml mapping')
                                         savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))
                                     save_start = t.time()
-                            else:
-                                print(this_dataframe)
+                            #else:
+                                #print('empty dataframe')
+                                #print(this_dataframe)
                         # wrap up
                         else:
                             print('wrapping up the run')
@@ -525,10 +531,15 @@ class LSHBuilder:
                             with open(self.lshforestpath , 'wb') as forestout:
                                 forestout.write(pickle.dumps(forest, -1))
                             h5flush()
-                            if self.fileglob or self.slicesubhogs:
-                                print('saving orthoxml to fam mapping')
-                                savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
-                            
+                            # Ensure fam2orthoxml.csv is saved when slicesubhogs is True
+                            if self.slicesubhogs:
+                                if savedf is not None and not savedf.empty:
+                                    print('saving orthoxml to fam mapping')
+                                    savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))
+                                else:
+                                    print('Warning: No fam-to-orthoxml mapping found.')
+                                    #pd.DataFrame(columns=['Fam', 'ortho']).to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'), index=False)
+
                             print('DONE SAVER' + str(i))
                             break
         except Exception as e:
@@ -970,9 +981,9 @@ def main():
           masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , 
           reformat_names=reformat_names, verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], 
           limit_events=args['eventslim'])
-        #lsh_builder.run_pipeline(threads)
+        lsh_builder.run_pipeline(threads)
         #print(f'Size of lsh_builder: {sys.getsizeof(lsh_builder)} bytes')
-        lsh_builder.run_pipeline_single()
+        #lsh_builder.run_pipeline_single()
     print("\nAnalysis took",time.time() - start, 'seconds')
     print('DONE\n\n')
     #'''
