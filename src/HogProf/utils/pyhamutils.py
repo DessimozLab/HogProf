@@ -141,7 +141,7 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
 
 
 def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= True, orthomapper = None,
-                                     limit_species = 10, limit_events = 0, dataset_nodes = None):  
+                                     limit_species = 10, limit_events = 0, dataset_nodes = None, hogid_for_all = None):  
     fam, orthoxml = row
     format = 'newick_string'
     def check_limits(treenode, limit_species, limit_events, subhogname):
@@ -186,12 +186,15 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             rootname = tp.treemap.name + '_0'
             ### get all subhogs
             subhogs  = tp.hog.get_all_descendant_hogs()
+            hogid_for_all = subhogs[0].hog_id
             ### try to get the HOG id to use as part of the subhog name
-            try:  
-                hogs = { str(subhog.hog_id) + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            #try:  
+            if hogid_for_all is None:
+                hogid_for_all = fam
+            hogs = { subhog.genome.name +'_' + str(hogid_for_all) + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
             ### it wont be possible in some cases, so just use the genome name (taxnode )
-            except Exception as e:     
-                hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            #except Exception as e:     
+            #    hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
             #print(hogs)
 
             ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
@@ -239,8 +242,10 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 ### save root name
                 rootname = tp.treemap.name + '_0'
                 ### get all subhogs
-                subhogs  = tp.hog.get_all_descendant_hogs()       
-                hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+                subhogs  = tp.hog.get_all_descendant_hogs() 
+                if hogid_for_all is None:
+                    hogid_for_all = fam      
+                hogs = { subhog.genome.name +'_' + str(hogid_for_all)+ '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
 
                 ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
                 if dataset_nodes is not None:

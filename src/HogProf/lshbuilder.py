@@ -315,7 +315,9 @@ class LSHBuilder:
             if self.verbose == True:
                 print('worker init ' + str(i))
             while True:
+                ### get dataframe from queue (generates_dataframes)
                 df = q.get()
+                #print(df.head())
                 if df is not None :
                     if self.slicesubhogs is False:
                         df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
@@ -328,10 +330,13 @@ class LSHBuilder:
                             retq.put(df[['Fam', 'hash', 'ortho']])
                         else:
                             retq.put(df[['Fam', 'hash']])
+                    ### slice subhogs case
                     else:
                         #print(df.size)
                         df['tree_dicts'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
                         df['hash_dicts'] = df[['Fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
+                        # Filter out rows with empty hash_dicts to save time
+                        df = df[df['hash_dicts'].apply(bool)]
                         newdf ={}
                         #print("worker df columns",df.columns)
                         #for col in df.columns:
@@ -341,8 +346,10 @@ class LSHBuilder:
                                 if self.fileglob:
                                     newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] 
                                                                     , 'ortho': row['ortho'] }
+                                ### don't save orthoxml strings if OMA
                                 else:
-                                    newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] }
+                                    newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1],
+                                    'ortho':''}
                         newdf = pd.DataFrame.from_dict(newdf, orient='index')
                         retq.put(newdf)
                 else:
@@ -459,7 +466,7 @@ class LSHBuilder:
 
                                     if self.fileglob or self.slicesubhogs:
                                         if savedf is None:
-                                            df_cols = this_dataframe.columns
+                                            #df_cols = this_dataframe.columns
                                             savedf = this_dataframe[['ortho']]
                                         else:
                                             savedf = pd.concat([savedf, this_dataframe[['ortho']]])
