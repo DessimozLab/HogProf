@@ -79,7 +79,7 @@ class Profiler:
 			print(id2famsubhog_df.head())
 			print(id2famsubhog_df[id2famsubhog_df['fam'] == 15]) 
 			# Group by 'fam' and create a dictionary of indices
-			fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
+			fam_dict = id2famsubhog_df.groupby('fam', group_keys=False).apply(lambda x: x.index.tolist(), include_groups=False).to_dict()
 			self.fam_dict = fam_dict
 			# Create the reverse dictionary too
 			subhogid_to_fam_dict = {subhogid: fam for fam, subhogid_list in fam_dict.items() for subhogid in subhogid_list}
@@ -96,7 +96,9 @@ class Profiler:
 			# Connect subhogids to levels
 			subhog_to_level_dict = {subhog_id: subhog_id.split('_')[1] for subhog_id in subhogname_to_id_dict.keys()}
 			self.subhog_to_level_dict = subhog_to_level_dict
-			
+			# Connect HOG IDs to fams
+			hogid_to_fam_dict = {subhogname.split("_")[-2]: fam for subhogname, fam in subhogname_to_fam_dict.items()}
+			self.hogid_to_fam_dict = hogid_to_fam_dict
 			
 		print('h5' , self.hashes_h5 , self.hashes_h5.keys())
 		self.nsamples = nsamples
@@ -182,7 +184,7 @@ class Profiler:
 			if id2famsubhog_df.index.name is not None:
 				id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath)
 			#print(id2famsubhog_df)
-			fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
+			fam_dict = id2famsubhog_df.groupby('fam', group_keys=False).apply(lambda x: x.index.tolist(), include_groups=False).to_dict()
 			#subhog_dict = id2famsubhog_df.set_index('subhog_id').to_dict(orient='index')
 			if isinstance(hog_entry, int):
 				indices = fam_dict[hog_entry]
@@ -441,6 +443,11 @@ class Profiler:
 					fam_id = hog_id
 					family_subhogids_list = self.fam_dict[hog_id]
 					family_subhogs_list = [self.subhog_dict[i] for i in family_subhogids_list]
+				### if a family is query by HOG ID
+				elif 'HOG' in hog_id:
+					fam_id = self.hogid_to_fam_dict[hog_id]
+					family_subhogids_list = self.fam_dict[int(fam_id)]
+					family_subhogs_list = [self.subhog_dict[i] for i in family_subhogids_list]
 				### if a subhog is query
 				else:
 					fam_id = int(hog_id.split('_')[0])
@@ -596,7 +603,7 @@ class Profiler:
 		return hashmat
 
 	def iternetwork(seedHOG):
-		pass
+		pas
 
 	def rank_hashes(query_hash,hashes):
 		jaccard = []
@@ -635,15 +642,20 @@ def main():
              nsamples=args['nsamples'],
 			 slicesubhogs=args['slicesubhogs'],
              mastertree=args['mastertree']
-			 
 			 )
 	print("\nProfiler object created")
 	#hogdict, sortedhogs = p.hog_query_sorted( hog_id= '0_0_0' , k = 20 )
 	#hogdict, sortedhogs = p.hog_query_sorted( hog_id= 0 , k = 20 )
-	hogdict, sortedhogs = p.hog_query_sorted( hog_id= "XP_015681225" , k = 20 )
+	hogdict, sortedhogs = p.hog_query_sorted( hog_id= 712231 , k = 20 )
 	print(sortedhogs)
 	print()
-	if sortedhogs['hit_subhogid'].str.contains('0_4_0').any(): ## for local was 0_0_0, for curnagl was 0_4_0
+	nonself_samelevel_hits = filtered_hogs = sortedhogs[(sortedhogs['query_level'] == sortedhogs['hit_level']) &
+													 (sortedhogs['query_subhogid'] != sortedhogs['hit_subhogid'])]
+	print(nonself_samelevel_hits)
+	outfile = os.path.join(os.path.dirname(args['lshforestpath']), 'nonself_samelevel_hits.csv')
+	nonself_samelevel_hits.to_csv(outfile, index=False)
+	print()
+	if sortedhogs['hit_subhogid'].str.contains('3584_HOG:E0712231_0').any(): ## for local was 0_0_0, for curnagl was 0_4_0
 		print('got hit!\n')
 	else:
 		print('Warning! Did not find itself!\n')

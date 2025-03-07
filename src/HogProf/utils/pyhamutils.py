@@ -187,15 +187,25 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             ### get all subhogs
             subhogs  = tp.hog.get_all_descendant_hogs()
             hogid_for_all = subhogs[0].hog_id
+            #print(subhogs[0]._properties['TaxRange'])
             ### try to get the HOG id to use as part of the subhog name
             #try:  
             if hogid_for_all is None:
                 hogid_for_all = fam
-            hogs = { subhog.genome.name +'_' + str(hogid_for_all) + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            
+            taxmapper = {value:key for key,value in orthomapper.items()}
+            def get_subhog_taxrange(subhog):
+                #print(subhog.genome.name)
+                taxrange = taxmapper[subhog.genome.name]
+                #print(subhog.genome.name, taxrange)
+                return taxrange
+            #hogs = { subhog.genome.name +'_' + str(hogid_for_all) + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            
+            hogs = { subhog.genome.name + '_' + get_subhog_taxrange(subhog) +'_' + str(hogid_for_all) + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
             ### it wont be possible in some cases, so just use the genome name (taxnode )
             #except Exception as e:     
             #    hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
-            #print(hogs)
+            #print('hogs keys',hogs.keys())
 
             ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
             if dataset_nodes is not None:
