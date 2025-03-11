@@ -187,12 +187,19 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             ### get all subhogs
             subhogs  = tp.hog.get_all_descendant_hogs()
             hogid_for_all = subhogs[0].hog_id
+            print('ham object initialized', hogid_for_all)
             #print(subhogs[0]._properties['TaxRange'])
             ### try to get the HOG id to use as part of the subhog name
             #try:  
             if hogid_for_all is None:
                 hogid_for_all = fam
             
+            '''function to extract taxids from subhogids. Needs to be adjusted as subhogids change'''
+            def get_taxid_from_subhogid(subhogid):
+                ### assuming format HOG:E0707322.2i_8570_7_51
+                return subhogid.split("_")[-2]
+
+            '''
             taxmapper = {value:key for key,value in orthomapper.items()}
             def get_subhog_taxrange(subhog):
                 #print(subhog.genome.name)
@@ -200,8 +207,11 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 #print(subhog.genome.name, taxrange)
                 return taxrange
             #hogs = { subhog.genome.name +'_' + str(hogid_for_all) + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
-            
-            hogs = { subhog.genome.name + '_' + get_subhog_taxrange(subhog) +'_' + str(hogid_for_all) + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            '''
+            #hogs = { subhog.genome.name + '_' + get_subhog_taxrange(subhog) +'_' + str(hogid_for_all) + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            hogs = { subhog.hog_id + '_' + subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+            #print(hogs.keys())
+
             ### it wont be possible in some cases, so just use the genome name (taxnode )
             #except Exception as e:     
             #    hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
@@ -211,7 +221,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             if dataset_nodes is not None:
                 #print('fam', fam)
                 #print('before',len(hogs.keys()))
-                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if subhogname.split('_')[0] in dataset_nodes}
+                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if get_taxid_from_subhogid(subhogname) in dataset_nodes}
                 #print('after',len(hogs.keys()))
                 if len(hogs) == 0:
                     return {}

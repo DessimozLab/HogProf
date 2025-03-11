@@ -75,29 +75,29 @@ class Profiler:
 			hashfunction = hashutils.hash_trees_subhogs
 			### get a dictionary of subhog ids
 			id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath) ### Athina note: here used to be index_col=0 !!!!!!!!!!!!!!!!!!!!!!!!
-			# print for fam=15
+			# print for fam=1
 			print(id2famsubhog_df.head())
-			print(id2famsubhog_df[id2famsubhog_df['fam'] == 15]) 
+			print(id2famsubhog_df[id2famsubhog_df['fam'] == 1]) 
 			# Group by 'fam' and create a dictionary of indices
 			fam_dict = id2famsubhog_df.groupby('fam', group_keys=False).apply(lambda x: x.index.tolist(), include_groups=False).to_dict()
 			self.fam_dict = fam_dict
 			# Create the reverse dictionary too
 			subhogid_to_fam_dict = {subhogid: fam for fam, subhogid_list in fam_dict.items() for subhogid in subhogid_list}
 			self.subhogid_to_fam_dict = subhogid_to_fam_dict
-			# Reconstruct the subhog_id for each row and create a subhog_dict
-			subhog_dict = id2famsubhog_df.apply(lambda x: f"{x['fam']}_{x['subhog_id']}", axis=1).to_dict()
+			# Reconstruct the subhog_id for each row and create a subhog_dict - assumes subhogid format!!!!
+			subhog_dict = id2famsubhog_df.apply(lambda x: x['subhog_id'], axis=1).to_dict()
 			self.subhog_dict = subhog_dict
 			# Create the reverse dictionary too
 			subhogname_to_id_dict = {subhogname: subhogid for subhogid, subhogname in subhog_dict.items()}
 			self.subhogname_to_id_dict = subhogname_to_id_dict
-			# Connect subhognames to fams
-			subhogname_to_fam_dict = {subhog_id: subhog_id.split('_')[0] for subhog_id in subhogname_to_id_dict.keys()}
+			# Connect subhognames to fam ids. 
+			subhogname_to_fam_dict = {subhog_name: subhogid_to_fam_dict[subhog_id]  for subhog_name, subhog_id  in subhogname_to_id_dict.items()}
 			self.subhogname_to_fam_dict = subhogname_to_fam_dict
-			# Connect subhogids to levels
+			# Connect subhogids to taxonomic levels. Assumes subhog id format!!!!
 			subhog_to_level_dict = {subhog_id: subhog_id.split('_')[1] for subhog_id in subhogname_to_id_dict.keys()}
 			self.subhog_to_level_dict = subhog_to_level_dict
-			# Connect HOG IDs to fams
-			hogid_to_fam_dict = {subhogname.split("_")[-2]: fam for subhogname, fam in subhogname_to_fam_dict.items()}
+			# Connect HOG IDs to fams. Assumes subhog id format!!!
+			hogid_to_fam_dict = {subhogname.split("_")[0].split(".")[0]: fam for subhogname, fam in subhogname_to_fam_dict.items()}
 			self.hogid_to_fam_dict = hogid_to_fam_dict
 			
 		print('h5' , self.hashes_h5 , self.hashes_h5.keys())
