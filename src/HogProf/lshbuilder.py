@@ -115,12 +115,38 @@ class LSHBuilder:
                     print( self.tree_ete3 )
                 except:
                     self.tree_ete3 = ete3.Tree(masterTree, format=0)
-            with open(masterTree) as treein:
-                self.tree_string = treein.read()
+            
             #self.tree_string = self.tree_ete3.write(format=0)
+        
+            if h5_oma:
+                with open(masterTree) as treein:
+                    self.tree_string = treein.read( )
+                tree = ete3.Tree(self.tree_string, format=1 , quoted_node_names= True)
+                #make sure the tree has no singletons
+                tree = self.tree_ete3
+                #if a node has a single descendant thats a leaf, make it a sister node
+                for n in tree.traverse():
+                    if n.is_leaf():
+                        continue
+                    if len(n.get_children()) == 1 and n.get_children()[0].is_leaf():
+                        print( 'detaching node' , n.name)
+                        child = n.get_children()[0]
+                        n.detach()
+                        n.up.add_child(child)
+                        print( 'attaching node' , child.name)
+                
+                self.tree_ete3 = tree
+                #save master tree 
+                with open( self.saving_path + 'master_tree.corrected.nwk', 'w') as treeout:
+                    treeout.write(self.tree_ete3.write(format=0 ))
+                self.tree_string = self.tree_ete3.write(format=1)
+            
         else:
             raise Exception( 'please specify a tree in either phylo xml or nwk format' )
         
+
+
+
         if self.reformat_names:
             self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
             with open( self.saving_path + 'reformatted_tree.nwk', 'w') as treeout:
@@ -253,6 +279,8 @@ class LSHBuilder:
         while True:
             df = q.get()
             if df is not None :
+
+
                 df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
                 #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
                 #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
@@ -336,7 +364,7 @@ class LSHBuilder:
                                 save_start = t.time()
                         else:
                             print(this_dataframe)
-                    else
+                    else:
                         print('wrapping up the run')
                         print('saving at :' , t.time() - global_time )
                         forest.index()
@@ -460,7 +488,7 @@ def main():
     parser.add_argument('--nthreads', help='nthreads for multiprocessing' , type = int)
     parser.add_argument('--lossonly', help='only compile loss events' , type = bool)
     parser.add_argument('--duplonly', help='only compile duplication events' , type = bool)
-    parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = str)
+    parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
     parser.add_argument('--verbose', help='print verbose output' , type = bool)
     parser.add_argument('--reformat_names', help='try to correct broken species trees by replacing all names with numbers.' , type = bool)
     dbdict = {
@@ -474,6 +502,7 @@ def main():
         'metazoa':{ 'taxfilter': None , 'taxmask': 33208 },
         'vertebrates':{ 'taxfilter': None , 'taxmask': 7742 },
     }
+
     taxfilter = None
     taxmask = None
     omafile = None
@@ -510,10 +539,6 @@ def main():
         fileglob = orthoglob
     else:
         raise Exception(' please specify input data ')
-    
-    
-
-
     if args['lossonly']:
         lossonly = args['lossonly']
     else:
@@ -523,7 +548,7 @@ def main():
     else:
         duplonly = False
     
-    if args['taxcodes']=='True':
+    if args['taxcodes']==True:
         taxcodes = True
     else:
         taxcodes = False
