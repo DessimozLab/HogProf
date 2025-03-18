@@ -598,6 +598,14 @@ def main():
           masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose)
         lsh_builder.run_pipeline(threads)
     print(time.time() - start)
+    #save corrected tree
+    if os.path.isfile('fallback.nwk'):
+        with open( dbname + 'corrected_tree.nwk', 'w') as treeout:
+            #copy the fallback tree
+            with open('fallback.nwk') as fallbackin:
+                treeout.write(fallbackin.read())   
+        #remove fallback tree
+        os.remove('fallback.nwk')
     print('DONE')
 
 
