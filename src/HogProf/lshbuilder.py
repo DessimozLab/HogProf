@@ -104,15 +104,12 @@ class LSHBuilder:
                 project.build_from_file(masterTree)
                 trees = [t for t in  project.get_phylogeny()]
                 self.tree_ete3 = [ n for n in trees[0] ][0]
-                print( self.tree_ete3 )
                 self.use_phyloxml = True
                 print('using phyloxml')
-                print( self.tree_ete3 )
                 self.tree_string = masterTree
             else:
                 try:
                     self.tree_ete3 = ete3.Tree(masterTree, format=1 , quoted_node_names= True)
-                    print( self.tree_ete3 )
                 except:
                     self.tree_ete3 = ete3.Tree(masterTree, format=0)
             
@@ -134,7 +131,6 @@ class LSHBuilder:
                         n.detach()
                         n.up.add_child(child)
                         print( 'attaching node' , child.name)
-                
                 self.tree_ete3 = tree
                 #save master tree 
                 with open( self.saving_path + 'master_tree.corrected.nwk', 'w') as treeout:
@@ -143,9 +139,6 @@ class LSHBuilder:
             
         else:
             raise Exception( 'please specify a tree in either phylo xml or nwk format' )
-        
-
-
 
         if self.reformat_names:
             self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
@@ -153,15 +146,14 @@ class LSHBuilder:
                 treeout.write(self.tree_ete3.write(format=0 ))
             with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
                 idout.write( pickle.dumps(self.idmapper))
-            print('reformatted tree')
-            print( self.tree_ete3 )
+            print( 'idmapper saved to ' + self.saving_path + 'idmapper.pkl')
             self.tree_string = self.tree_ete3.write(format=1) 
             #remap taxfilter and taxmask
             if taxfilter:
                 self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
             if taxmask:
                 self.tax_mask = self.idmapper[taxmask]
-        
+
         self.swap2taxcode = use_taxcodes
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
