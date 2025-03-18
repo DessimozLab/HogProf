@@ -226,7 +226,7 @@ class LSHBuilder:
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
             self.rows = len(self.groups)
-            for i, row in enumerate(self.groups):
+            for i, row in enumerate(tqdm.tqdm(self.groups)):
                 if i > start:
                     fam = row[0]
                     ortho_fam = self.READ_ORTHO(fam)
@@ -438,7 +438,7 @@ class LSHBuilder:
                 for process in work_processes[key]:
                     process.start()
             
-            for data in tqdm.tqdm(data_generator):
+            for data in data_generator:
                 q.put(data)
             
             print('done spooling data')
