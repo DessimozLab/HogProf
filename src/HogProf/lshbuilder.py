@@ -9,6 +9,7 @@ import time as t
 import pickle
 import xml.etree.cElementTree as ET
 from ete3 import Phyloxml
+from ete3 import NCBITaxa
 import sys
 import traceback
 from datasketch import MinHashLSHForest , WeightedMinHashGenerator
@@ -42,7 +43,7 @@ class LSHBuilder:
 
     def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , 
                  lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False, slicesubhogs = False,
-                 limit_species = 10, limit_events = 0):
+                 limit_species = 10, limit_events = 0, dataset_nodes=None):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -86,6 +87,7 @@ class LSHBuilder:
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
         self.limit_species = limit_species
         self.limit_events = limit_events
+        self.dataset_nodes = dataset_nodes
         if saving_name:
             self.saving_name= saving_name 
             if self.saving_name[-1]!= '/':
@@ -102,7 +104,7 @@ class LSHBuilder:
             if h5_oma:
                 genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
                 genomes = [ str(g) for g in genomes]
-                taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
+                taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]             
                 self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa, genomes = genomes , outdir=self.saving_path )
             elif taxa:
                 with open(taxa, 'r') as taxin:
@@ -135,6 +137,20 @@ class LSHBuilder:
         else:
             raise Exception( 'please specify a tree in either phylo xml or nwk format' )
         
+        ### apply mask already here if provided (not None)
+        if self.tax_mask:
+            ### get acceptable ids here:
+            tax_mask_node = self.tree_ete3.search_nodes(name=self.tax_mask)
+            if tax_mask_node:
+                tax_mask_node = tax_mask_node[0]
+                print(f"Found tax_mask_node: {tax_mask_node.name}")
+                self.dataset_nodes = [node.name for node in tax_mask_node.traverse()]
+                print(f"Dataset nodes: {len(self.dataset_nodes)}")
+            else:
+                print(f"No node found with name: {tax_mask}")
+                self.dataset_nodes = []
+        #print(self.dataset_nodes)
+        #print(len(self.dataset_nodes))
         ### reformat names to avoid special characters
         if self.reformat_names:
             self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
@@ -148,7 +164,6 @@ class LSHBuilder:
             self.tree_string = self.tree_ete3.write(format=3, format_root_node=True ) 
             
             #remap taxfilter and taxmask 
-            self.dataset_nodes = None
             if taxfilter:
                 self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
                 unacceptable_nodes = []
@@ -166,17 +181,40 @@ class LSHBuilder:
             if taxmask:
                 #print(self.idmapper)
                 self.tax_mask = self.idmapper[taxmask]
+                '''
                 ### get acceptable ids here:
                 tax_mask_node = self.tree_ete3.search_nodes(name=self.tax_mask)
                 if tax_mask_node:
                     tax_mask_node = tax_mask_node[0]
                     print(f"Found tax_mask_node: {tax_mask_node.name}")
                     self.dataset_nodes = [node.name for node in tax_mask_node.traverse()]
+                    print(f"Dataset nodes: {len(self.dataset_nodes)}")
                 else:
                     print(f"No node found with name: {tax_mask}")
                     self.dataset_nodes = []
+                '''
+                self.dataset_nodes = [self.idmapper[tax] for tax in self.dataset_nodes]
         
+        ### at this point adapt again the tree to the new dataset nodes
+        if self.dataset_nodes:
+            #print(f"Dataset nodes: {len(self.dataset_nodes)}")
+            #print(self.dataset_nodes)
+            self.tree_ete3.prune(self.dataset_nodes)
+            self.tree_string = self.tree_ete3.write(format=3, format_root_node=True)
+
         self.swap2taxcode = use_taxcodes
+        if self.swap2taxcode and self.h5OMA:
+            ### swap dataset nodes to taxcodes
+            self.dataset_nodes = [self.db_obj.taxid_from_level(taxonname)
+                                  for taxonname in self.dataset_nodes]
+
+            '''
+            ### ncbi method is slow - needs download the first time
+            ncbi = NCBITaxa()
+            self.dataset_nodes = [ncbi.get_name_translator([node])[node] for node in self.dataset_nodes]
+            '''
+        #print(self.dataset_nodes)
+
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
@@ -199,21 +237,27 @@ class LSHBuilder:
         print( 'reformat names', self.reformat_names)
         print( 'use phyloxml', self.use_phyloxml)
         print( 'use taxcodes', self.swap2taxcode)
+
         hamfunction = pyhamutils.get_ham_treemap_from_row
         hashfunction = hashutils.row2hash
         if slicesubhogs:
             hamfunction = pyhamutils.get_subhog_ham_treemaps_from_row
             hashfunction = hashutils.hash_trees_subhogs
+
         ### set up the pyHAM pipeline with different parameters depending on whether the input is an OMA hdf5 file or a list of orthoxml files
         if self.h5OMA:
+            self.taxmapper = {genome["NCBITaxonId"]: genome["SciName"].decode()
+                              for genome in  self.oma_id_obj.genome_table}
             self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None,
-                                                  limit_species = self.limit_species, limit_events = self.limit_events , dataset_nodes = self.dataset_nodes) 
+                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.oma_id_obj , levels = None,
+                                                  limit_species = self.limit_species, limit_events = self.limit_events , dataset_nodes = self.dataset_nodes,
+                                                  taxmapper = self.taxmapper) 
         else:
-            self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
-                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , 
-                                                  orthomapper = self.idmapper , levels = None, limit_species = self.limit_species, limit_events = self.limit_events,
-                                                  dataset_nodes = self.dataset_nodes)         
+            self.taxmapper = {value:key for key,value in self.idmapper.items()}
+            self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names ,
+                                                  orthoXML_as_string = False ,  use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None, 
+                                                  limit_species = self.limit_species, limit_events = self.limit_events, dataset_nodes = self.dataset_nodes,
+                                                  taxmapper = self.taxmapper)         
         ### set up the hash pipeline
         self.HASH_PIPELINE = functools.partial( hashfunction , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         print("\nSetting up input data reader")
