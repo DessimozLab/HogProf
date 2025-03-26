@@ -82,7 +82,9 @@ class Profiler:
         
 		if oma:
 			self.reformat_names = reformat_names
+			
 			self.saving_path = mat_path
+
 			if not os.path.exists(self.saving_path):
 				os.makedirs(self.saving_path)
 			

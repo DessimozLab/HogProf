@@ -1,3 +1,4 @@
+#
 from tables import *
 import functools
 import argparse
@@ -153,15 +154,18 @@ class LSHBuilder:
                 self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
             if taxmask:
                 self.tax_mask = self.idmapper[taxmask]
+                print( 'masking at taxonomic level:', self.tax_mask)
+
 
         self.swap2taxcode = use_taxcodes
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
+        
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
         self.numperm = numperm
         if treeweights is None:
             #generate aconfig_utilsll ones
-            self.treeweights = hashutils.generate_treeweights(self.tree_ete3  , self.taxaIndex , taxfilter, taxmask)
+            self.treeweights = hashutils.generate_treeweights(self.tree_ete3  , self.taxaIndex , self.tax_filter,  self.tax_mask)
         else:
             #load machine learning weights
             self.treeweights = treeweights
@@ -171,12 +175,23 @@ class LSHBuilder:
             wmgout.write( pickle.dumps(wmg))
         self.wmg = wmg
 
+
+        print( 'taxfilter', self.tax_filter)
+        print( 'taxmask', self.tax_mask)
         print( 'configuring pyham functions')
         print( 'swap ids', self.swap2taxcode)
         print( 'reformat names', self.reformat_names)
         print( 'use phyloxml', self.use_phyloxml)
         print( 'use taxcodes', self.swap2taxcode)
-                
+        print( 'lossonly', lossonly)
+        print( 'duplonly', duplonly)
+
+        
+        #print( 'treeweghts', list(self.treeweights) ) 
+        
+
+        import pdb ; pdb.set_trace()
+
         if self.h5OMA:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
                                                   orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None ) 
@@ -516,9 +531,11 @@ def main():
         taxfilter = dbdict[args['dbtype']]['taxfilter']
         taxmask = dbdict[args['dbtype']]['taxmask']
     if args['taxmask']:
-        taxfilter = args['taxfilter']
-    if args['taxfilter']:
         taxmask = args['taxmask']
+    
+    if args['taxfilter']:
+        taxfilter = args['taxfilter']
+
     if args['nperm']:
         nperm = int(args['nperm'])
     else:
