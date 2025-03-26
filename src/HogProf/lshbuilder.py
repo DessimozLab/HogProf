@@ -185,12 +185,8 @@ class LSHBuilder:
         print( 'use taxcodes', self.swap2taxcode)
         print( 'lossonly', lossonly)
         print( 'duplonly', duplonly)
-
-        
-        #print( 'treeweghts', list(self.treeweights) ) 
         
 
-        import pdb ; pdb.set_trace()
 
         if self.h5OMA:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
