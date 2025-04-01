@@ -98,15 +98,11 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
 
     input_vec = list(hog_matrix_weighted.flatten())
 
-    if wmg.dim == len(input_vec):
+    if wmg.dim == len(input_vec) and sum(input_vec) > 0:
         weighted_hash = wmg.minhash(input_vec)
         return  hog_matrix_binary , weighted_hash
 
     else:
-        print('error in hash_tree')
-        print('wmg.dim', wmg.dim)
-        print('len(input_vec)', len(input_vec))
-        print( input_vec)
         return None, None
     
 def tree2str_DCA(tp , taxaIndex ):
