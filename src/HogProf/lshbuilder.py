@@ -9,7 +9,6 @@ import time as t
 import pickle
 import xml.etree.cElementTree as ET
 from ete3 import Phyloxml
-from ete3 import NCBITaxa
 import sys
 import traceback
 from datasketch import MinHashLSHForest , WeightedMinHashGenerator
@@ -43,7 +42,7 @@ class LSHBuilder:
 
     def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , 
                  lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False, slicesubhogs = False,
-                 limit_species = 10, limit_events = 0, dataset_nodes=None):
+                 limit_species = 10, limit_events = 0):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -87,7 +86,6 @@ class LSHBuilder:
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
         self.limit_species = limit_species
         self.limit_events = limit_events
-        self.dataset_nodes = dataset_nodes
         if saving_name:
             self.saving_name= saving_name 
             if self.saving_name[-1]!= '/':
@@ -104,7 +102,7 @@ class LSHBuilder:
             if h5_oma:
                 genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
                 genomes = [ str(g) for g in genomes]
-                taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]             
+                taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
                 self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa, genomes = genomes , outdir=self.saving_path )
             elif taxa:
                 with open(taxa, 'r') as taxin:
@@ -137,20 +135,6 @@ class LSHBuilder:
         else:
             raise Exception( 'please specify a tree in either phylo xml or nwk format' )
         
-        ### apply mask already here if provided (not None)
-        if self.tax_mask:
-            ### get acceptable ids here:
-            tax_mask_node = self.tree_ete3.search_nodes(name=self.tax_mask)
-            if tax_mask_node:
-                tax_mask_node = tax_mask_node[0]
-                print(f"Found tax_mask_node: {tax_mask_node.name}")
-                self.dataset_nodes = [node.name for node in tax_mask_node.traverse()]
-                print(f"Dataset nodes: {len(self.dataset_nodes)}")
-            else:
-                print(f"No node found with name: {tax_mask}")
-                self.dataset_nodes = []
-        #print(self.dataset_nodes)
-        #print(len(self.dataset_nodes))
         ### reformat names to avoid special characters
         if self.reformat_names:
             self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
@@ -164,6 +148,7 @@ class LSHBuilder:
             self.tree_string = self.tree_ete3.write(format=3, format_root_node=True ) 
             
             #remap taxfilter and taxmask 
+            self.dataset_nodes = None
             if taxfilter:
                 self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
                 unacceptable_nodes = []
@@ -181,40 +166,17 @@ class LSHBuilder:
             if taxmask:
                 #print(self.idmapper)
                 self.tax_mask = self.idmapper[taxmask]
-                '''
                 ### get acceptable ids here:
                 tax_mask_node = self.tree_ete3.search_nodes(name=self.tax_mask)
                 if tax_mask_node:
                     tax_mask_node = tax_mask_node[0]
                     print(f"Found tax_mask_node: {tax_mask_node.name}")
                     self.dataset_nodes = [node.name for node in tax_mask_node.traverse()]
-                    print(f"Dataset nodes: {len(self.dataset_nodes)}")
                 else:
                     print(f"No node found with name: {tax_mask}")
                     self.dataset_nodes = []
-                '''
-                self.dataset_nodes = [self.idmapper[tax] for tax in self.dataset_nodes]
         
-        ### at this point adapt again the tree to the new dataset nodes
-        if self.dataset_nodes:
-            #print(f"Dataset nodes: {len(self.dataset_nodes)}")
-            #print(self.dataset_nodes)
-            self.tree_ete3.prune(self.dataset_nodes)
-            self.tree_string = self.tree_ete3.write(format=3, format_root_node=True)
-
         self.swap2taxcode = use_taxcodes
-        if self.swap2taxcode and self.h5OMA:
-            ### swap dataset nodes to taxcodes
-            self.dataset_nodes = [self.db_obj.taxid_from_level(taxonname)
-                                  for taxonname in self.dataset_nodes]
-
-            '''
-            ### ncbi method is slow - needs download the first time
-            ncbi = NCBITaxa()
-            self.dataset_nodes = [ncbi.get_name_translator([node])[node] for node in self.dataset_nodes]
-            '''
-        #print(self.dataset_nodes)
-
         self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
@@ -237,27 +199,21 @@ class LSHBuilder:
         print( 'reformat names', self.reformat_names)
         print( 'use phyloxml', self.use_phyloxml)
         print( 'use taxcodes', self.swap2taxcode)
-
         hamfunction = pyhamutils.get_ham_treemap_from_row
         hashfunction = hashutils.row2hash
         if slicesubhogs:
             hamfunction = pyhamutils.get_subhog_ham_treemaps_from_row
             hashfunction = hashutils.hash_trees_subhogs
-
         ### set up the pyHAM pipeline with different parameters depending on whether the input is an OMA hdf5 file or a list of orthoxml files
         if self.h5OMA:
-            self.taxmapper = {genome["NCBITaxonId"]: genome["SciName"].decode()
-                              for genome in  self.oma_id_obj.genome_table}
             self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.oma_id_obj , levels = None,
-                                                  limit_species = self.limit_species, limit_events = self.limit_events , dataset_nodes = self.dataset_nodes,
-                                                  taxmapper = self.taxmapper) 
+                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None,
+                                                  limit_species = self.limit_species, limit_events = self.limit_events , dataset_nodes = self.dataset_nodes) 
         else:
-            self.taxmapper = {value:key for key,value in self.idmapper.items()}
-            self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names ,
-                                                  orthoXML_as_string = False ,  use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None, 
-                                                  limit_species = self.limit_species, limit_events = self.limit_events, dataset_nodes = self.dataset_nodes,
-                                                  taxmapper = self.taxmapper)         
+            self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
+                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , 
+                                                  orthomapper = self.idmapper , levels = None, limit_species = self.limit_species, limit_events = self.limit_events,
+                                                  dataset_nodes = self.dataset_nodes)         
         ### set up the hash pipeline
         self.HASH_PIPELINE = functools.partial( hashfunction , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         print("\nSetting up input data reader")
@@ -306,11 +262,11 @@ class LSHBuilder:
                         families[fam] = {'ortho': ortho_fam}
                     if len(families) > size:
                         pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                        pd_dataframe['fam'] = pd_dataframe.index
+                        pd_dataframe['Fam'] = pd_dataframe.index
                         yield pd_dataframe
                         families = {}
             pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-            pd_dataframe['fam'] = pd_dataframe.index
+            pd_dataframe['Fam'] = pd_dataframe.index
             yield pd_dataframe
             print('last dataframe sent')
             families = {}
@@ -330,14 +286,16 @@ class LSHBuilder:
                     families[i] = {'ortho': file}
                 if len(families) > size:
                     pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                    pd_dataframe['fam'] = pd_dataframe.index
+                    pd_dataframe['Fam'] = pd_dataframe.index
+                    print(pd_dataframe)
                     yield pd_dataframe
                     families = {}
             # Yield any remaining families
             if families:
                 pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                pd_dataframe['fam'] = pd_dataframe.index
-                yield pd_dataframe
+                pd_dataframe['Fam'] = pd_dataframe.index
+                #print(pd_dataframe)
+                yield pd_dataframe # this dataframe has othoxml paths and family IDs (0,1,2,...)
                 print('last dataframe sent')
                 
 
@@ -361,26 +319,48 @@ class LSHBuilder:
             while True:
                 ### get dataframe from queue (generates_dataframes)
                 df = q.get()
-                #print(df.head())
+                #print(df.head()) # gives error if df is None
                 if df is not None :
                     if self.slicesubhogs is False:
-                        df['tree'] = df[['fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-                        #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'fam':fam }  , fam_sub2: { 'tree':tp , 'fam':fam } , ... }
+                        df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                        #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
                         #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
-                        #merge with pandas on right e.g. df.merge( returned_df , on = 'fam' , how = 'right' )
+                        #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
                         print(df.head())
-                        df[['hash','rows']] = df[['fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+                        df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
                         if self.fileglob:
-                            retq.put(df[['fam', 'hash', 'ortho']])
+                            retq.put(df[['Fam', 'hash', 'ortho']])
                         else:
-                            retq.put(df[['fam', 'hash']])
+                            retq.put(df[['Fam', 'hash']])
                     ### slice subhogs case
                     else:
+                        #print(df)
                         #print(df.size)
-                        df['tree_dicts'] = df[['fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-                        df['hash_dicts'] = df[['fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
+                        ### original one liner
+                        #df['tree_dicts'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                        ### for debugging
+                        # Iterate over each row in the DataFrame
+                        tree_dicts = []
+                        for index, row in df[['Fam', 'ortho']].iterrows():
+                            try:
+                                # Apply the HAM_PIPELINE function to the current row
+                                result = self.HAM_PIPELINE(row)
+                                tree_dicts.append(result)
+                                print(f"Debug: Successfully processed row {index} with Fam={row['Fam']}")
+                            except Exception as e:
+                                # Handle and log any errors
+                                print(f"Error processing row {index} with Fam={row['Fam']}: {e}")
+                                tree_dicts.append(None)  # Append None for rows that failed
+                        df['tree_dicts'] = tree_dicts
+                        print(tree_dicts)
+                        # Assign the results back to the DataFrame
+                        df['tree_dicts'] = tree_dicts
+                        df['hash_dicts'] = df[['Fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
+                        print(df)
+                        print(df.tree_dicts.iloc[0])
                         # Filter out rows with empty hash_dicts to save time
                         df = df[df['hash_dicts'].apply(bool)]
+                        print(df.tree_dicts.iloc[0])
                         newdf ={}
                         #print("worker df columns",df.columns)
                         #for col in df.columns:
@@ -388,13 +368,14 @@ class LSHBuilder:
                         for i,row in df.iterrows():
                             for subhog in row['hash_dicts']:
                                 if self.fileglob:
-                                    newdf[ ( row['fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] 
+                                    newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] 
                                                                     , 'ortho': row['ortho'] }
                                 ### don't save orthoxml strings if OMA
                                 else:
-                                    newdf[ ( row['fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1],
+                                    newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1],
                                     'ortho':''}
                         newdf = pd.DataFrame.from_dict(newdf, orient='index')
+                        print(newdf)
                         retq.put(newdf)
                 else:
                     if self.verbose == True:
@@ -413,29 +394,29 @@ class LSHBuilder:
             df = data
             #print(df.head())
             if self.slicesubhogs is False:
-                df['tree'] = df[['fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
                 #print(f'Generated tree in worker_single: {df["tree"]}')
-                #print("df fam tree\n", df[['fam', 'tree']])  # Debugging
-                df[['hash', 'rows']] = df[['fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+                #print("df fam tree\n", df[['Fam', 'tree']])  # Debugging
+                df[['hash', 'rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
                 #print(f'Generated hash and rows in worker_single: {df[["hash", "rows"]]}')
                 if self.fileglob:
-                    return df[['fam', 'hash', 'ortho']]
+                    return df[['Fam', 'hash', 'ortho']]
                 else:
-                    return df[['fam', 'hash']]
+                    return df[['Fam', 'hash']]
             else:
 
-                df['tree_dicts'] = df[['fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                df['tree_dicts'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
                 #print(df)
-                df['hash_dicts'] = df[['fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
+                df['hash_dicts'] = df[['Fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
                 
                 newdf ={}
                 for i,row in df.iterrows():
                     for subhog in row['hash_dicts']:
                         if self.fileglob:
-                            newdf[ ( row['fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] 
+                            newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] 
                                                              , 'ortho': row['ortho'] }
                         else:
-                            newdf[ ( row['fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] }
+                            newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] }
                 newdf = pd.DataFrame.from_dict(newdf, orient='index')
                 #print(newdf)
                 empty_rows = df[df['tree_dicts'].apply(lambda x: len(x) == 0)]
@@ -483,14 +464,18 @@ class LSHBuilder:
                         h5flush = h5hashes.flush
                     print('saver init ' + str(i))
                     while True:
+                        #print("Debug: Checking retq queue before processing:")
+                        #print(retq.qsize())
                         this_dataframe = retq.get()
                         if this_dataframe is not None:
                             if not this_dataframe.empty:
                                 hashes = this_dataframe['hash'].to_dict()
-                                #print(str(this_dataframe.fam.max())+ 'fam num')
+                                #print(str(this_dataframe.Fam.max())+ 'fam num')
                                 #print(str(count) + ' done')
                                 ### remove empty hashes
                                 hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
+                                print(f'Non empty hashes: {len(hashes)}')
+                                print(this_dataframe)
                                 ### handle slicesubhogs
                                 if self.slicesubhogs:
                                     subfam_ids_list = this_dataframe.index.to_list()
@@ -523,10 +508,14 @@ class LSHBuilder:
                                             h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
                                         h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
                                     if self.fileglob or self.slicesubhogs:
-                                        if savedf is None:
-                                            savedf = this_dataframe[['fam', 'ortho']]
-                                        else:
-                                            savedf = pd.concat([savedf, this_dataframe[['fam', 'ortho']]])
+                                        # Addition to ensure savedf is properly updated - 13.05.25
+                                        if not this_dataframe.empty:
+                                            print(this_dataframe)
+                                            if savedf is None:
+                                                savedf = this_dataframe[['Fam', 'ortho']]
+                                            else:
+                                                savedf = pd.concat([savedf, this_dataframe[['Fam', 'ortho']]])
+                                            print(savedf)
 
                                     '''# original:
                                     [ forest.add(str(fam),hashes[fam]) for fam in hashes]
@@ -537,9 +526,9 @@ class LSHBuilder:
                                         count += 1
                                     if self.fileglob:
                                         if savedf is None:
-                                            savedf = this_dataframe[['fam', 'ortho']]
+                                            savedf = this_dataframe[['Fam', 'ortho']]
                                         else:
-                                            savedf = pd.concat( [ savedf , this_dataframe[['fam', 'ortho']] ] )  
+                                            savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )  
                                     if t.time() - save_start > 200:
                                         print( 'saving at :' , t.time() - global_time )
                                         forest.index()
@@ -564,7 +553,6 @@ class LSHBuilder:
                                     print('Saving at:', t.time() - global_time)
                                     forest.index()
                                     print( 'testing forest' )
-                                    fam = next(iter(hashes))  # Get a valid fam value
                                     print(forest.query( hashes[fam] , k = 10 ) )
                                     h5flush()
                                     with open(self.lshforestpath, 'wb') as forestout:
@@ -578,7 +566,7 @@ class LSHBuilder:
                                 #print(this_dataframe)
                         # wrap up
                         else:
-                            print('wrapping up the run')
+                            print('\nwrapping up the run')
                             print('saving at :' , t.time() - global_time )
                             forest.index()
                             with open(self.lshforestpath , 'wb') as forestout:
@@ -588,10 +576,11 @@ class LSHBuilder:
                             if self.slicesubhogs:
                                 if savedf is not None and not savedf.empty:
                                     print('saving orthoxml to fam mapping')
+                                    print(savedf.head())
                                     savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))
                                 else:
                                     print('Warning: No fam-to-orthoxml mapping found.')
-                                    #pd.DataFrame(columns=['fam', 'ortho']).to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'), index=False)
+                                    #pd.DataFrame(columns=['Fam', 'ortho']).to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'), index=False)
 
                             print('DONE SAVER' + str(i))
                             break
@@ -613,7 +602,7 @@ class LSHBuilder:
                     rows = matq.get()
                     if rows is not None:
                         rows = rows.dropna()
-                        maxfam = rows.fam.max()
+                        maxfam = rows.Fam.max()
                         if h5mat is None:
                             h5hashes.create_dataset('matrows',(10,block.shape[1]), maxshape=(None, block.shape[1]),chunks=(1, block.shape[1]), dtype='i8')
                             h5mat = h5hashes['matrows']
@@ -622,7 +611,7 @@ class LSHBuilder:
                         i+=1
                         frames.append(rows)
                         assign = t.time()
-                        index = np.asarray(rows.fam)
+                        index = np.asarray(rows.Fam)
                         block = np.vstack(rows.rows)
                         h5mat[index,:]= block
 
@@ -724,6 +713,7 @@ class LSHBuilder:
                 #print(df.size)
                 df.index.set_names(['fam', 'subhog_id'], inplace=True)  # Set correct names
                 df.to_csv(csv_path)  # Overwrite with corrected index names
+                #print(df.size)
         #'''
         ### return the paths to the output files
         return self.hashes_path, self.lshforestpath , self.mat_path
@@ -785,9 +775,9 @@ class LSHBuilder:
                         
                             if self.fileglob:
                                 if savedf is None:
-                                    savedf = retdf[['fam', 'ortho']]
+                                    savedf = retdf[['Fam', 'ortho']]
                                 else:
-                                    savedf = pd.concat([savedf, retdf[['fam', 'ortho']]])
+                                    savedf = pd.concat([savedf, retdf[['Fam', 'ortho']]])
                             if this_dataframe is None:
                                 this_dataframe = retdf
                             if this_dataframe is not None:
@@ -796,9 +786,9 @@ class LSHBuilder:
                             if len(this_dataframe) > 10:
                                 #print(this_dataframe)
                                 hashes = this_dataframe['hash'].to_dict()
-                                fam = this_dataframe.fam.max()
+                                fam = this_dataframe.Fam.max()
                                 h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                                #print(str(this_dataframe.fam.max())+ 'fam num')
+                                #print(str(this_dataframe.Fam.max())+ 'fam num')
                                 #print(str(count) + ' done')
                                 hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
                                 [ forest.add(str(fam),hashes[fam]) for fam in hashes]
@@ -852,7 +842,7 @@ class LSHBuilder:
 
                 if this_dataframe is not None and self.slicesubhogs is False:
                     hashes = this_dataframe['hash'].to_dict()
-                    #print(str(this_dataframe.fam.max())+ 'fam num')
+                    #print(str(this_dataframe.Fam.max())+ 'fam num')
                     #print(str(count) + ' done')
                     hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
                     [ forest.add(str(fam),hashes[fam]) for fam in hashes]
@@ -877,11 +867,13 @@ class LSHBuilder:
                 if self.slicesubhogs:
                     #savedf['subhog_id'] =  total_subfam_ids
                     print(savedf.head())
+                    print(savedf.size)
                     savedf.index.set_names(['fam','subhog_id'], inplace=True)
                     # Turn the multi-index into columns
                     savedf.reset_index(inplace=True)
                     # Create a new numeric index
                     savedf.index = range(len(savedf))
+                    print(savedf.size)
                     #print(savedf.head())
                 #'''
 
@@ -1074,21 +1066,32 @@ def main():
                           mastertree = inputfolder + "Sauria_speciestree_edited.newick",
                           slicesubhogs = True
                           )
-    #hogdict, sortedhogs = p.hog_query_sorted( hog_id= '0_7_HOG:E0712183_95' , k = 20 )
-    #hogdict, sortedhogs = p.hog_query_sorted( hog_id= 0 , k = 20 )
-    hogdict, sortedhogs = p.hog_query_sorted( hog_id= 'HOG:E0712183' , k = 20 )
-    print(sortedhogs)
-#   hogdict, sortedhogs = p.hog_query( hog_id= 0 , k = 20 )
-    #print(jkern)
-    print()
-    if sortedhogs['hit_subhogid'].str.contains('HOG:E0712183').any(): ###local is HOG:E0712183  ### before id fix: for local was 0_0_0, for curnagl was 0_4_0
-        print('got hit!\n')
-    else:
-        print('Warning! Did not find itself!\n')
+    #hogdict, sortedhogs = p.hog_query_sorted( hog_id= '0_0_0' , k = 20 )
+    i = -1
+    sorted_hogs_dfs_list = []
+    is_list = [0, 1, 3, 5, 14,15]
+    #while True:
+    for i in is_list:
+        #i+=1
+        #try:
+        hogdict, sortedhogs = p.hog_query_sorted( hog_id= i , k = 20 )
+        print(i)
+    #   hogdict, sortedhogs = p.hog_query( hog_id= 0 , k = 20 )
+        #print(jkern)
+        sorted_hogs_dfs_list.append(sortedhogs)
+        #except:
+        #    break
+        
+    #print()
+    #if sortedhogs['hit_subhogid'].str.contains('E0712183').any(): ## for local was 0_0_0, for curnagl was 0_4_0
+    #    print('got hit!\n')
+    #else:
+    #    print('Warning! Did not find itself!\n')
     #'''
 
     ### save the df
-    sortedhogs.to_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/HOG_E0712183_hits.csv', index=False)
+    totalsortedhogs = pd.concat(sorted_hogs_dfs_list)
+    totalsortedhogs.to_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/sauria_hogprof/fam_0_hits.csv', index=False)
     '''
     singledf1 = pd.read_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam_0_hits.csv')
     multidf2 = pd.read_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam_0_hits_multi.csv')
