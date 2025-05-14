@@ -346,21 +346,21 @@ class LSHBuilder:
                                 # Apply the HAM_PIPELINE function to the current row
                                 result = self.HAM_PIPELINE(row)
                                 tree_dicts.append(result)
-                                print(f"Debug: Successfully processed row {index} with Fam={row['Fam']}")
+                                #print(f"Debug: Successfully processed row {index} with Fam={row['Fam']}")
                             except Exception as e:
                                 # Handle and log any errors
                                 print(f"Error processing row {index} with Fam={row['Fam']}: {e}")
                                 tree_dicts.append(None)  # Append None for rows that failed
                         df['tree_dicts'] = tree_dicts
-                        print(tree_dicts)
+                        #print(tree_dicts)
                         # Assign the results back to the DataFrame
                         df['tree_dicts'] = tree_dicts
                         df['hash_dicts'] = df[['Fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
-                        print(df)
-                        print(df.tree_dicts.iloc[0])
+                        #print(df)
+                        #print(df.tree_dicts.iloc[0])
                         # Filter out rows with empty hash_dicts to save time
                         df = df[df['hash_dicts'].apply(bool)]
-                        print(df.tree_dicts.iloc[0])
+                        #print(df.tree_dicts.iloc[0])
                         newdf ={}
                         #print("worker df columns",df.columns)
                         #for col in df.columns:

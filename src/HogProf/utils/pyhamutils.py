@@ -141,7 +141,7 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
 
 
 def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= True, orthomapper = None,
-                                     limit_species = 10, limit_events = 0, dataset_nodes = None, hogid_for_all = None):  
+                                     limit_species =10, limit_events = 0, dataset_nodes = None, hogid_for_all = None):  
     fam, orthoxml = row
     format = 'newick_string'
     def check_limits(treenode, limit_species, limit_events, subhogname):
@@ -187,7 +187,34 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
             ### save root name
             #rootname = tp.treemap.name + '_0'
+
+            '''
+            ### get all taxa names
+            taxa_names = [taxon.name for taxon in ete3.Tree(tree , format = 1).traverse()]
+            ### if dataset_nodes is specified, filter out the taxa that are not in the dataset
+            ### there may be some dataset_nodes missing, which is why we need to check
+            if dataset_nodes is not None:
+                taxa_names = [taxon for taxon in taxa_names if taxon in dataset_nodes]
+
+            subhogs = []
+            ### get ancestral genome names
+            test = ham_obj.get_list_ancestral_genomes() + ham_obj.get_list_extant_genomes()
+            test = [t.name for t in test]
+            print(test)
+            testhog = ham_obj.get_ancestral_genome_by_name('6').genes
+            print('hogs at level 6:',len(testhog),testhog)
+            print('descendant hogs of first hog in level 6:', len(testhog[0].get_all_descendant_hogs()), testhog[0].get_all_descendant_hogs())
+            print('all subhogs:', len(tp.hog.get_all_descendant_hogs()), tp.hog.get_all_descendant_hogs())
+            ### get subhogs for each level
+            for taxon in taxa_names:
+                try:
+                    subhogs = subhogs + ham_obj.get_ancestral_genome_by_name(taxon).genes
+                except:
+                    continue
             
+            #print(f'Subhogs list: {len(subhogs_list)}')
+            '''
+
             ### get all subhogs
             subhogs  = tp.hog.get_all_descendant_hogs()
             hogid_for_all = subhogs[0].hog_id
@@ -202,7 +229,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             ### manually add roothog cause apparently we are not including it
             #print(f'Subhogs: {len(hogs)}')
             hogs[rootname] = tp
-            print(f'RootHOG: {rootname}')
+            print(f'\nRootHOG: {rootname}')
             print(f'Subhogs total: {len(hogs)}')
             ### filter out the small ones and turn into treemaps
             hogs = {subhogname: hogs[subhogname].treemap for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) > limit_species}
@@ -214,11 +241,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
 
             ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
             if dataset_nodes is not None:
-                #print('fam', fam)
-                #print('before',len(hogs.keys()))
-                print([subhogname for subhogname in hogs])
                 hogs = {subhogname: hogs[subhogname] for subhogname in hogs if subhogname.split('_')[0] in dataset_nodes}
-                #print('after',len(hogs.keys()))
                 if len(hogs) == 0:
                     print('no suitable subhogs')
                     return {}
@@ -234,7 +257,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             if len(hogs) == 0:
                 print('no suitable subhogs')
             #print(hogs)
-            #print(f'Subhogs after filtering: {len(hogs)}')
+            print(f'Subhogs after filtering: {len(hogs)}')
             #'''
             return hogs
         
