@@ -277,11 +277,13 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             # Capture the exception and format the traceback
             full_error_message = str(e)
             if 'TypeError: species name ' in full_error_message and 'maps to an ancestral name, not a leaf' in full_error_message:
-                print('error' , full_error_message, file=sys.stderr)
+                if verbose:
+                    print('error' , full_error_message, file=sys.stderr)
                 #species name from bullshit error
                 #TypeError: species name '3515' maps to an ancestral name, not a leaf of the taxono
                 species = full_error_message.split('species name ')[1].split(' ')[0].replace('\'','')
-                print( 'trim tree'+species)
+                if verbose:
+                    print( 'trim tree'+species)
                 tree = ete3.Tree(tree , format = 1)
                 #select all nodes with name = species
                 nodes = tree.search_nodes(name = species)
