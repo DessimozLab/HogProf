@@ -135,14 +135,14 @@ def parse_args():
         type=str,
         nargs="*",
         default=[],
-        help="List of families to query.",
+        help="List of families to query (format 1,2,3 as in fam2orthoxml).",
     )
     parser.add_argument(
         "--hogs_list",
         type=str,
         nargs="*",
         default=[],
-        help="List of HOGs to query.",
+        help="List of HOGs to query (format 0_0_HOG:E0712183_1394_1).",
     )
     return parser.parse_args()
 

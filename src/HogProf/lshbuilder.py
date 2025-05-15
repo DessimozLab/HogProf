@@ -208,12 +208,13 @@ class LSHBuilder:
         if self.h5OMA:
             self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
                                                   orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None,
-                                                  limit_species = self.limit_species, limit_events = self.limit_events , dataset_nodes = self.dataset_nodes) 
+                                                  limit_species = self.limit_species, limit_events = self.limit_events , dataset_nodes = self.dataset_nodes,
+                                                  verbose = self.verbose) 
         else:
             self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
                                                   orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , 
                                                   orthomapper = self.idmapper , levels = None, limit_species = self.limit_species, limit_events = self.limit_events,
-                                                  dataset_nodes = self.dataset_nodes)         
+                                                  dataset_nodes = self.dataset_nodes, verbose = self.verbose)         
         ### set up the hash pipeline
         self.HASH_PIPELINE = functools.partial( hashfunction , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         print("\nSetting up input data reader")
