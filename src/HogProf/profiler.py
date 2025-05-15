@@ -452,7 +452,7 @@ class Profiler:
 		#		fam_id = fam_id[0]
 		### case where a family is given as query (including many subfamilies)
 		if self.slicesubhogs:
-			print("\nHOG query sorted - Case of sliced subhogs")
+			#print("\nHOG query sorted - Case of sliced subhogs")
 			#print(hog_id,'first fam_id', fam_id[0]) # family, [index1, index2, ...]
 			query_hashes_dict = {i:hashutils.fam2hash_hdf5(i, self.hashes_h5 , nsamples=  self.nsamples ) for i in family_subhogids_list}
 			#print('query_hashes',list(query_hashes_dict.keys())[0],query_hashes_dict[list(query_hashes_dict.keys())[0]]) # index1: hash1, index2: hash2, ...
@@ -640,13 +640,13 @@ def main():
 	print("\nProfiler object created")
 	#hogdict, sortedhogs = p.hog_query_sorted( hog_id= '0_0_0' , k = 20 )
 	#hogdict, sortedhogs = p.hog_query_sorted( hog_id= 0 , k = 20 )
-	hogdict, sortedhogs = p.hog_query_sorted( hog_id= "XP_015681225" , k = 20 )
-	print(sortedhogs)
-	print()
-	if sortedhogs['hit_subhogid'].str.contains('0_4_0').any(): ## for local was 0_0_0, for curnagl was 0_4_0
-		print('got hit!\n')
-	else:
-		print('Warning! Did not find itself!\n')
+	#hogdict, sortedhogs = p.hog_query_sorted( hog_id= "XP_015681225" , k = 20 )
+	#print(sortedhogs)
+	#print()
+	#if sortedhogs['hit_subhogid'].str.contains('0_4_0').any(): ## for local was 0_0_0, for curnagl was 0_4_0
+	#	print('got hit!\n')
+	#else:
+	#	print('Warning! Did not find itself!\n')
 
 
 if __name__ == '__main__':

@@ -1031,76 +1031,7 @@ def main():
         #lsh_builder.run_pipeline_single()
     print("\nAnalysis took",time.time() - start, 'seconds')
     print('DONE\n\n')
-    #'''
-    '''
-    # Load the two CSV files
-    df1 = pd.read_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam2orthoxml.csv')  # Assuming file1 has an extra column
-    df2 = pd.read_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam2orthoxml_multi_filtered.csv')
-    # Drop the first column from df1 (if it's the extra one)
-        df1 = df1.iloc[:, 1:]
-    '''
-    def check_difference(df1, df2):
-        df1['source'] = 'single'
-        df2['source'] = 'multi'
-        combined_df = pd.concat([df1, df2])
-
-        # Compare the two dataframes to find rows that are different
-        difference = combined_df.drop_duplicates(subset=df1.columns.difference(['source']), keep=False)
-
-
-        # Print the differences
-        print("Differences in rows between the two CSVs:")
-        pd.set_option('display.max_rows', None)
-        print(difference)
-
-    #'''
-    ### Added step to call profiler - DEBUGING ONLY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    import profiler
-    outputfolder = '/home/agavriil/Documents/venom_project/2a_hogprof_testing/sauria_hogprof/'
-    inputfolder = '/home/agavriil/Documents/venom_project/hogprof_levels_scripts/test_data/'
-    p = profiler.Profiler(lshforestpath = outputfolder + 'newlshforest.pkl' , 
-                          hashes_h5=outputfolder + 'hashes.h5' , 
-                          #mat_path= outputfolder + 'fam2orthoxml.csv' ,
-                          oma = False , 
-                          nsamples = 256 ,
-                          mastertree = inputfolder + "Sauria_speciestree_edited.newick",
-                          slicesubhogs = True
-                          )
-    #hogdict, sortedhogs = p.hog_query_sorted( hog_id= '0_0_0' , k = 20 )
-    i = -1
-    sorted_hogs_dfs_list = []
-    is_list = [0, 1, 3, 5, 14,15]
-    #while True:
-    for i in is_list:
-        #i+=1
-        #try:
-        hogdict, sortedhogs = p.hog_query_sorted( hog_id= i , k = 20 )
-        print(i)
-    #   hogdict, sortedhogs = p.hog_query( hog_id= 0 , k = 20 )
-        #print(jkern)
-        sorted_hogs_dfs_list.append(sortedhogs)
-        #except:
-        #    break
-        
-    #print()
-    #if sortedhogs['hit_subhogid'].str.contains('E0712183').any(): ## for local was 0_0_0, for curnagl was 0_4_0
-    #    print('got hit!\n')
-    #else:
-    #    print('Warning! Did not find itself!\n')
-    #'''
-
-    ### save the df
-    totalsortedhogs = pd.concat(sorted_hogs_dfs_list)
-    totalsortedhogs.to_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/sauria_hogprof/fam_0_hits.csv', index=False)
-    '''
-    singledf1 = pd.read_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam_0_hits.csv')
-    multidf2 = pd.read_csv('/home/agavriil/Documents/venom_project/2a_hogprof_testing/fam_0_hits_multi.csv')
-    check_difference(singledf1, multidf2)
-    '''
-    ###
     
-    
-    #'''
 
 if __name__ == '__main__':
     main()

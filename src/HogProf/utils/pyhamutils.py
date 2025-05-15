@@ -145,13 +145,13 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
     fam, orthoxml = row
     format = 'newick_string'
     def check_limits(treenode, limit_species, limit_events, subhogname):
-                ###removed because already covered in generates_dataframes!!!!!!!
+                ###removed because already covered earlier when generating treemaps
                 ### leaves counting failed e.g. in HOG:E0712183.1e, counts more than there is
                 #print(dir(treenode))
-                leaves_num = sum(1 for node in treenode.traverse() if node.is_leaf())
-                if leaves_num < limit_species:
-                    #print(treenode.name,subhogname)
-                    return False
+                #leaves_num = sum(1 for node in treenode.traverse() if node.is_leaf())
+                #if leaves_num < limit_species:
+                #    #print(treenode.name,subhogname)
+                #    return False
 
                 total_dupl = 0
                 total_loss = 0
@@ -168,6 +168,8 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                     return True
                 #print(treenode.name,subhogname, total_dupl, total_loss)
                 return False
+
+
     if use_phyloxml:
         format = 'phyloxml'
     if orthoxml:
@@ -231,8 +233,11 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             hogs[rootname] = tp
             print(f'\nRootHOG: {rootname}')
             print(f'Subhogs total: {len(hogs)}')
-            ### filter out the small ones and turn into treemaps
-            hogs = {subhogname: hogs[subhogname].treemap for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) > limit_species}
+            ### filter out the small HOGs (protein num) 
+            hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) > limit_species}
+            ### filter out the HOGs that are present only in a few species (num of species with proteins in HOG)
+            ### and turn into treemaps
+            hogs = {subhogname: hogs[subhogname].treemap for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()) > limit_species}
             print(f'Subhogs large enough: {len(hogs)}')
             ### it wont be possible in some cases, so just use the genome name (taxnode )
             #except Exception as e:     
