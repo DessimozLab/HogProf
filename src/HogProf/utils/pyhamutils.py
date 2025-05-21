@@ -6,7 +6,6 @@ import traceback
 import sys
 from Bio import Phylo
 from io import StringIO
-import dendropy     ###had to install this extra, hopefully did not break the conda env
 
 def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()    

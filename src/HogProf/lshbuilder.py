@@ -26,8 +26,8 @@ import os
 import ete3
 random.seed(0)
 np.random.seed(0)
-import psutil
-process = psutil.Process()
+#import psutil
+#process = psutil.Process()
 
 class LSHBuilder:
 
@@ -466,7 +466,6 @@ class LSHBuilder:
                 taxstr = str(self.tax_filter)
             self.errorfile = self.saving_path + 'errors.txt'
             with open(self.errorfile, 'w') as hashes_error_files:
-                print(f"Memory before saving: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                 with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
                     datasets = {}
 
@@ -519,7 +518,6 @@ class LSHBuilder:
 
                                 ### standard processing
                                 else:
-                                    print(f"Memory at standard processing: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                                     [forest.add(str(fam), hashes[fam]) for fam in hashes]
                                     for fam in hashes:
                                         if len(h5hashes[taxstr]) < fam + 10:
@@ -570,7 +568,6 @@ class LSHBuilder:
                                     
                                 # Save every 200 seconds
                                 if t.time() - save_start > 200:
-                                    print(f"Memory at 200 second save: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                                     print('Saving at:', t.time() - global_time)
                                     forest.index()
                                     print( 'testing forest' )
@@ -587,7 +584,6 @@ class LSHBuilder:
                                 #print(this_dataframe)
                         # wrap up
                         else:
-                            print(f"Memory at wrap up: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                             print('\nwrapping up the run')
                             print('saving at :' , t.time() - global_time )
                             forest.index()
@@ -903,14 +899,14 @@ class LSHBuilder:
                 ### Athina note: could this be changing the indices????????????
                 if self.slicesubhogs:
                     #savedf['subhog_id'] =  total_subfam_ids
-                    print(savedf.head())
-                    print(savedf.size)
+                    #print(savedf.head())
+                    #print(savedf.size)
                     savedf.index.set_names(['fam','subhog_id'], inplace=True)
                     # Turn the multi-index into columns
                     savedf.reset_index(inplace=True)
                     # Create a new numeric index
                     savedf.index = range(len(savedf))
-                    print(savedf.size)
+                    #print(savedf.size)
                     #print(savedf.head())
                 #'''
 
