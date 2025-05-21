@@ -4,6 +4,9 @@ import ete3
 import pickle
 import traceback
 import sys
+from Bio import Phylo
+from io import StringIO
+import dendropy     ###had to install this extra, hopefully did not break the conda env
 
 def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()    
@@ -129,11 +132,21 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
                 nodes = tree.search_nodes(name = species)
                 #get the first node
                 node = nodes[0]
-                for c in node.children:
-                    #delete all children
-                    c.delete()
-                #rerun with trimmed tree
-                ham_obj = pyham.Ham(tree.write(format=1), orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string )
+                parent = node.up
+                #create polytomy with children and internal node
+                for child in node.get_children():
+                    child.detach()
+                    parent.add_child(child)
+                #remove node
+                tree.write(     outfile = 'fallback.nwk' , format = 1)
+                #make sure node names are correctly formatted   
+                try:
+                    #rerun with trimmed tree
+                    return get_ham_treemap_from_row(row, tree.write(format = 1) , levels = levels , swap_ids = swap_ids , orthoXML_as_string = orthoXML_as_string , use_phyloxml = use_phyloxml ,
+                                                     use_internal_name = use_internal_name ,reformat_names= reformat_names, orthomapper = orthomapper , fallback= 'fallback.nwk' )
+                except Exception as e:
+                    print('error' , full_error_message)
+                    return None
             else:
                 print('error' , full_error_message)
                 return None
@@ -142,7 +155,10 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
 
 def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= True, orthomapper = None,
                                      limit_species =10, limit_events = 0, dataset_nodes = None, hogid_for_all = None, verbose=False):  
-    
+    #verbose = True
+    if verbose:
+        ### reverse orthomapper
+        orthomapper_rev = {v: k for k, v in orthomapper.items()}
     fam, orthoxml = row
     format = 'newick_string'
     def check_limits(treenode, limit_species, limit_events, subhogname):
@@ -170,7 +186,6 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 #print(treenode.name,subhogname, total_dupl, total_loss)
                 return False
 
-
     if use_phyloxml:
         format = 'phyloxml'
     if orthoxml:
@@ -190,6 +205,26 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
             ### save root name
             #rootname = tp.treemap.name + '_0'
+            ### first checks on top-level HOG to save time
+            roothog_genes = len(tp.hog.get_all_descendant_genes())
+            roothog_species = len(tp.hog.get_all_descendant_genes_clustered_by_species().keys())
+            if roothog_genes <= limit_species or roothog_species <= limit_species:
+                return {}
+            if  dataset_nodes is not None:
+                roothog_levels = tp.hog.get_all_descendant_hog_levels()
+                roothog_levels = [level.name for level in roothog_levels] 
+                #print(len(roothog_levels))
+                #roothog_levels = [level for level in roothog_levels if level in dataset_nodes]
+                relevant_roothog = False
+                for level in roothog_levels:
+                    if level in dataset_nodes:
+                        relevant_roothog = True
+                        break
+                if not relevant_roothog:
+                    return {}
+                del roothog_levels
+            
+            
 
             '''
             ### get all taxa names
@@ -228,7 +263,11 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             if hogid_for_all is None:
                 hogid_for_all = fam
             #hogs = { subhog.genome.name +'_' + str(subhog.hog_id) + '_' + str(i + 1):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
-            hogs = { subhog.genome.name +'_' + str(subhog.hog_id) + '_' + str(i + 1):  ham_obj.create_tree_profile(hog=subhog) for i,subhog in enumerate(subhogs) }
+            #hogs = { subhog.genome.name +'_' + str(subhog.hog_id) + '_' + str(i + 1):  ham_obj.create_tree_profile(hog=subhog) for i,subhog in enumerate(subhogs) }
+            hogs = {
+                f"{subhog.genome.name}_{str(subhog.hog_id) if subhog.hog_id is not None else str(hogid_for_all)}_{i + 1}": ham_obj.create_tree_profile(hog=subhog)
+                for i, subhog in enumerate(subhogs)
+            }
             ### manually add roothog cause apparently we are not including it
             #print(f'Subhogs: {len(hogs)}')
             hogs[rootname] = tp
@@ -237,11 +276,19 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 print(f'Subhogs total: {len(hogs)}')
             ### filter out the small HOGs (protein num) 
             hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) > limit_species}
+            if verbose:
+                print(f'Subhogs with enough proteins: {len(hogs)}')
+                
+                #{print(subhogname, orthomapper_rev[subhogname.split('_')[0]], len(hogs[subhogname].hog.get_all_descendant_genes()), 
+                #    len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()),
+                #    [orthomapper_rev[genome.name] for genome in hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()]) for subhogname in hogs}
             ### filter out the HOGs that are present only in a few species (num of species with proteins in HOG)
             ### and turn into treemaps
+            ### This is the part that works well with orthoxmls but not with OMA (fails to calculate species num for non rootHOG)!!!!!!!!!!!!!!!!!!
             hogs = {subhogname: hogs[subhogname].treemap for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()) > limit_species}
             if verbose:
                 print(f'Subhogs large enough: {len(hogs)}')
+                #{print(subhogname.split('_')[0]) for subhogname in hogs}
             ### it wont be possible in some cases, so just use the genome name (taxnode )
             #except Exception as e:     
             #    hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
@@ -249,6 +296,13 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
 
             ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
             if dataset_nodes is not None:
+                if verbose:
+                    print('dataset_nodes',dataset_nodes)
+                ### print dataset nodes as taxids using the orthomapper values instead of keys
+                #[print(dataset_node, orthomapper_rev[dataset_node]) for dataset_node in dataset_nodes]
+                #print([list(hogs.keys())[0].split('_')[0]])
+                ### print all of them
+                #{print(subhogname.split('_')[0]) for subhogname in hogs}
                 hogs = {subhogname: hogs[subhogname] for subhogname in hogs if subhogname.split('_')[0] in dataset_nodes}
                 if len(hogs) == 0:
                     if verbose:
@@ -276,22 +330,65 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
         except Exception as e:
             # Capture the exception and format the traceback
             full_error_message = str(e)
-            if 'TypeError: species name ' in full_error_message and 'maps to an ancestral name, not a leaf' in full_error_message:
+            ### Here if we remove the 'TypeError : ' part then it all breaks apart
+            if  ('maps to an ancestral name, not a leaf' in full_error_message): #\
+                #and ('TypeError: species name ' in full_error_message):
                 if verbose:
-                    print('error' , full_error_message, file=sys.stderr)
+                    print('exception error: ' , full_error_message, file=sys.stderr)
                 #species name from bullshit error
                 #TypeError: species name '3515' maps to an ancestral name, not a leaf of the taxono
                 species = full_error_message.split('species name ')[1].split(' ')[0].replace('\'','')
                 if verbose:
-                    print( 'trim tree'+species)
+                    print( 'trim tree of '+species, orthomapper_rev[species])
+                ### here is original solution - works best compared to other approaches, but not great
+                ### until now tree was simple newick string but we need ete3 tree to delete nodes
                 tree = ete3.Tree(tree , format = 1)
                 #select all nodes with name = species
                 nodes = tree.search_nodes(name = species)
                 #get the first node
                 node = nodes[0]
+                # get parent of it
+                parent = node.up
+                print('parent:', parent)
+                if verbose:
+                    print('nodes',nodes)
+                    print("Children before deletion:", [c.name for c in node.children])
+                #create polytomy with children and internal node
+                for child in node.get_children():
+                    child.detach()
+                    parent.add_child(child)
+                #remove node
+                tree.write(     outfile = 'fallback.nwk' , format = 1)
+                '''
+                def remove_node_and_cleanup(node):
+                    parent = node.up
+                    node.detach()
+                    # If parent has only one child left, remove it too
+                    while parent is not None and len(parent.children) == 1:
+                        only_child = parent.children[0]
+                        grandparent = parent.up
+                        parent.detach()
+                        if grandparent:
+                            only_child.up = None
+                            grandparent.add_child(only_child)
+                        parent = grandparent
+                    # If parent has no children left, remove it too     
+                ### detach node before
+                #node.detach()
                 for c in node.children:
-                    #delete all children
-                    c.delete()
+                    #delete all children # delete is what worked best. alt: detach
+                    remove_node_and_cleanup(c)
+                    #c.detach()
+                    #if c.is_leaf():
+                        #print('deleting leaf', c.name)
+                        #c.delete()
+                    #else:
+                    #    print('Warning: unexpectedly not leaf', c.name)
+
+                    #break
+                '''
+                ### turn tree back into newick string
+                tree = tree.write(format=1)
                 #rerun with trimmed tree    
                 ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string ) 
                 #print(dir(ham_obj)) 
@@ -324,7 +421,9 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
 
                 return hogs            
             else:
-                print('error' , full_error_message, file=sys.stderr)
+                if verbose:
+                    print('Rootname:',rootname)
+                    print('error' , full_error_message, file=sys.stderr)
         return {}#None
         #'''
 

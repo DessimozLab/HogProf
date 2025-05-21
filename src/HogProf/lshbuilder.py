@@ -26,6 +26,8 @@ import os
 import ete3
 random.seed(0)
 np.random.seed(0)
+import psutil
+process = psutil.Process()
 
 class LSHBuilder:
 
@@ -221,8 +223,6 @@ class LSHBuilder:
         ### if the input is an OMA hdf5 file, set up the function to read the orthoxml data
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
-       
-        if self.h5OMA:
             self.n_groups  = len(self.h5OMA.root.OrthoXML.Index)
             print( 'reading oma hdf5 with n groups:', self.n_groups)
         ### if the input is a list of orthoxml files, set up another function to read the orthoxml data
@@ -253,12 +253,21 @@ class LSHBuilder:
         start = -1
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
+            ### only Fam makes sense here, the rest are OMAmer related fields
+            #print(self.h5OMA.root.OrthoXML.Index.colnames)
             self.rows = len(self.groups)
             for i, row in enumerate(self.groups):
                 if i > start:
+                    #### family here is HOG ID minus the "HOG:E" prefix
                     fam = row[0]
+                    ### testing only
+                    if fam != 712183 and fam != 712236 and fam != 708323:
+                        continue
                     ortho_fam = self.READ_ORTHO(fam)
                     hog_size = ortho_fam.count('<species name=')
+                    #print(fam, hog_size)
+                    #print(self.idmapper)
+                    ### filtering for size already here (max HOG size and minimum species in HOG)
                     if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
                         families[fam] = {'ortho': ortho_fam}
                     if len(families) > size:
@@ -342,6 +351,7 @@ class LSHBuilder:
                         ### for debugging
                         # Iterate over each row in the DataFrame
                         tree_dicts = []
+                        #print(f"Memory before HAM: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                         for index, row in df[['Fam', 'ortho']].iterrows():
                             try:
                                 # Apply the HAM_PIPELINE function to the current row
@@ -352,11 +362,13 @@ class LSHBuilder:
                                 # Handle and log any errors
                                 print(f"Error processing row {index} with Fam={row['Fam']}: {e}")
                                 tree_dicts.append(None)  # Append None for rows that failed
+                        #print(f"Memory after HAM: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                         df['tree_dicts'] = tree_dicts
                         #print(tree_dicts)
                         # Assign the results back to the DataFrame
                         df['tree_dicts'] = tree_dicts
                         df['hash_dicts'] = df[['Fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
+                        #print(f"Memory after HASH: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                         #print(df)
                         #print(df.tree_dicts.iloc[0])
                         # Filter out rows with empty hash_dicts to save time
@@ -376,7 +388,9 @@ class LSHBuilder:
                                     newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1],
                                     'ortho':''}
                         newdf = pd.DataFrame.from_dict(newdf, orient='index')
-                        print(newdf)
+                        ### this here is what prints empty for OMA run (seemingly cause of the Toxicofera mask)!!!!!!!!!!!!
+                        #print(newdf)
+                        #print(f"Memory before retq: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                         retq.put(newdf)
                 else:
                     if self.verbose == True:
@@ -452,6 +466,7 @@ class LSHBuilder:
                 taxstr = str(self.tax_filter)
             self.errorfile = self.saving_path + 'errors.txt'
             with open(self.errorfile, 'w') as hashes_error_files:
+                print(f"Memory before saving: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                 with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
                     datasets = {}
 
@@ -475,8 +490,9 @@ class LSHBuilder:
                                 #print(str(count) + ' done')
                                 ### remove empty hashes
                                 hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
-                                print(f'Non empty hashes: {len(hashes)}')
-                                print(this_dataframe)
+                                if self.verbose == True:
+                                    print(f'Non empty hashes: {len(hashes)}')
+                                    print(this_dataframe)
                                 ### handle slicesubhogs
                                 if self.slicesubhogs:
                                     subfam_ids_list = this_dataframe.index.to_list()
@@ -503,6 +519,7 @@ class LSHBuilder:
 
                                 ### standard processing
                                 else:
+                                    print(f"Memory at standard processing: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                                     [forest.add(str(fam), hashes[fam]) for fam in hashes]
                                     for fam in hashes:
                                         if len(h5hashes[taxstr]) < fam + 10:
@@ -511,12 +528,14 @@ class LSHBuilder:
                                     if self.fileglob or self.slicesubhogs:
                                         # Addition to ensure savedf is properly updated - 13.05.25
                                         if not this_dataframe.empty:
-                                            print(this_dataframe)
+                                            if self.verbose:
+                                                print(this_dataframe)
                                             if savedf is None:
                                                 savedf = this_dataframe[['Fam', 'ortho']]
                                             else:
                                                 savedf = pd.concat([savedf, this_dataframe[['Fam', 'ortho']]])
-                                            print(savedf)
+                                            if self.verbose:
+                                                print(savedf)
 
                                     '''# original:
                                     [ forest.add(str(fam),hashes[fam]) for fam in hashes]
@@ -547,10 +566,11 @@ class LSHBuilder:
 
                                             savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
                                         save_start = t.time()
-                                        '''
+                                    '''
                                     
                                 # Save every 200 seconds
                                 if t.time() - save_start > 200:
+                                    print(f"Memory at 200 second save: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                                     print('Saving at:', t.time() - global_time)
                                     forest.index()
                                     print( 'testing forest' )
@@ -567,6 +587,7 @@ class LSHBuilder:
                                 #print(this_dataframe)
                         # wrap up
                         else:
+                            print(f"Memory at wrap up: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                             print('\nwrapping up the run')
                             print('saving at :' , t.time() - global_time )
                             forest.index()
@@ -574,6 +595,8 @@ class LSHBuilder:
                                 forestout.write(pickle.dumps(forest, -1))
                             h5flush()
                             # Ensure fam2orthoxml.csv is saved when slicesubhogs is True
+                            ### changed below with alt
+                            '''
                             if self.slicesubhogs:
                                 if savedf is not None and not savedf.empty:
                                     print('saving orthoxml to fam mapping')
@@ -582,7 +605,20 @@ class LSHBuilder:
                                 else:
                                     print('Warning: No fam-to-orthoxml mapping found.')
                                     #pd.DataFrame(columns=['Fam', 'ortho']).to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'), index=False)
-
+                            '''
+                            ### alt to make sure fam2orthoxml is saved no matter what
+                            if self.slicesubhogs:
+                                if savedf is not None and not savedf.empty:
+                                    print('saving orthoxml to fam mapping')
+                                    print(savedf.head())
+                                    savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))
+                                elif self.h5OMA and savedf is not None:
+                                    # Save a mapping with just Fam and subhog_id (index of savedf)
+                                    mapping = pd.DataFrame(savedf.index.tolist(), columns=['Fam', 'subhog_id'])
+                                    mapping.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'), index=False)
+                                else:
+                                    print("savedf is empty?")
+                                    print('Warning: No fam-to-orthoxml mapping found.')
                             print('DONE SAVER' + str(i))
                             break
         except Exception as e:

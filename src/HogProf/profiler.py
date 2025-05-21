@@ -69,33 +69,36 @@ class Profiler:
 		hashfunction = hashutils.row2hash
 		### special operations for sliced subhogs
 		if self.slicesubhogs is True:
-			self.fam2orthoxmlpath = os.path.join(os.path.dirname(lshforestpath), 'fam2orthoxml.csv')
-			### adjust functions
-			hamfunction = pyhamutils.get_subhog_ham_treemaps_from_row
-			hashfunction = hashutils.hash_trees_subhogs
-			### get a dictionary of subhog ids
-			id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath) ### Athina note: here used to be index_col=0 !!!!!!!!!!!!!!!!!!!!!!!!
-			# print for fam=15
-			print(id2famsubhog_df.head())
-			print(id2famsubhog_df[id2famsubhog_df['fam'] == 15]) 
-			# Group by 'fam' and create a dictionary of indices
-			fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
-			self.fam_dict = fam_dict
-			# Create the reverse dictionary too
-			subhogid_to_fam_dict = {subhogid: fam for fam, subhogid_list in fam_dict.items() for subhogid in subhogid_list}
-			self.subhogid_to_fam_dict = subhogid_to_fam_dict
-			# Reconstruct the subhog_id for each row and create a subhog_dict
-			subhog_dict = id2famsubhog_df.apply(lambda x: f"{x['fam']}_{x['subhog_id']}", axis=1).to_dict()
-			self.subhog_dict = subhog_dict
-			# Create the reverse dictionary too
-			subhogname_to_id_dict = {subhogname: subhogid for subhogid, subhogname in subhog_dict.items()}
-			self.subhogname_to_id_dict = subhogname_to_id_dict
-			# Connect subhognames to fams
-			subhogname_to_fam_dict = {subhog_id: subhog_id.split('_')[0] for subhog_id in subhogname_to_id_dict.keys()}
-			self.subhogname_to_fam_dict = subhogname_to_fam_dict
-			# Connect subhogids to levels
-			subhog_to_level_dict = {subhog_id: subhog_id.split('_')[1] for subhog_id in subhogname_to_id_dict.keys()}
-			self.subhog_to_level_dict = subhog_to_level_dict
+			try:
+				self.fam2orthoxmlpath = os.path.join(os.path.dirname(lshforestpath), 'fam2orthoxml.csv')
+				### adjust functions
+				hamfunction = pyhamutils.get_subhog_ham_treemaps_from_row
+				hashfunction = hashutils.hash_trees_subhogs
+				### get a dictionary of subhog ids
+				id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath) ### Athina note: here used to be index_col=0 !!!!!!!!!!!!!!!!!!!!!!!!
+				# print for fam=15
+				print(id2famsubhog_df.head())
+				print(id2famsubhog_df[id2famsubhog_df['fam'] == 15]) 
+				# Group by 'fam' and create a dictionary of indices
+				fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
+				self.fam_dict = fam_dict
+				# Create the reverse dictionary too
+				subhogid_to_fam_dict = {subhogid: fam for fam, subhogid_list in fam_dict.items() for subhogid in subhogid_list}
+				self.subhogid_to_fam_dict = subhogid_to_fam_dict
+				# Reconstruct the subhog_id for each row and create a subhog_dict
+				subhog_dict = id2famsubhog_df.apply(lambda x: f"{x['fam']}_{x['subhog_id']}", axis=1).to_dict()
+				self.subhog_dict = subhog_dict
+				# Create the reverse dictionary too
+				subhogname_to_id_dict = {subhogname: subhogid for subhogid, subhogname in subhog_dict.items()}
+				self.subhogname_to_id_dict = subhogname_to_id_dict
+				# Connect subhognames to fams
+				subhogname_to_fam_dict = {subhog_id: subhog_id.split('_')[0] for subhog_id in subhogname_to_id_dict.keys()}
+				self.subhogname_to_fam_dict = subhogname_to_fam_dict
+				# Connect subhogids to levels
+				subhog_to_level_dict = {subhog_id: subhog_id.split('_')[1] for subhog_id in subhogname_to_id_dict.keys()}
+				self.subhog_to_level_dict = subhog_to_level_dict
+			except:
+				print("Could not find fam2orthoxml.csv file. Was HogProf run on OMA?")
 			
 			
 		print('h5' , self.hashes_h5 , self.hashes_h5.keys())
