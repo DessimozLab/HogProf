@@ -112,9 +112,10 @@ def hash_trees_subhogs(hog_tps , taxaIndex , treeweights , wmg , lossonly = Fals
     """
     #print(hog_tps.keys())
     #print(hog_tps[['tree_dicts']].to_dict())
-    if hog_tps is None:
+    if hog_tps is None or 'tree_dicts' not in hog_tps or hog_tps['tree_dicts'] is None:
         return None
-    hashes_subhogs = {key:hash_tree(tp , taxaIndex , treeweights , wmg) for key,tp  in hog_tps['tree_dicts'].items() }
+    ### AttributeError: 'NoneType' object has no attribute 'items' is here (for OMA run):
+    hashes_subhogs = {key:hash_tree(tp , taxaIndex , treeweights , wmg) for key,tp  in hog_tps['tree_dicts'].items()}
     
     return hashes_subhogs
 
@@ -194,7 +195,7 @@ def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128, fam2orthoxmlpath =
             subhog_str = '_'.join(fam_parts[1:])
             indices = id2famsubhog_df[(id2famsubhog_df['fam'] == fam_int) & (id2famsubhog_df['subhog_id'] == subhog_str)].index.tolist() 
         print('recursive call to fam2hash_hdf5')
-        return [fam2hash_hdf5(i, hdf5, dataset, nsamples) for i in indices]
+        return [fam2hash_hdf5(i, hdf5, dataset, nsamples, fam2orthoxmlpath=fam2orthoxmlpath) for i in indices]
     #print(hashvalues)
     hashvalues = hashvalues.astype('int64')
     minhash1 = datasketch.WeightedMinHash( seed = 1, hashvalues=hashvalues)

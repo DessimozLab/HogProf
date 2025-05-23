@@ -256,13 +256,14 @@ class LSHBuilder:
             ### only Fam makes sense here, the rest are OMAmer related fields
             #print(self.h5OMA.root.OrthoXML.Index.colnames)
             self.rows = len(self.groups)
+            ### take subset of the groups for testing with: self.groups[:100000]
             for i, row in enumerate(self.groups):
                 if i > start:
                     #### family here is HOG ID minus the "HOG:E" prefix
                     fam = row[0]
                     ### testing only
-                    if fam != 712183 and fam != 712236 and fam != 708323:
-                        continue
+                    #if fam != 712183 and fam != 712236 and fam != 708323:
+                    #    continue
                     ortho_fam = self.READ_ORTHO(fam)
                     hog_size = ortho_fam.count('<species name=')
                     #print(fam, hog_size)
@@ -338,6 +339,10 @@ class LSHBuilder:
                         #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
                         print(df.head())
                         df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+                        ### check for empty dfs before putting them in the queue
+                        if df[['Fam', 'hash']].empty:
+                            return
+                        ### put data in queue to be saved
                         if self.fileglob:
                             retq.put(df[['Fam', 'hash', 'ortho']])
                         else:
@@ -361,7 +366,8 @@ class LSHBuilder:
                             except Exception as e:
                                 # Handle and log any errors
                                 print(f"Error processing row {index} with Fam={row['Fam']}: {e}")
-                                tree_dicts.append(None)  # Append None for rows that failed
+                                # Append None for rows that failed - necessary or raises alueError: Length of values (65) does not match length of index (101)
+                                tree_dicts.append(None)  
                         #print(f"Memory after HAM: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                         df['tree_dicts'] = tree_dicts
                         #print(tree_dicts)
@@ -373,6 +379,9 @@ class LSHBuilder:
                         #print(df.tree_dicts.iloc[0])
                         # Filter out rows with empty hash_dicts to save time
                         df = df[df['hash_dicts'].apply(bool)]
+                        ### check again if df is empty:
+                        if df.empty:
+                            return
                         #print(df.tree_dicts.iloc[0])
                         newdf ={}
                         #print("worker df columns",df.columns)
@@ -571,7 +580,10 @@ class LSHBuilder:
                                     print('Saving at:', t.time() - global_time)
                                     forest.index()
                                     print( 'testing forest' )
-                                    print(forest.query( hashes[fam] , k = 10 ) )
+                                    #print(hashes)
+                                    #### HERE IS WHERE I LEFT OFF - maybe get fam another way!!!!!!!!!!!!!
+                                    testfam = list(hashes.keys())[0]
+                                    print(forest.query( hashes[testfam] , k = 10 ) )
                                     h5flush()
                                     with open(self.lshforestpath, 'wb') as forestout:
                                         forestout.write(pickle.dumps(forest, -1))

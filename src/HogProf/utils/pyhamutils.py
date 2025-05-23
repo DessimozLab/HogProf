@@ -348,8 +348,8 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 node = nodes[0]
                 # get parent of it
                 parent = node.up
-                print('parent:', parent)
                 if verbose:
+                    print('parent:', parent)
                     print('nodes',nodes)
                     print("Children before deletion:", [c.name for c in node.children])
                 #create polytomy with children and internal node

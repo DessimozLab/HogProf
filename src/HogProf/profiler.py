@@ -172,7 +172,7 @@ class Profiler:
 		
 		self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
 
-		print('DONE with profiler init')
+		print('DONE with profiler init\n')
 
 	def hogid2fam(self, hog_entry, reverse = False):
 		#print("hog_entry", hog_entry)
@@ -428,7 +428,7 @@ class Profiler:
 
 		return results
 
-	def hog_query_sorted(self, hog_id=None, fam_id=None , k = 100  ):
+	def hog_query_sorted(self, hog_id=None, fam_id=None , k = 100, fam2orthoxmlpath = None):
 		"""
 		Given a hog_id or a fam_id as a query, returns a dictionary containing the results of the LSH.
 		:param hog_id: query hog id
@@ -442,6 +442,8 @@ class Profiler:
 				### if a family is query
 				if isinstance(hog_id, int):
 					fam_id = hog_id
+					if not hog_id in self.fam_dict:
+						return {}, pd.DataFrame()
 					family_subhogids_list = self.fam_dict[hog_id]
 					family_subhogs_list = [self.subhog_dict[i] for i in family_subhogids_list]
 				### if a subhog is query
@@ -457,7 +459,8 @@ class Profiler:
 		if self.slicesubhogs:
 			#print("\nHOG query sorted - Case of sliced subhogs")
 			#print(hog_id,'first fam_id', fam_id[0]) # family, [index1, index2, ...]
-			query_hashes_dict = {i:hashutils.fam2hash_hdf5(i, self.hashes_h5 , nsamples=  self.nsamples ) for i in family_subhogids_list}
+			query_hashes_dict = {i:hashutils.fam2hash_hdf5(i, self.hashes_h5 , nsamples=  self.nsamples, fam2orthoxmlpath=fam2orthoxmlpath) 
+						for i in family_subhogids_list}
 			#print('query_hashes',list(query_hashes_dict.keys())[0],query_hashes_dict[list(query_hashes_dict.keys())[0]]) # index1: hash1, index2: hash2, ...
 			### works without filtering
 			results_dict = { fam: self.lshobj.query(query_hash, k) for fam, query_hash in query_hashes_dict.items() }
@@ -465,7 +468,7 @@ class Profiler:
 			### the line below is not optimised!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			#print(query_hashes_dict)
 			
-			hogdict = { fam: self.pull_hashes(results) for fam, results in results_dict.items() }
+			hogdict = { fam: self.pull_hashes(results, fam2orthoxmlpath=fam2orthoxmlpath) for fam, results in results_dict.items() }
 			#print('hogdict',list(hogdict.keys())[0],'first result: 0_0_0',hogdict[list(hogdict.keys())[0]]['0_0_0']) # {index1:{hitsubhog1:hash1, hitsubhog2:hash2, ...}, index2:{subhog1:hash1, subhog2:hash2, ...}, ...}				
 			hogdict = { fam: { subhog: hogdict[fam][subhog].jaccard(query_hashes_dict[fam]) for subhog in hogdict[fam] } for fam in hogdict }
 			#print('hogdict',list(hogdict.keys())[0],'first result: 0_0_0',hogdict[list(hogdict.keys())[0]]['0_0_0']) # {index1: jaccard1, index2: jaccard2, ...}
@@ -490,7 +493,7 @@ class Profiler:
 			subhogsdf = subhogsdf.sort_values(['jaccard', 'query_subhogid', 'hit_family', 'hit_level'], ascending=False)
 			return hogdict, subhogsdf	
 		else:
-			query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5 , nsamples=  self.nsamples)
+			query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5 , nsamples=  self.nsamples, fam2orthoxmlpath=fam2orthoxmlpath)
 			results = self.lshobj.query(query_hash, k)
 			hogdict = self.pull_hashes(results)
 			hogdict = { hog: hogdict[hog].jaccard(query_hash) for hog in hogdict  }
@@ -500,7 +503,7 @@ class Profiler:
 		sortedhogs = [ h[0] for h in sortehogs.reverse() ]
 		return hogdict , sortedhogs
 
-	def pull_hashes(self , hoglist):
+	def pull_hashes(self , hoglist, fam2orthoxmlpath = None):
 
 		"""
 		Given a list of hog_ids , returns a dictionary containing their hashes.
@@ -519,7 +522,7 @@ class Profiler:
 			result_dict = {}
 			for entry in hoglist:
 				indices, subhog_dict = self.hogid2fam(entry)
-				result_dict[entry] = [hashutils.fam2hash_hdf5(idx, self.hashes_h5, nsamples=self.nsamples) for idx in indices][0]
+				result_dict[entry] = [hashutils.fam2hash_hdf5(idx, self.hashes_h5, nsamples=self.nsamples, fam2orthoxmlpath=fam2orthoxmlpath) for idx in indices][0]
 				
 			return result_dict
 
