@@ -114,7 +114,7 @@ def hash_trees_subhogs(hog_tps , taxaIndex , treeweights , wmg , lossonly = Fals
     #print(hog_tps[['tree_dicts']].to_dict())
     if hog_tps is None or 'tree_dicts' not in hog_tps or hog_tps['tree_dicts'] is None:
         return None
-    ### AttributeError: 'NoneType' object has no attribute 'items' is here (for OMA run):
+
     hashes_subhogs = {key:hash_tree(tp , taxaIndex , treeweights , wmg) for key,tp  in hog_tps['tree_dicts'].items()}
     
     return hashes_subhogs

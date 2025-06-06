@@ -24,10 +24,63 @@ import random
 import tqdm
 import os
 import ete3
+import collections
+import io
 random.seed(0)
 np.random.seed(0)
 #import psutil
 #process = psutil.Process()
+
+'''This is a function for adding subhog ids to the OMA orthoxml files (from Adrian). Will become redundant
+ with the next version of OMA'''
+class OrthoXMLBuilder:
+
+    def __init__(self):
+        self.NS = "http://orthoXML.org/2011/"
+        ET.register_namespace('', self.NS)  # Register default namespace
+
+    def add_loft_ids(self, orthoxml):
+
+        def encodeParalogClusterId(prefix, nr):
+            letters = []
+            while nr // 26 > 0:
+                letters.append(chr(97 + (nr % 26)))
+                nr = nr // 26 - 1
+            letters.append(chr(97 + (nr % 26)))
+            return prefix + ''.join(letters[::-1])
+
+        def nextSubHogId(idx):
+            dups[idx] += 1
+            return dups[idx]
+
+        def rec_annotate(node, og, idx=0):
+            if node.tag == f"{{{self.NS}}}orthologGroup":
+                taxon_id = node.get('taxonId')
+                if taxon_id is not None:
+                    node.set('id', og + "_" + taxon_id)
+                else:
+                    # If no taxonId, just set the id to the og
+                    node.set('id', og )
+                for child in list(node):
+                    rec_annotate(child, og, idx)
+            elif node.tag == f"{{{self.NS}}}paralogGroup":
+                idx += 1
+                next_og = "{}.{}".format(og, nextSubHogId(idx))
+                for i, child in enumerate(list(node)):
+                    rec_annotate(child, encodeParalogClusterId(next_og, i), idx)
+            elif node.tag == f"{{{self.NS}}}geneRef":
+                # Set the id to the geneRef id
+                node.set('LOFT', og)
+
+        doc = ET.parse(io.StringIO(orthoxml))
+        xml = doc.getroot()
+        for i, el in enumerate(xml.findall(".//groups/orthologGroup", {"": self.NS})):
+            og = el.get('id', "HOG:{:08d}".format(i+1))
+            dups = collections.defaultdict(int)
+            rec_annotate(el, og)
+        tree_str = io.StringIO()
+        doc.write(tree_str, encoding='unicode')
+        return tree_str.getvalue()
 
 class LSHBuilder:
 
@@ -262,9 +315,12 @@ class LSHBuilder:
                     #### family here is HOG ID minus the "HOG:E" prefix
                     fam = row[0]
                     ### testing only
-                    #if fam != 712183 and fam != 712236 and fam != 708323:
-                    #    continue
+                    if fam != 589377: #and fam != 712236 and fam != 708323:
+                        continue
                     ortho_fam = self.READ_ORTHO(fam)
+                    ### for older versions of OMA that do not have subhogIDs
+                    orthoxmlbuilder = OrthoXMLBuilder()
+                    ortho_fam = orthoxmlbuilder.add_loft_ids(ortho_fam)
                     hog_size = ortho_fam.count('<species name=')
                     #print(fam, hog_size)
                     #print(self.idmapper)

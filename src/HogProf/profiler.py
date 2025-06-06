@@ -77,8 +77,8 @@ class Profiler:
 				### get a dictionary of subhog ids
 				id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath) ### Athina note: here used to be index_col=0 !!!!!!!!!!!!!!!!!!!!!!!!
 				# print for fam=15
-				print(id2famsubhog_df.head())
-				print(id2famsubhog_df[id2famsubhog_df['fam'] == 15]) 
+				#print(id2famsubhog_df.head())
+				#print(id2famsubhog_df[id2famsubhog_df['fam'] == 15]) 
 				# Group by 'fam' and create a dictionary of indices
 				fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
 				self.fam_dict = fam_dict
@@ -110,12 +110,12 @@ class Profiler:
 			self.tree = [ n for n in trees[0] ][0]
 			self.use_phyloxml = True
 			print('using phyloxml')
-			print( 'loaded tree:' , self.tree )
+			#print( 'loaded tree:' , self.tree )
 			self.tree_string = mastertree
 		else:
 			try:
 				self.tree = ete3.Tree(mastertree, format=1 , quoted_node_names= True)
-				print( 'loaded tree:', self.tree )
+				#print( 'loaded tree:', self.tree )
 			except:
 				self.tree = ete3.Tree(mastertree, format=0)
 		with open(mastertree) as treein:
