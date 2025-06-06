@@ -255,7 +255,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             ### get all subhogs
             subhogs  = tp.hog.get_all_descendant_hogs()
             hogid_for_all = subhogs[0].hog_id
-            rootname = subhogs[0].genome.name + '_' + str(hogid_for_all) + '_0'
+            rootname = subhogs[0].genome.name + '_' + str(hogid_for_all) #+ '_0'
             ### try to get the HOG id to use as part of the subhog name
             #print(dir(subhogs[0]))
             #try:  
@@ -264,12 +264,12 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             #hogs = { subhog.genome.name +'_' + str(subhog.hog_id) + '_' + str(i + 1):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
             #hogs = { subhog.genome.name +'_' + str(subhog.hog_id) + '_' + str(i + 1):  ham_obj.create_tree_profile(hog=subhog) for i,subhog in enumerate(subhogs) }
             hogs = {
-                f"{subhog.genome.name}_{str(subhog.hog_id) if subhog.hog_id is not None else str(hogid_for_all)}_{i + 1}": ham_obj.create_tree_profile(hog=subhog)
+                f"{subhog.genome.name}_{str(subhog.hog_id) if subhog.hog_id is not None else str(hogid_for_all)}": ham_obj.create_tree_profile(hog=subhog)
                 for i, subhog in enumerate(subhogs)
             }
             ### manually add roothog cause apparently we are not including it
             #print(f'Subhogs: {len(hogs)}')
-            hogs[rootname] = tp
+            #hogs[rootname] = tp
             if verbose:
                 print(f'\nRootHOG: {rootname}')
                 print(f'Subhogs total: {len(hogs)}')
@@ -310,7 +310,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             #'''
             ### first check rootHOG to see if there will be at least one hog returned
             ### if dataset_nodes is specified, this step cannot be done
-            if dataset_nodes is None and not check_limits(hogs[rootname], limit_species, limit_events, 'root'):
+            if dataset_nodes is None and not check_limits(hogs[f"{rootname}_1"], limit_species, limit_events, 'root'):
                 if verbose:
                     print('no suitable rootHOG')
                 return {}
