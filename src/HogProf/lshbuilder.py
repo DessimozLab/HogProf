@@ -79,6 +79,8 @@ class OrthoXMLBuilder:
             dups = collections.defaultdict(int)
             rec_annotate(el, og)
         tree_str = io.StringIO()
+        ### addition by Athina:
+        tree_str.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         doc.write(tree_str, encoding='unicode')
         return tree_str.getvalue()
 
@@ -315,7 +317,7 @@ class LSHBuilder:
                     #### family here is HOG ID minus the "HOG:E" prefix
                     fam = row[0]
                     ### testing only
-                    if fam != 589377: #and fam != 712236 and fam != 708323:
+                    if fam != 751313: #and fam != 712236 and fam != 708323:
                         continue
                     ortho_fam = self.READ_ORTHO(fam)
                     ### for older versions of OMA that do not have subhogIDs
@@ -825,170 +827,154 @@ class LSHBuilder:
         # Use the correct data generator
         data_generator = self.generates_dataframes(size=100, minhog_size=limit_species)
         
-        # Initialize queues and lock as None since we are not using multiprocessing
-        q = []
-        retq = []
-        matq = []
-        lock = None
+        # Initialize minimal required variables
         chunk_size = 100
-        
-        # Initialize lshforest
-        self.lshforest = MinHashLSHForest(num_perm=self.numperm)
-        
-        # Process worker tasks
-        taxstr = ''
+        forest = MinHashLSHForest(num_perm=self.numperm)
         savedf = None
-        if self.tax_filter is None:
-            taxstr = 'NoFilter'
-        if self.tax_mask is None:
-            taxstr+= 'NoMask'
-        else:
-            taxstr = str(self.tax_filter)
-        
         total_subfam_ids = []
         totals_subfams = 0
         global_time = t.time()
-        forest = self.lshforest
-        savedf = None  # Initialize savedf
+        
+        # Set taxstr consistently with saver function
+        if self.tax_filter is None:
+            taxstr = 'NoFilter'
+        if self.tax_mask is None:
+            taxstr += 'NoMask'
+        else:
+            taxstr = str(self.tax_filter)
+            
+        # Open files for writing, matching saver's file handling
         with open(self.errorfile, 'w') as hashes_error_files:
             with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
-                datasets = {}
+                # Initialize h5 dataset
                 if taxstr not in h5hashes.keys():
-                    if self.verbose == True:
+                    if self.verbose:
                         print('creating dataset')
                         print('filtered at taxonomic level: '+taxstr)
                     h5hashes.create_dataset(taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
-                    if self.verbose == True:
-                        print(datasets)
-                    h5flush = h5hashes.flush
-                h5flush = h5hashes.flush
-                #print(h5hashes[taxstr])
-                #print('retq', retq)
+                
                 this_dataframe = None
                 for i, data in enumerate(tqdm.tqdm(data_generator)):
-                    #print(f'Iteration {i}')
-                    #print(f'Generated data {i}: {data}')
                     if data is not None:
-                        #print(f'Processing data {i}')
-                        retdf = self.worker_single(i, data, retq, matq, lock)
+                        retdf = self.worker_single(i, data, [], [], None)  # Empty lists for retq/matq since not using queues
                         
                         if self.slicesubhogs is False:
-                        
+                            # Handle non-sliced case
                             if self.fileglob:
                                 if savedf is None:
                                     savedf = retdf[['Fam', 'ortho']]
                                 else:
                                     savedf = pd.concat([savedf, retdf[['Fam', 'ortho']]])
+                            
                             if this_dataframe is None:
                                 this_dataframe = retdf
-                            if this_dataframe is not None:
+                            elif this_dataframe is not None:
                                 this_dataframe = pd.concat([this_dataframe, retdf])
                             
                             if len(this_dataframe) > 10:
-                                #print(this_dataframe)
                                 hashes = this_dataframe['hash'].to_dict()
-                                fam = this_dataframe.Fam.max()
-                                h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                                #print(str(this_dataframe.Fam.max())+ 'fam num')
-                                #print(str(count) + ' done')
-                                hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
-                                [ forest.add(str(fam),hashes[fam]) for fam in hashes]
+                                hashes = {fam:hashes[fam] for fam in hashes if hashes[fam]}
+                                
+                                # Add to forest and resize h5 if needed
                                 for fam in hashes:
-                                    if len(h5hashes[taxstr]) < fam + 10:
+                                    if len(h5hashes[taxstr]) < fam + chunk_size:
                                         h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                                        print('Resized h5hashes')
-                                        print(h5hashes[taxstr].shape)
+                                    forest.add(str(fam), hashes[fam])
                                     h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
+                                
                                 this_dataframe = None
+                                
                         else:
-                            #print(retdf)
+                            # Handle sliced case 
                             if self.fileglob:
                                 if savedf is None:
                                     savedf = retdf[['ortho']]
-                                    #print(savedf)
                                 else:
-                                    savedf = pd.concat([savedf, retdf[[ 'ortho']]])
+                                    savedf = pd.concat([savedf, retdf[['ortho']]])
+                            
                             if this_dataframe is None:
                                 this_dataframe = retdf
-                            if this_dataframe is not None:
+                            elif this_dataframe is not None:
                                 this_dataframe = pd.concat([this_dataframe, retdf])
                             
-                            if len(this_dataframe) > 10: 
+                            if len(this_dataframe) > 10:
                                 hashes = this_dataframe['hash'].to_dict()
                                 nsubfams = len(hashes)
+                                
+                                # Resize if needed
                                 if h5hashes[taxstr].shape[0] < totals_subfams + nsubfams + chunk_size:
                                     example = list(hashes.keys())[0]
-                                    h5hashes[taxstr].resize((totals_subfams + nsubfams + chunk_size, len(hashes[example].hashvalues.ravel())))
-                                    #print('resized h5hashes')
-                                    #print(h5hashes[taxstr].shape)
-                                #### we need to keep track of the row ids mapping to double index !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                                #print('taxstr', taxstr)
-                                #print('totals_subfams', totals_subfams)
-                                #print('nsubfams', nsubfams)
-                                #print('hashes', type(hashes))
-                                #print('h5hashes', h5hashes)
-                                #print('this_dataframe', this_dataframe)
+                                    h5hashes[taxstr].resize((totals_subfams + nsubfams + chunk_size, 
+                                                           len(hashes[example].hashvalues.ravel())))
+                                
                                 subfam_ids_list = retdf.index.to_list()
-                                #print('subfamids',subfam_ids_list)
-                                total_subfam_ids = total_subfam_ids + subfam_ids_list
-                                h5hashes[taxstr][totals_subfams:totals_subfams + nsubfams, :] = [hashes[fam].hashvalues.ravel() for fam in subfam_ids_list]
-                                #print(h5hashes[taxstr][totals_subfams:totals_subfams + nsubfams])
+                                total_subfam_ids.extend(subfam_ids_list)
+                                
+                                # Store hashes
+                                h5hashes[taxstr][totals_subfams:totals_subfams + nsubfams, :] = \
+                                    [hashes[fam].hashvalues.ravel() for fam in subfam_ids_list]
+                                
                                 totals_subfams += nsubfams
-                                hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam]}
-                                [ forest.add(str(fam[0]) + '_' + str(fam[1]),hashes[fam]) for fam in hashes]
+                                
+                                # Add to forest
+                                hashes = {fam:hashes[fam] for fam in hashes if hashes[fam]}
+                                for fam in hashes:
+                                    forest.add(str(fam[0]) + '_' + str(fam[1]), hashes[fam])
+                                
                                 this_dataframe = None
 
-                
-                            
+                # Handle final dataframe if exists
+                if this_dataframe is not None:
+                    if self.slicesubhogs:
+                        # Handle remaining sliced data
+                        hashes = this_dataframe['hash'].to_dict() 
+                        nsubfams = len(hashes)
+                        if h5hashes[taxstr].shape[0] < totals_subfams + nsubfams + chunk_size:
+                            example = list(hashes.keys())[0]
+                            h5hashes[taxstr].resize((totals_subfams + nsubfams + chunk_size,
+                                                   len(hashes[example].hashvalues.ravel())))
+                        
+                        h5hashes[taxstr][totals_subfams:totals_subfams + nsubfams, :] = \
+                            [hashes[fam].hashvalues.ravel() for fam in hashes]
+                        totals_subfams += nsubfams
+                        
+                        hashes = {fam:hashes[fam] for fam in hashes if hashes[fam]}
+                        for fam in hashes:
+                            forest.add(str(fam[0]) + '_' + str(fam[1]), hashes[fam])
+                    
+                    else:
+                        # Handle remaining non-sliced data
+                        hashes = this_dataframe['hash'].to_dict()
+                        hashes = {fam:hashes[fam] for fam in hashes if hashes[fam]}
+                        for fam in hashes:
+                            if len(h5hashes[taxstr]) < fam + chunk_size:
+                                h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
+                            forest.add(str(fam), hashes[fam])
+                            h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
 
-                if this_dataframe is not None and self.slicesubhogs is False:
-                    hashes = this_dataframe['hash'].to_dict()
-                    #print(str(this_dataframe.Fam.max())+ 'fam num')
-                    #print(str(count) + ' done')
-                    hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
-                    [ forest.add(str(fam),hashes[fam]) for fam in hashes]
-                    for fam in hashes:
-                        if len(h5hashes[taxstr]) < fam + 10:
-                            h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                        h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()   
-                elif this_dataframe is not None and self.slicesubhogs is True:
-                    hashes = this_dataframe['hash'].to_dict()
-                    nsubfams = len(hashes)
-                    if h5hashes[taxstr].shape[0] < totals_subfams + nsubfams + chunk_size:
-                        example = list(hashes.keys())[0]
-                        h5hashes[taxstr].resize((totals_subfams + chunk_size, len(hashes[example].hashvalues.ravel())))
-
-                    h5hashes[taxstr][totals_subfams:totals_subfams + nsubfams, :] = [hashes[fam].hashvalues.ravel() for fam in hashes]
-                    totals_subfams += nsubfams
-                    hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam]}
-                    [ forest.add(str(fam[0]) + '_' + str(fam[1]),hashes[fam]) for fam in hashes]
-
-                #'''
-                ### Athina note: could this be changing the indices????????????
-                if self.slicesubhogs:
-                    #savedf['subhog_id'] =  total_subfam_ids
-                    #print(savedf.head())
-                    #print(savedf.size)
-                    savedf.index.set_names(['fam','subhog_id'], inplace=True)
-                    # Turn the multi-index into columns
-                    savedf.reset_index(inplace=True)
-                    # Create a new numeric index
-                    savedf.index = range(len(savedf))
-                    #print(savedf.size)
-                    #print(savedf.head())
-                #'''
-
+                # Final processing
                 print('wrapping up the run')
-                print('saving at :', t.time() - global_time)
+                print('saving at:', t.time() - global_time)
+                
+                # Index and save forest
                 forest.index()
                 with open(self.lshforestpath, 'wb') as forestout:
                     forestout.write(pickle.dumps(forest, -1))
-                h5flush()
-                if self.fileglob and savedf is not None:
-                    print('saving orthoxml to fam mapping')
-                    savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))        
+                
+                # Save mappings if needed
+                if savedf is not None:
+                    if self.slicesubhogs:
+                        savedf.index.set_names(['fam','subhog_id'], inplace=True)
+                        savedf.reset_index(inplace=True)
+                        savedf.index = range(len(savedf))
+                    
+                    if self.fileglob:
+                        print('saving orthoxml to fam mapping')
+                        savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))
 
         print('done single-threaded pipeline')
+
+    
 
 def main():
     parser = argparse.ArgumentParser()
@@ -1121,6 +1107,7 @@ def main():
             lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, 
             verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], limit_events=args['eventslim'])
             lsh_builder.run_pipeline(threads)
+            #lsh_builder.run_pipeline_single()
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
         treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
