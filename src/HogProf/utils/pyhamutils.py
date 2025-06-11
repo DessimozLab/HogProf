@@ -154,7 +154,7 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
 
 def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= True, orthomapper = None,
                                      limit_species =10, limit_events = 0, dataset_nodes = None, hogid_for_all = None, verbose=False):  
-    verbose = True
+    #verbose = True
     if verbose:
         ### reverse orthomapper
         orthomapper_rev = {v: k for k, v in orthomapper.items()}
@@ -222,35 +222,6 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 if not relevant_roothog:
                     return {}
                 del roothog_levels
-            
-            
-
-            '''
-            ### get all taxa names
-            taxa_names = [taxon.name for taxon in ete3.Tree(tree , format = 1).traverse()]
-            ### if dataset_nodes is specified, filter out the taxa that are not in the dataset
-            ### there may be some dataset_nodes missing, which is why we need to check
-            if dataset_nodes is not None:
-                taxa_names = [taxon for taxon in taxa_names if taxon in dataset_nodes]
-
-            subhogs = []
-            ### get ancestral genome names
-            test = ham_obj.get_list_ancestral_genomes() + ham_obj.get_list_extant_genomes()
-            test = [t.name for t in test]
-            print(test)
-            testhog = ham_obj.get_ancestral_genome_by_name('6').genes
-            print('hogs at level 6:',len(testhog),testhog)
-            print('descendant hogs of first hog in level 6:', len(testhog[0].get_all_descendant_hogs()), testhog[0].get_all_descendant_hogs())
-            print('all subhogs:', len(tp.hog.get_all_descendant_hogs()), tp.hog.get_all_descendant_hogs())
-            ### get subhogs for each level
-            for taxon in taxa_names:
-                try:
-                    subhogs = subhogs + ham_obj.get_ancestral_genome_by_name(taxon).genes
-                except:
-                    continue
-            
-            #print(f'Subhogs list: {len(subhogs_list)}')
-            '''
 
             ### get all subhogs
             subhogs  = tp.hog.get_all_descendant_hogs()
@@ -358,34 +329,6 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                     parent.add_child(child)
                 #remove node
                 tree.write(     outfile = 'fallback.nwk' , format = 1)
-                '''
-                def remove_node_and_cleanup(node):
-                    parent = node.up
-                    node.detach()
-                    # If parent has only one child left, remove it too
-                    while parent is not None and len(parent.children) == 1:
-                        only_child = parent.children[0]
-                        grandparent = parent.up
-                        parent.detach()
-                        if grandparent:
-                            only_child.up = None
-                            grandparent.add_child(only_child)
-                        parent = grandparent
-                    # If parent has no children left, remove it too     
-                ### detach node before
-                #node.detach()
-                for c in node.children:
-                    #delete all children # delete is what worked best. alt: detach
-                    remove_node_and_cleanup(c)
-                    #c.detach()
-                    #if c.is_leaf():
-                        #print('deleting leaf', c.name)
-                        #c.delete()
-                    #else:
-                    #    print('Warning: unexpectedly not leaf', c.name)
-
-                    #break
-                '''
                 ### turn tree back into newick string
                 tree = tree.write(format=1)
                 #rerun with trimmed tree    
@@ -393,13 +336,14 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 #print(dir(ham_obj)) 
                 ### Create tree profile for the top-level HOG
                 tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
-                ### save root name
-                rootname = tp.treemap.name + '_0'
                 ### get all subhogs
                 subhogs  = tp.hog.get_all_descendant_hogs() 
                 if hogid_for_all is None:
-                    hogid_for_all = fam      
-                hogs = { subhog.genome.name +'_' + str(hogid_for_all)+ '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
+                    hogid_for_all = fam   
+                ### save root name
+                #rootname = tp.treemap.name + '_0'
+                rootname = subhogs[0].genome.name + '_' + str(hogid_for_all)   
+                hogs = { subhog.genome.name +'_' + str(hogid_for_all):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
 
                 ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
                 if dataset_nodes is not None:
