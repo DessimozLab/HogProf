@@ -160,7 +160,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
         orthomapper_rev = {v: k for k, v in orthomapper.items()}
     fam, orthoxml = row
     format = 'newick_string'
-    def check_limits(treenode, limit_species, limit_events, subhogname):
+    def check_limits(treenode, limit_events):
                 ###removed because already covered earlier when generating treemaps
                 ### leaves counting failed e.g. in HOG:E0712183.1e, counts more than there is
                 #print(dir(treenode))
@@ -281,13 +281,13 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             #'''
             ### first check rootHOG to see if there will be at least one hog returned
             ### if dataset_nodes is specified, this step cannot be done
-            if dataset_nodes is None and not check_limits(hogs[rootname], limit_species, limit_events, 'root'):
+            if dataset_nodes is None and not check_limits(hogs[rootname], limit_events):
                 if verbose:
                     print('no suitable rootHOG')
                 return {}
 
             ### then check subhogs and remove the ones that do not meet the limits
-            hogs = {subhogname: hogs[subhogname] for subhogname in hogs if check_limits(hogs[subhogname], limit_species, limit_events, subhogname)}
+            hogs = {subhogname: hogs[subhogname] for subhogname in hogs if check_limits(hogs[subhogname], limit_events)}
             if len(hogs) == 0 and verbose:
                 print('no suitable subhogs')
             #print(hogs)
@@ -338,13 +338,16 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
                 ### get all subhogs
                 subhogs  = tp.hog.get_all_descendant_hogs() 
+                hogid_for_all = subhogs[0].hog_id
                 if hogid_for_all is None:
                     hogid_for_all = fam   
                 ### save root name
                 #rootname = tp.treemap.name + '_0'
                 rootname = subhogs[0].genome.name + '_' + str(hogid_for_all)   
-                hogs = { subhog.genome.name +'_' + str(hogid_for_all):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
-
+                hogs = {
+                    f"{subhog.genome.name}_{str(subhog.hog_id) if subhog.hog_id is not None else str(hogid_for_all)}": ham_obj.create_tree_profile(hog=subhog).treemap
+                    for i, subhog in enumerate(subhogs)
+                }
                 ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
                 if dataset_nodes is not None:
                     #print('fam', fam)
@@ -356,12 +359,13 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
 
                 ### first check rootHOG to see if there will be at least one hog returned
                 ### if dataset_nodes is specified, this step cannot be done
-                if dataset_nodes is None and not check_limits(hogs[rootname], limit_species, limit_events, 'root'):
+                if dataset_nodes is None and not check_limits(hogs[rootname], limit_events):
                     return {}
 
                 ### then check subhogs and remove the ones that do not meet the limits
-                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if check_limits(hogs[subhogname], limit_species, limit_events, subhogname)}
-
+                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if check_limits(hogs[subhogname], limit_events )}
+                if verbose:
+                    print(hogs)
                 return hogs            
             else:
                 if verbose:
