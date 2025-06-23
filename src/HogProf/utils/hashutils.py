@@ -63,6 +63,8 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
     presence = [ taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in taxaIndex ]
     indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
+    ### Athina comment:
+    ### change things here to do permutation test!!!!
     for i,event in enumerate(indices):
         if len(indices[event])>0:
             try:

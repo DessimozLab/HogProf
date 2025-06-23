@@ -317,7 +317,7 @@ class LSHBuilder:
                     #### family here is HOG ID minus the "HOG:E" prefix
                     fam = row[0]
                     ### testing only
-                    if fam != 751313: #and fam != 712236 and fam != 708323:
+                    if fam != 794303 and fam!= 751313: #and fam != 712236 and fam != 708323:
                         continue
                     ortho_fam = self.READ_ORTHO(fam)
                     ### for older versions of OMA that do not have subhogIDs
@@ -1106,8 +1106,8 @@ def main():
             treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , 
             lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, 
             verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], limit_events=args['eventslim'])
-            lsh_builder.run_pipeline(threads)
-            #lsh_builder.run_pipeline_single()
+            #lsh_builder.run_pipeline(threads)
+            lsh_builder.run_pipeline_single()
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
         treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,

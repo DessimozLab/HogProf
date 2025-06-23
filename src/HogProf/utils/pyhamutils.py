@@ -154,7 +154,7 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
 
 def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= True, orthomapper = None,
                                      limit_species =10, limit_events = 0, dataset_nodes = None, hogid_for_all = None, verbose=False):  
-    #verbose = True
+    verbose = True
     if verbose:
         ### reverse orthomapper
         orthomapper_rev = {v: k for k, v in orthomapper.items()}
@@ -325,12 +325,21 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                     print("Children before deletion:", [c.name for c in node.children])
                 #create polytomy with children and internal node
                 for child in node.get_children():
+                    print(child)
                     child.detach()
                     parent.add_child(child)
+                    print(parent)
                 #remove node
                 tree.write(     outfile = 'fallback.nwk' , format = 1)
+                if verbose:
+                    nodes = tree.search_nodes(name = species)
+                    node = nodes[0]
+                    parent = node.up
+                    print('new parent:', parent)
                 ### turn tree back into newick string
                 tree = tree.write(format=1)
+                
+
                 #rerun with trimmed tree    
                 ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string ) 
                 #print(dir(ham_obj)) 
