@@ -150,7 +150,13 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
                 print('error' , full_error_message)
                 return None
 
-
+def add_library_path(library_path):
+    """Add the directory containing profiler.py to Python's sys.path"""
+    if not os.path.exists(library_path):
+        raise FileNotFoundError(f"Path does not exist: {library_path}")
+    profiler_dir = os.path.dirname(os.path.abspath(library_path))
+    if profiler_dir not in sys.path:
+        sys.path.append(profiler_dir)
 
 def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= True, orthomapper = None,
                                      limit_species =10, limit_events = 0, dataset_nodes = None, hogid_for_all = None, verbose=False):  
@@ -198,6 +204,12 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
         else:
             quoted = True
         try:
+            ### testing hamblaster
+            # Add profiler directory to path and import
+            add_library_path("")
+            import profiler
+
+
             ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string ) 
             #print(dir(ham_obj)) 
             ### Create tree profile for the top-level HOG

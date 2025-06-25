@@ -179,13 +179,14 @@ class Profiler:
 		if type(hog_entry )== int and not self.slicesubhogs:
 			return hog_entry
 		elif self.slicesubhogs:
-			### if there is a column without label, use it as index
-			id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath, index_col=0)
+			### Athina comment: possible redundancy here!!!!!!!!!!!!!!!!!!
+			### if there is a column without label, use it as index 
+			#id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath, index_col=0)
 			### check if index is labeled
-			if id2famsubhog_df.index.name is not None:
-				id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath)
+			#if id2famsubhog_df.index.name is not None:
+			#	id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath)
 			#print(id2famsubhog_df)
-			fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
+			fam_dict = self.fam_dict#id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
 			#subhog_dict = id2famsubhog_df.set_index('subhog_id').to_dict(orient='index')
 			if isinstance(hog_entry, int):
 				indices = fam_dict[hog_entry]
@@ -194,14 +195,15 @@ class Profiler:
 					#print(id2famsubhog_df)
 					#subhog_dict = id2famsubhog_df.set_index('subhog_id').to_dict(orient='index')
 					### for each row of the df with index in indices, reconstruct the subhog id from columns fam and subhog_id
-					subhog_dict = id2famsubhog_df.loc[indices, ['fam', 'subhog_id']].apply(lambda x: f"{x['fam']}_{x['subhog_id']}", axis=1).to_dict()
+					subhog_dict = self.subhog_dict#id2famsubhog_df.loc[indices, ['fam', 'subhog_id']].apply(lambda x: f"{x['fam']}_{x['subhog_id']}", axis=1).to_dict()
 					#print(subhog_dict)
 					return indices, subhog_dict
 			elif isinstance(hog_entry, str):
-				fam_parts = hog_entry.split('_')
-				fam_int = int(fam_parts[0])
-				subhog_str = '_'.join(fam_parts[1:])
-				indices = id2famsubhog_df[(id2famsubhog_df['fam'] == fam_int) & (id2famsubhog_df['subhog_id'] == subhog_str)].index.tolist()
+				#fam_parts = hog_entry.split('_')
+				#fam_int = int(fam_parts[0])
+				#subhog_str = '_'.join(fam_parts[1:])
+				#indices = id2famsubhog_df[(id2famsubhog_df['fam'] == fam_int) & (id2famsubhog_df['subhog_id'] == subhog_str)].index.tolist()
+				indices = [self.subhogname_to_id_dict[ hog_entry ]]
 				return indices, {indices[0]:hog_entry}
 			else:
 				return indices
@@ -459,15 +461,13 @@ class Profiler:
 		if self.slicesubhogs:
 			#print("\nHOG query sorted - Case of sliced subhogs")
 			#print(hog_id,'first fam_id', fam_id[0]) # family, [index1, index2, ...]
-			query_hashes_dict = {i:hashutils.fam2hash_hdf5(i, self.hashes_h5 , nsamples=  self.nsamples, fam2orthoxmlpath=fam2orthoxmlpath) 
+			query_hashes_dict = {i:hashutils.fam2hash_hdf5(i, self.hashes_h5 , nsamples=  self.nsamples) 
 						for i in family_subhogids_list}
 			#print('query_hashes',list(query_hashes_dict.keys())[0],query_hashes_dict[list(query_hashes_dict.keys())[0]]) # index1: hash1, index2: hash2, ...
 			### works without filtering
 			results_dict = { fam: self.lshobj.query(query_hash, k) for fam, query_hash in query_hashes_dict.items() }
 			#print('results',list(results_dict.keys())[0],'first result hogid',results_dict[list(results_dict.keys())[0]][0]) # index1: results1, index2: results2, ...
 			### the line below is not optimised!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			#print(query_hashes_dict)
-			
 			hogdict = { fam: self.pull_hashes(results, fam2orthoxmlpath=fam2orthoxmlpath) for fam, results in results_dict.items() }
 			#print('hogdict',list(hogdict.keys())[0],'first result: 0_0_0',hogdict[list(hogdict.keys())[0]]['0_0_0']) # {index1:{hitsubhog1:hash1, hitsubhog2:hash2, ...}, index2:{subhog1:hash1, subhog2:hash2, ...}, ...}				
 			hogdict = { fam: { subhog: hogdict[fam][subhog].jaccard(query_hashes_dict[fam]) for subhog in hogdict[fam] } for fam in hogdict }
@@ -522,8 +522,7 @@ class Profiler:
 			result_dict = {}
 			for entry in hoglist:
 				indices, subhog_dict = self.hogid2fam(entry)
-				result_dict[entry] = [hashutils.fam2hash_hdf5(idx, self.hashes_h5, nsamples=self.nsamples, fam2orthoxmlpath=fam2orthoxmlpath) for idx in indices][0]
-				
+				result_dict[entry] = [hashutils.fam2hash_hdf5(idx, self.hashes_h5, nsamples=self.nsamples) for idx in indices][0]
 			return result_dict
 
 	def pull_matrows(self,fams):
