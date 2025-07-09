@@ -306,19 +306,24 @@ class LSHBuilder:
     def generates_dataframes(self, size=100, minhog_size=10, maxhog_size=None ):
         families = {}
         start = -1
+        #hogsizetable = "/home/agavriil/Documents/venom_project/A_venom_analysis_tidy/2_profiling/1_oma_profiles/" \
+        #"levels_oma_full_subhogs_250523/hogsize_table.csv"
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
             ### only Fam makes sense here, the rest are OMAmer related fields
             #print(self.h5OMA.root.OrthoXML.Index.colnames)
             self.rows = len(self.groups)
+            #with open(hogsizetable, 'w') as hogsizein:
+                #import csv
+                #hogsizewriter = csv.writer(hogsizein)
             ### take subset of the groups for testing with: self.groups[:100000]
             for i, row in enumerate(self.groups):
                 if i > start:
                     #### family here is HOG ID minus the "HOG:E" prefix
                     fam = row[0]
                     ### testing only
-                    if fam != 794303 and fam!= 751313: #and fam != 712236 and fam != 708323:
-                        continue
+                    #if fam != 794303 and fam!= 751313: #and fam != 712236 and fam != 708323:
+                    #    continue
                     ortho_fam = self.READ_ORTHO(fam)
                     ### for older versions of OMA that do not have subhogIDs
                     orthoxmlbuilder = OrthoXMLBuilder()
@@ -329,6 +334,7 @@ class LSHBuilder:
                     ### filtering for size already here (max HOG size and minimum species in HOG)
                     if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
                         families[fam] = {'ortho': ortho_fam}
+                        #hogsizewriter.writerow([fam, hog_size])
                     if len(families) > size:
                         pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                         pd_dataframe['Fam'] = pd_dataframe.index
@@ -427,7 +433,7 @@ class LSHBuilder:
                                 # Append None for rows that failed - necessary or raises alueError: Length of values (65) does not match length of index (101)
                                 tree_dicts.append(None)  
                         #print(f"Memory after HAM: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
-                        df['tree_dicts'] = tree_dicts
+                        #df['tree_dicts'] = tree_dicts
                         #print(tree_dicts)
                         # Assign the results back to the DataFrame
                         df['tree_dicts'] = tree_dicts
@@ -468,15 +474,25 @@ class LSHBuilder:
             print('Worker error', file=sys.stderr)
             print(f"Error in worker process: {traceback.format_exc()}", file=sys.stderr)
 
+    def safe_ham(self, row):
+            try:
+                return self.HAM_PIPELINE(row)
+            except Exception as e:
+                if self.verbose:
+                    print(f"Error in HAM_PIPELINE for Fam={row['Fam']}: {e}")
+                return None
+
     def worker_single(self, i, data, retq, matq, l):
         if self.verbose:
             print('worker init ' + str(i))
-        
+
         if data is not None:
             df = data
             #print(df.head())
             if self.slicesubhogs is False:
-                df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                df['tree'] = df[['Fam', 'ortho']].apply(self.safe_ham, axis=1)
+                # Drop rows where tree is None (error in HAM_PIPELINE)
+                df = df[df['tree'].notnull()]
                 #print(f'Generated tree in worker_single: {df["tree"]}')
                 #print("df fam tree\n", df[['Fam', 'tree']])  # Debugging
                 df[['hash', 'rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
@@ -487,7 +503,9 @@ class LSHBuilder:
                     return df[['Fam', 'hash']]
             else:
 
-                df['tree_dicts'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                df['tree_dicts'] = df[['Fam', 'ortho']].apply(self.safe_ham, axis=1)
+                # Drop rows where tree is None (error in HAM_PIPELINE)
+                df = df[df['tree_dicts'].notnull()]
                 #print(df)
                 df['hash_dicts'] = df[['Fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
                 
@@ -534,15 +552,15 @@ class LSHBuilder:
             self.errorfile = self.saving_path + 'errors.txt'
             with open(self.errorfile, 'w') as hashes_error_files:
                 with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
-                    datasets = {}
+                    #datasets = {}
 
                     if taxstr not in h5hashes.keys():
                         if self.verbose == True:
                             print('creating dataset')
                             print('filtered at taxonomic level: '+taxstr)
                         h5hashes.create_dataset(taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
-                        if self.verbose == True:
-                            print(datasets)
+                        #if self.verbose == True:
+                        #    print(datasets)
                         h5flush = h5hashes.flush
                     print('saver init ' + str(i))
                     while True:
@@ -576,12 +594,12 @@ class LSHBuilder:
                                 
                                     totals_subfams += nsubfams
 
-                                    if self.fileglob or self.slicesubhogs:
-                                        if savedf is None:
-                                            #df_cols = this_dataframe.columns
-                                            savedf = this_dataframe[['ortho']]
-                                        else:
-                                            savedf = pd.concat([savedf, this_dataframe[['ortho']]])
+                                    #if self.fileglob or self.slicesubhogs:
+                                    if savedf is None:
+                                        #df_cols = this_dataframe.columns
+                                        savedf = this_dataframe[['ortho']]
+                                    else:
+                                        savedf = pd.concat([savedf, this_dataframe[['ortho']]])
 
                                 ### standard processing
                                 else:
@@ -590,7 +608,7 @@ class LSHBuilder:
                                         if len(h5hashes[taxstr]) < fam + 10:
                                             h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
                                         h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
-                                    if self.fileglob or self.slicesubhogs:
+                                    if self.fileglob:# or self.slicesubhogs:
                                         # Addition to ensure savedf is properly updated - 13.05.25
                                         if not this_dataframe.empty:
                                             if self.verbose:
@@ -1108,6 +1126,8 @@ def main():
             verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], limit_events=args['eventslim'])
             #lsh_builder.run_pipeline(threads)
             lsh_builder.run_pipeline_single()
+            #for t in lsh_builder.generates_dataframes(size=100000000, minhog_size=args['specieslim']):
+            #    continue
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
         treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,

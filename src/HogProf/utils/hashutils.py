@@ -72,10 +72,10 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
                 
                 hog_matrix_weighted[:,hogindex] = treeweights[hogindex , : ].ravel()
                 
-                if lossonly == True and event == 'loss':
-                    hog_matrix_weighted[:,hogindex] = 1
-                if duplonly == True and event == 'dup':
-                    hog_matrix_weighted[:,hogindex] = 1
+                if lossonly == True and event != 'loss':
+                    hog_matrix_weighted[:,hogindex] = 0
+                if duplonly == True and event != 'dup':
+                    hog_matrix_weighted[:,hogindex] = 0
                 if lossonly == False and duplonly == False:
                     hog_matrix_binary[:,hogindex] = 1
             except:

@@ -6,6 +6,7 @@ import traceback
 import sys
 from Bio import Phylo
 from io import StringIO
+import os
 
 def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()    
@@ -206,8 +207,8 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
         try:
             ### testing hamblaster
             # Add profiler directory to path and import
-            add_library_path("")
-            import profiler
+            #add_library_path("")
+            #import profiler
 
 
             ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string ) 
@@ -258,6 +259,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 print(f'Subhogs total: {len(hogs)}')
             ### filter out the small HOGs (protein num) 
             hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) > limit_species}
+            #subhogs_size_dict = {subhogname:[len(hogs[subhogname].hog.get_all_descendant_genes()),len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys())] for subhogname in hogs}
             if verbose:
                 print(f'Subhogs with enough proteins: {len(hogs)}')
                 
@@ -266,8 +268,18 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 #    [orthomapper_rev[genome.name] for genome in hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()]) for subhogname in hogs}
             ### filter out the HOGs that are present only in a few species (num of species with proteins in HOG)
             ### and turn into treemaps
-            ### This is the part that works well with orthoxmls but not with OMA (fails to calculate species num for non rootHOG)!!!!!!!!!!!!!!!!!!
+            ### Athina note: This is the part that works well with orthoxmls but not with OMA (fails to calculate species num for non rootHOG)!!!!!!!!!!!!!!!!!!
             hogs = {subhogname: hogs[subhogname].treemap for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()) > limit_species}
+            
+            ### get info to save to csv
+            #import csv
+            #subhogs_size_table = "/home/agavriil/Documents/venom_project/A_venom_analysis_tidy/2_profiling/1_oma_profiles/levels_oma_full_subhogs_250523/subhogize_table.csv"
+            #subhogswriter = csv.writer(open(subhogs_size_table, 'a'))
+            #for subhogname, size_list in subhogs_size_dict.items():
+            #    if subhogname in hogs.keys():
+            #        ### save row with subhog name, species num and proteins num
+            #        subhogswriter.writerow([subhogname, size_list[0], size_list[1]])
+
             if verbose:
                 print(f'Subhogs large enough: {len(hogs)}')
                 #{print(subhogname.split('_')[0]) for subhogname in hogs}
@@ -369,6 +381,10 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                     f"{subhog.genome.name}_{str(subhog.hog_id) if subhog.hog_id is not None else str(hogid_for_all)}": ham_obj.create_tree_profile(hog=subhog).treemap
                     for i, subhog in enumerate(subhogs)
                 }
+                ### filter out the small HOGs (protein num) 
+                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) > limit_species}
+                #subhogs_size_dict = {subhogname:[len(hogs[subhogname].hog.get_all_descendant_genes()),len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys())] for subhogname in hogs}
+            
                 ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
                 if dataset_nodes is not None:
                     #print('fam', fam)
@@ -385,11 +401,21 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
 
                 ### then check subhogs and remove the ones that do not meet the limits
                 hogs = {subhogname: hogs[subhogname] for subhogname in hogs if check_limits(hogs[subhogname], limit_events )}
+                ### get info to save to csv
+                #import csv
+                #subhogs_size_table = "/home/agavriil/Documents/venom_project/A_venom_analysis_tidy/2_profiling/1_oma_profiles/levels_oma_full_subhogs_250523/subhogize_table.csv"
+                #subhogswriter = csv.writer(open(subhogs_size_table, 'a'))
+                #for subhogname, size_list in subhogs_size_dict.items():
+                #    if subhogname in hogs.keys():
+                        ### save row with subhog name, species num and proteins num
+                #        subhogswriter.writerow([subhogname, size_list[0], size_list[1]])
+                
                 if verbose:
                     print(hogs)
                 return hogs            
             else:
                 if verbose:
+                    rootname = subhogs[0].genome.name + '_' + str(hogid_for_all)
                     print('Rootname:',rootname)
                     print('error' , full_error_message, file=sys.stderr)
         return {}#None
