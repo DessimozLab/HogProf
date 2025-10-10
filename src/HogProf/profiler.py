@@ -79,8 +79,12 @@ class Profiler:
 				# print for fam=15
 				#print(id2famsubhog_df.head())
 				#print(id2famsubhog_df[id2famsubhog_df['fam'] == 15]) 
-				# Group by 'fam' and create a dictionary of indices
-				fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
+				# Group by 'fam' and create a dictionary of indices - this may not work great for fastOMA where fam and subhog_ids are completely different!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				#fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
+				#self.fam_dict = fam_dict
+				### attempt to fix it by Athina. # Extract the HOG number (integer) from subhog_id, e.g. "61_HOG:0099866_474" → 99866
+				id2famsubhog_df["hog_num"] = id2famsubhog_df["subhog_id"].str.extract(r"HOG:(\d+)").astype(int)
+				fam_dict = id2famsubhog_df.groupby("hog_num").apply(lambda x: x.index.tolist()).to_dict()
 				self.fam_dict = fam_dict
 				# Create the reverse dictionary too
 				subhogid_to_fam_dict = {subhogid: fam for fam, subhogid_list in fam_dict.items() for subhogid in subhogid_list}
