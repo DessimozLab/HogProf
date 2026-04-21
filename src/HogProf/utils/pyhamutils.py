@@ -220,7 +220,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             ### first checks on top-level HOG to save time
             roothog_genes = len(tp.hog.get_all_descendant_genes())
             roothog_species = len(tp.hog.get_all_descendant_genes_clustered_by_species().keys())
-            if roothog_genes <= limit_species or roothog_species <= limit_species:
+            if roothog_genes < limit_species or roothog_species < limit_species:
                 return {}
             if  dataset_nodes is not None:
                 roothog_levels = tp.hog.get_all_descendant_hog_levels()
@@ -415,9 +415,17 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 return hogs            
             else:
                 if verbose:
-                    rootname = subhogs[0].genome.name + '_' + str(hogid_for_all)
-                    print('Rootname:',rootname)
-                    print('error' , full_error_message, file=sys.stderr)
+                    # avoid NameError if subhogs/hogid_for_all weren't created
+                    try:
+                        rootname = subhogs[0].genome.name + '_' + str(hogid_for_all)
+                    except Exception:
+                        rootname = "<unknown>"
+                    print('Rootname:', rootname)
+                    # print full error message and full traceback to stderr for easier debugging
+                    import traceback as _tb
+                    print('error:', full_error_message, file=sys.stderr)
+                    _tb.print_exc(file=sys.stderr)
+                    
         return {}#None
         #'''
 
