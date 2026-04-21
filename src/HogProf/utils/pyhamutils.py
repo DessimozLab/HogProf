@@ -258,7 +258,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                 print(f'\nRootHOG: {rootname}')
                 print(f'Subhogs total: {len(hogs)}')
             ### filter out the small HOGs (protein num) 
-            hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) > limit_species}
+            hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) >= limit_species}
             #subhogs_size_dict = {subhogname:[len(hogs[subhogname].hog.get_all_descendant_genes()),len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys())] for subhogname in hogs}
             if verbose:
                 print(f'Subhogs with enough proteins: {len(hogs)}')
@@ -269,7 +269,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
             ### filter out the HOGs that are present only in a few species (num of species with proteins in HOG)
             ### and turn into treemaps
             ### Athina note: This is the part that works well with orthoxmls but not with OMA (fails to calculate species num for non rootHOG)!!!!!!!!!!!!!!!!!!
-            hogs = {subhogname: hogs[subhogname].treemap for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()) > limit_species}
+            hogs = {subhogname: hogs[subhogname].treemap for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()) >= limit_species}
             
             ### get info to save to csv
             #import csv
@@ -382,7 +382,7 @@ def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True
                     for i, subhog in enumerate(subhogs)
                 }
                 ### filter out the small HOGs (protein num) 
-                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) > limit_species}
+                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) >= limit_species}
                 #subhogs_size_dict = {subhogname:[len(hogs[subhogname].hog.get_all_descendant_genes()),len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys())] for subhogname in hogs}
             
                 ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
