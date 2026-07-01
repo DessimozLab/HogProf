@@ -2,18 +2,12 @@
 print("\nNote: this script requires the hogprof environment\n")
 import argparse
 import pandas as pd
-import h5py
 import os
-from pyoma.browser import db
-import pyoma.browser.models as db_models
 import sys
-import pickle
 from time import time
 from datetime import datetime
-import traceback
 import numpy as np
 import seaborn as sns
-
 
 from ete3 import NCBITaxa
 ncbi = NCBITaxa()
@@ -58,20 +52,14 @@ def get_hashes(subhogs_table, fam2orthoxml_file):
 '''use hashes directly to extract hits'''
 def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, profiler_path,
                                    allvsall, k, subhogs_table, thresholds_df):
-    
     # Add profiler directory to path and import
     add_profiler_path(profiler_path)
     import profiler
-
     subhogs_df = pd.read_csv(subhogs_table, sep='\t', index_col=0)
     ## index label is subhogid
     subhogs_df.index.name = 'subhogid'
-    #print(subhogs_df.head())
-    #subhogs_df.set_index('subhogid')
     subhog_to_hashid = subhogs_df['hashid'].to_dict()
     hashid_to_subhog = {v: k for k, v in subhog_to_hashid.items()}
-    #subhog_to_taxon = subhogs_df['taxon_name'].to_dict()
-    
     print("\nBuilding the profiler")
     p = profiler.Profiler(lshforestpath = lshforestpath, 
                         hashes_h5= hashes_h5, 
@@ -80,14 +68,9 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
                         mastertree = treepath,
                         slicesubhogs = True
                         )
-    
-    #print(p.subhogname_to_fam_dict)
-
     p.slicesubhogs = False ### setting as False to try original hogid2fam function in profiler.py
-    #print("slicesubhogs:",p.slicesubhogs)
     print("Pulling hashes...")
     raw_profiles = p.pull_hashes(subhog_to_hashid.values()) # returns hashid to hashsig dict
-
     ### here check that the expected number of hashes was pulled
     if len(raw_profiles)!= len(hashid_to_subhog):
         print("Warning! Could not pull all the hashes!")
@@ -97,7 +80,6 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
             subhogs_without_hash.append(subhog)
     if len(subhogs_without_hash)>0:
         print("Examples:", subhogs_without_hash[:5])
-
     profiles = {
         hashid_to_subhog[h]: {
             'hashsig': raw_profiles[h],
@@ -106,12 +88,8 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
         for h in raw_profiles
         if h in hashid_to_subhog
     }
-
     profiles_df = pd.DataFrame.from_dict(profiles, orient='index')
     profiles_num = len(profiles_df.index.unique())
-    #print(f'Got hash signatures for {len(profiles.index.unique())} HOGs')
-    #print(profiles.head())
-
     ### checking for empty / degenerate /invalid signatures
     profiles_df['sigsum'] = profiles_df.hashsig.map(lambda x : np.sum(x.digest()))
     profiles_df = profiles_df[profiles_df.sigsum>0]
@@ -136,7 +114,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
             if this_score >= level_threshold:
                 scores[hashid] = this_score
         return scores
-
+    
     ### get jaccard scores too
     rows = []
     counter = 0
@@ -162,7 +140,6 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
         query_hashid = querydict['hashid']
         # query LSH forest for candidate hash ids - get top k
         candidate_hashids, local_hashid_to_subhog, candidate_hashes = get_candidates(p, query_sig, k)
-
         scores = get_scores(candidate_hashids,candidate_hashes, query_sig, level_threshold)
         ### it is possible that none pass the threshold
         if len(scores) == 0:
@@ -172,10 +149,8 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
         if len(scores) == len(candidate_hashids):
             candidate_hashids, local_hashid_to_subhog, candidate_hashes = get_candidates(p, query_sig, 2*k)
             scores = get_scores(candidate_hashids,candidate_hashes, query_sig, level_threshold)
-
         # sort candidate scores descending
         scored_pairs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-
         # save info for allvsall
         if allvsall:
             if query_level not in taxa_networks_dict.keys():
@@ -185,7 +160,6 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
             # add new info
             network_id_to_hid[query_subhog_id] = query_hashid
             taxa_networks_dict[query_level] = network_id_to_hid
-
         # build rows: one row per query-target pair
         for hid, jaccard in scored_pairs:
             target_subhog = local_hashid_to_subhog[hid]
@@ -202,18 +176,14 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
                 target_hog_id_str = target_hog_clean.split("_")[1]
             except Exception:
                 target_hog_id_str = ""
-
             # don't keep self hits:
             if query_subhog_id ==target_hog_clean:
                 continue
-
             # only keep same-level hits so threshold makes sense
             if target_level != query_level:
                 continue
-
             # flag same-family (compare the id string parts)
             same_fam = (hog_id_str == target_hog_id_str)
-
             # append row
             rows.append({
                 'query_hog': query_subhog_id,
@@ -223,7 +193,6 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
                 'taxname': current_taxon,
                 'same_fam': same_fam
             })
-    
     taxa_hsig_dict ={}
     ### change info for allvsall
     if allvsall:
@@ -232,18 +201,14 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
             ### turn into subhog to hashsig
             network_id_to_hsig = {subhogid:all_raw_profiles[hid] for subhogid, hid in  network_id_to_hid.items()}
             taxa_hsig_dict[level] = [level_to_T_dict[level],network_id_to_hsig]
-
     hits_df = pd.DataFrame(rows)
     print(hits_df.head())
-
     if len(no_hits_subhogs)>0:
         print(f"No hits found for {len(no_hits_subhogs)} subHOGs")
         print("Examples:", no_hits_subhogs[:5])
-    
     ### save to file
     hits_df.to_csv(outputfile, index=False)
     print("Created file:", outputfile)
-
     return taxa_hsig_dict
 
 ### from Dave's jupyter notebook, with changes
@@ -253,7 +218,6 @@ def compare_all_vs_all(taxa_hsig_dict, outputfile):
         out_eps = outputfile.replace(".csv",f"{level}.eps")
         ids = list(network_id_to_hsig.keys())
         sigs = [network_id_to_hsig[i] for i in ids]
-        #jkern = [[sig1.jaccard(sig2) if (i != j and sig1.jaccard(sig2)>level_T) else 0 for j, sig2 in enumerate(sigs)] for i, sig1 in enumerate(sigs)]
         jkern = np.array([
             [sig1.jaccard(sig2) if i != j else 0
             for j, sig2 in enumerate(sigs)]
@@ -265,7 +229,6 @@ def compare_all_vs_all(taxa_hsig_dict, outputfile):
         jkern_plot = jkern.copy()
         jkern_plot[jkern_plot < level_T] = 0
         print(jkern)
-        #g = sns.clustermap(jkern, xticklabels=ids, yticklabels=ids, figsize=(20, 20), vmin=0, vmax=1)
         g = sns.clustermap(
             dist,
             xticklabels=ids,
@@ -333,7 +296,6 @@ def main(lshforestpath, hashes_h5, treepath, outputfile, profiler_path, queries_
     if allvsall:
         compare_all_vs_all(taxa_hsig_dict, outputfile=outputfile.replace(".csv", "_allvsall.csv"))
 
-
 ## Command line argument parsing'''
 def parse_args():
     """
@@ -341,23 +303,14 @@ def parse_args():
     """
     print("Parsing command line arguments")
     parser = argparse.ArgumentParser(description="Extract hits from the profiler for levels mode, per taxon. Queries are subHOGs that can be found in the fam2orthoxml file.")
-    parser.add_argument("-i", "--input", required=False, help="Folder containing the output of HogProf LSHbuilder. Expected files:"
-    " newlshforest.pkl hashes.h5 reformatted_tree.nwk fam2orthoxml.csv profilersavingpath.csv",
-    default="/home/agavriil/curnagl_mount/venom_project/2a_hogprof_testing/levels_fastoma_metazoa_251114_subhogs_eventlim1_260619/")
-    parser.add_argument("-o", "--outputfile", required=False, help="Output csv file with extracted hits.",
-    default="/home/agavriil/curnagl_mount/venom_project/3_hogprof_hits/levels_fastoma_metazoa_251114_subhogs_eventlim1_260619_venomexpression_blastphits/extracted_hits_from_subhogs_local.csv")
-    parser.add_argument("--allvsall",help="Run all vs all mode additionally to the main hit extraction (may take a long time).", 
-                        default=True)
+    parser.add_argument("-i", "--input", required=True, help="HogProf output folder")
+    parser.add_argument("-o", "--outputfile", required=True, help="Output CSV file")
+    parser.add_argument("--queries_file", required=True, help="Query subHOG table")
+    parser.add_argument("--thresholds", required=True, help="Threshold CSV from Step 3")
+    parser.add_argument("--profilerpath", default="profiler.py")
     parser.add_argument("--k", type=int, default=1000, help="Number of top hits to extract for each query.")
-    parser.add_argument("--queries_file", type=str, help="Table of HOGs to use as queries (e.g. venom HOGs table). 1st column is subhogid and a hashid column needs to exist." \
-    " Make sure to include blastp in the filename if it is a blastp output file.",
-    default="/home/agavriil/curnagl_mount/venom_project/3_hogprof_hits/levels_fastoma_metazoa_251114_subhogs_eventlim1_260619_queries/venomhog_full_subhog_metadata_venomqueries.tsv")
-    parser.add_argument("--thresholds", help="Table of thresholds for each taxonomic level (csv).",
-    default="/home/agavriil/curnagl_mount/venom_project/3a_hogprof_thresholds/levels_fastoma_metazoa_251114_subhogs_eventlim1_260619_thresholds/bins_jaccard_thresholds.csv")
-    parser.add_argument("--profilerpath", help="Full path to profiler.py script of HogProf (to be used if run from another location).",
-    default="profiler.py")
+    parser.add_argument("--allvsall",type=bool, help="Run all vs all mode additionally to the main hit extraction (may take a long time).", default=False)
     return parser.parse_args()
-
 
 if __name__ == "__main__":
     # Parse command line arguments
@@ -370,10 +323,8 @@ if __name__ == "__main__":
     treepath = inputfolder + "reformatted_tree.nwk"
     fam2orthoxml_file = inputfolder + "fam2orthoxml.csv"
     queries_file = args.queries_file
-
     # special case for unknown hashids (subhogid per line, identical to fam2orthoxml)
     queries_file = get_hashes(queries_file, fam2orthoxml_file)
-
     # Run the main function with the parsed arguments
     main(
         lshforestpath=lshforestpath,
