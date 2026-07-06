@@ -2,6 +2,12 @@
   - HogProf is an extensible and tunable approach to phylogenetic profiling using orthology data. It is powered by minhash based datastructures and computationally efficient.
   - Still under major development and may change
 
+⚠️ Development branch
+
+The implementation supporting taxonomic-level-aware phylogenetic profiling is currently available on the levels_addition branch and has not yet been merged into master.
+
+If you would like to use the latest functionality described here, make sure you clone or install the levels_addition branch rather than the default master branch.
+
 # Features
 
   - Using orthoxoml files and a taxonomy calculated enhanced phylogenies of each family
@@ -13,10 +19,13 @@ If you run into any problems feel free to contact me at [dmoi@unil.ch](dmoi@unil
 
 # Quickstart
 
-to install from github
+to install from github using a conda environment (recommended)
 ```
-$ git clone https://github.com/DessimozLab/HogProf.git
-$ pip install -r pipreqs.txt .
+$ git clone --branch levels_addition https://github.com/DessimozLab/HogProf.git
+$ cd HogProf
+$ conda create -n hogprof_levels python=3.8 pip
+$ conda activate hogprof_levels
+$ pip install -r pipreqs.txt
 ```
 or to install from pypi (levels mode not supported)
 ```
