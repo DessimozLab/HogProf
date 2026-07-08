@@ -26,6 +26,7 @@ $ cd HogProf
 $ conda create -n hogprof_levels python=3.8 pip
 $ conda activate hogprof_levels
 $ pip install -r pipreqs.txt
+$ pip install -e .
 ```
 or to install from pypi (levels mode not supported)
 ```
