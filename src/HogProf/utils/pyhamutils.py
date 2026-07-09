@@ -95,7 +95,7 @@ def orthoxml2numerical(orthoxml , mapper):
     return orthoxml 
 
 def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= True, orthomapper = None,
-                             limit_species = 10, limit_events = 0, dataset_nodes = None):  
+                             limit_species = 10, limit_events = 0, dataset_nodes = None, verbose=False):  
     fam, orthoxml = row
     format = 'newick_string'
     if use_phyloxml:
