@@ -1037,6 +1037,7 @@ def main():
 
     if 'OrthoGlob' in args:
         if args['OrthoGlob']:
+            print("Using orthoxml files from:", args['OrthoGlob'])
             orthoglob = glob.glob(args['OrthoGlob'])
         else:   
             orthoglob = None
