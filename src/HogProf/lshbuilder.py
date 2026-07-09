@@ -1035,13 +1035,11 @@ def main():
     args = vars(parser.parse_args(sys.argv[1:]))
     print("\nReading arguments")
 
+    orthoglob = None
     if 'OrthoGlob' in args:
         if args['OrthoGlob']:
             print("Using orthoxml files from:", args['OrthoGlob'])
             orthoglob = glob.glob(args['OrthoGlob'])
-        else:   
-            orthoglob = None
-    #print('orthoglob',orthoglob)
 
     if 'outpath' in args:
         dbname = args['outpath']
@@ -1064,7 +1062,7 @@ def main():
         omafile = args['OMA']
     elif args['tarfile']:
         omafile = args['tarfile']
-    elif orthoglob:
+    elif orthoglob is not None:
         fileglob = orthoglob
     else:
         raise Exception(' please specify input data ')
