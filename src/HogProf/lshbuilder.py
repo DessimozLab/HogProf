@@ -1124,10 +1124,9 @@ def main():
             treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , 
             lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, 
             verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], limit_events=args['eventslim'])
-            #lsh_builder.run_pipeline(threads)
-            lsh_builder.run_pipeline_single()
-            #for t in lsh_builder.generates_dataframes(size=100000000, minhog_size=args['specieslim']):
-            #    continue
+            lsh_builder.run_pipeline(threads)
+            #lsh_builder.run_pipeline_single() # made for local tests. ignore
+
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
         treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
@@ -1135,7 +1134,6 @@ def main():
           reformat_names=reformat_names, verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], 
           limit_events=args['eventslim'])
         lsh_builder.run_pipeline(threads)
-        #print(f'Size of lsh_builder: {sys.getsizeof(lsh_builder)} bytes')
         #lsh_builder.run_pipeline_single()
     print("\nAnalysis took",time.time() - start, 'seconds')
     print('DONE\n\n')
