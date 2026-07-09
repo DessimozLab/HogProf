@@ -20,7 +20,15 @@ def get_tree(taxa , genomes ,  outdir = None):
     tax.remove(0)
     print(len(tax))
     tree = ete3.PhyloTree( name = '-1')
-    topo = ncbi.get_topology(genomes , collapse_subspecies=False)
+    try:
+        topo = ncbi.get_topology(genomes , collapse_subspecies=False)
+    except Exception as exc:
+        print(exc)
+        raise ValueError(
+            "Failed to build the NCBI taxonomy topology from the provided genome IDs. "
+            "This may be due to non-NCBI IDs (e.g. GTDB IDs). "
+            "Please try again and manually provide the tree with the --mastertree parameter."
+        ) from exc
     tax = set([ str(taxid) for taxid in tax])
     tree.add_child(topo)
     orphans = list(genomes - set([x.name for x in tree.get_leaves()]))
