@@ -192,6 +192,7 @@ class LSHBuilder:
         else:
             raise Exception( 'please specify a tree in either phylo xml or nwk format' )
         
+        self.dataset_nodes = None
         ### reformat names to avoid special characters
         if self.reformat_names:
             self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
@@ -205,7 +206,6 @@ class LSHBuilder:
             self.tree_string = self.tree_ete3.write(format=3, format_root_node=True ) 
             
             #remap taxfilter and taxmask 
-            self.dataset_nodes = None
             if taxfilter:
                 self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
                 unacceptable_nodes = []
