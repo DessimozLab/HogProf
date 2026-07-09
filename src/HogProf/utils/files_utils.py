@@ -25,9 +25,9 @@ def get_tree(taxa , genomes ,  outdir = None):
     except Exception as exc:
         print(exc)
         raise ValueError(
-            "Failed to build the NCBI taxonomy topology from the provided genome IDs. "
+            "\nERROR: Failed to build the NCBI taxonomy topology from the provided genome IDs. "
             "This may be due to non-NCBI IDs (e.g. GTDB IDs). "
-            "Please try again and manually provide the tree with the --mastertree parameter."
+            "Please try again and manually provide the tree with the --mastertree parameter.\n"
         ) from exc
     tax = set([ str(taxid) for taxid in tax])
     tree.add_child(topo)
