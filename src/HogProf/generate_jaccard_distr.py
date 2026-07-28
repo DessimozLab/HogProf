@@ -90,10 +90,10 @@ def create_bins(hogmetadata_df, outputdir, taxidmapper={}, samplesize=21):
     
 
 def get_hog_to_hog_jaccards(subhogs_sampled_pairs_df, lshforestfile, hashes_h5, treefile, 
-                            fam2orthoxmlfile, outputdir, profiler_path, allvsall=False, suffix=""):
+                            fam2orthoxmlfile, outputdir, p, allvsall=False, suffix=""):
     ### import profiler
-    add_profiler_path(profiler_path)
-    import profiler
+    #add_profiler_path(profiler_path)
+    #import profiler
 
     ### check for NaN, there should not be any
     if not allvsall:
@@ -121,14 +121,14 @@ def get_hog_to_hog_jaccards(subhogs_sampled_pairs_df, lshforestfile, hashes_h5, 
         return hashmat
 
     ### read lshforest
-    p = profiler.Profiler(lshforestpath = lshforestfile, 
-                            hashes_h5= hashes_h5, 
-                            #mat_path= fam2orthoxmlfile ,
-                            oma = False , 
-                            nsamples = 256 ,
-                            mastertree = treefile,
-                            slicesubhogs = True
-                            )
+    #p = profiler.Profiler(lshforestpath = lshforestfile, 
+    #                        hashes_h5= hashes_h5, 
+    #                        #mat_path= fam2orthoxmlfile ,
+    #                        oma = False , 
+    #                        nsamples = 256 ,
+    #                        mastertree = treefile,
+    #                        slicesubhogs = True
+    #                        )
 
     if not allvsall:
         ### get jaccard similarity for each pair using hog_v_hog(self, hogs)
@@ -364,7 +364,7 @@ def main(hogprofoutputfolder, outputdir, profiler_path):
         if bin_pairs_df.shape[0] < 10:
             continue
         print(f"Processing bin: {species_bin}")
-        allvsall_hashmat = get_hog_to_hog_jaccards(bin_pairs_df, lshforestfile, hashes_h5, treefile, 
+        allvsall_hashmat, p = get_hog_to_hog_jaccards(bin_pairs_df, lshforestfile, hashes_h5, treefile, 
                                 fam2orthoxmlfile, outputdir, profiler_path, allvsall=True, suffix=binname)
         
         ### plot all vs all jaccard distribution
