@@ -313,8 +313,11 @@ def main(hogprofoutputfolder, outputdir, profiler_path):
 
     ### get subhogids from fam2orthoxml file
     subhogids_df = pd.read_csv(fam2orthoxmlfile)
+    ### subhog_id column should be called fam or be the second one
+    subhogid_column_num = subhogids_df.columns.get_loc('fam') if 'fam' in subhogids_df.columns else 1
+    print(f"Using column {subhogid_column_num} as subhog_id column in fam2orthoxml file.")
     ### merge first column with subhog_id column
-    subhogids_df['subhogid_full'] = subhogids_df['fam'].astype(str) + "_" + subhogids_df['subhog_id'].astype(str)
+    subhogids_df['subhogid_full'] = subhogids_df.iloc[:, subhogid_column_num].astype(str) + "_" + subhogids_df['subhog_id'].astype(str)
     ### use as index
     subhogids_df.set_index('subhogid_full', inplace=True)
     ### add taxid column (first part of subhog_id)
