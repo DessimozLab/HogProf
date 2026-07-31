@@ -8,8 +8,10 @@ from time import time
 from datetime import datetime
 import numpy as np
 import seaborn as sns
+import re
+from functools import lru_cache
 
-from ete3 import NCBITaxa
+from ete3 import NCBITaxa, Tree
 ncbi = NCBITaxa()
 
 ### get current time
@@ -48,6 +50,51 @@ def get_hashes(subhogs_table, fam2orthoxml_file):
     # save new file with hash ids
     subhogs_df.to_csv(outputqueryfile, sep='\t')
     return outputqueryfile
+
+
+'''function to add some info to the extrected hits about how the origin and strength of coevolution'''
+def find_coevolution_origin(hits_df, treepath):
+    tree = Tree(treepath, format=1)
+    node_lookup = {int(n.name): n for n in tree.traverse() if n.name}
+    def edge_to_pair(row):
+        return frozenset({
+                re.search(r'_(HOG:[^_]+)_', row["source"]).group(1),
+                re.search(r'_(HOG:[^_]+)_', row["target"]).group(1)
+            })
+    
+    @lru_cache(maxsize=None)
+    def lineage(taxid):
+        # use tree for lineage
+        node = node_lookup.get(int(taxid))
+        if node is None:
+            return frozenset()
+        node = node[0]
+        return frozenset(int(n.name) for n in node.get_ancestors()) | {taxid}
+        #return set(ncbi.get_lineage(int(taxid)))
+    def highest_non_overlapping_taxa(taxids):
+        taxids = sorted(set(map(int, taxids)))
+        keep = []
+        for t in taxids:
+            # Remove t if any other observed taxon is an ancestor of it
+            if not any(
+                other != t and other in lineage(t)
+                for other in taxids):
+                keep.append(t)
+        return keep
+    # 1 add column for checking 
+    hits_df['pair'] = hits_df.apply(edge_to_pair, axis=1)
+    # 2 group by pair so that each pair has a list of taxa it appears in
+    hits_grouped_df = hits_df.groupby('pair')['taxid'].apply(list).reset_index(name='taxid_list')
+    # add column with number of taxids per pair
+    hits_grouped_df['families_score'] = hits_grouped_df['taxid_list'].apply(len)
+    # 3 find highest rank taxon (or taxa) for each list 
+    hits_grouped_df["origin_taxids"] = hits_grouped_df["taxid_list"].apply(highest_non_overlapping_taxa)
+    # 4 add to hits_df column '1st_occurence' with True for the rows that have a taxid in origin_taxids and False otherwise
+    hits_df = hits_df.merge(hits_grouped_df[['pair', 'families_score','origin_taxids']], on='pair', how='left')
+    hits_df['1st_occurence'] = hits_df.apply(lambda row: row['taxid'] in row['origin_taxids'], axis=1)
+    # 5 remvoe 'pair' column and 'origin_taxids' column
+    hits_df.drop(columns=['pair', 'origin_taxids'], inplace=True)
+    return hits_df
 
 '''use hashes directly to extract hits'''
 def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, profiler_path,
@@ -191,6 +238,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
                 'jaccard': jaccard,
                 'empirical_t': level_threshold,
                 'taxname': current_taxon,
+                'taxid': query_level,
                 'same_fam': same_fam
             })
     taxa_hsig_dict ={}
@@ -202,10 +250,16 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
             network_id_to_hsig = {subhogid:all_raw_profiles[hid] for subhogid, hid in  network_id_to_hid.items()}
             taxa_hsig_dict[level] = [level_to_T_dict[level],network_id_to_hsig]
     hits_df = pd.DataFrame(rows)
-    print(hits_df.head())
+    
     if len(no_hits_subhogs)>0:
         print(f"No hits found for {len(no_hits_subhogs)} subHOGs")
         print("Examples:", no_hits_subhogs[:5])
+    ### add column with coevolution origin
+    hits_df = find_coevolution_origin(hits_df, treepath)
+    # remove taxid column if it exists
+    if 'taxid' in hits_df.columns:
+        hits_df.drop(columns=['taxid'], inplace=True)
+    print(hits_df.head())
     ### save to file
     hits_df.to_csv(outputfile, index=False)
     print("Created file:", outputfile)
