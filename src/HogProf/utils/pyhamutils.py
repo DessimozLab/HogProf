@@ -161,7 +161,7 @@ def add_library_path(library_path):
 
 def get_subhog_ham_treemaps_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= True, orthomapper = None,
                                      limit_species =10, limit_events = 0, dataset_nodes = None, hogid_for_all = None, verbose=False):  
-    verbose = True
+    #verbose = True
     if verbose:
         ### reverse orthomapper
         orthomapper_rev = {v: k for k, v in orthomapper.items()}
