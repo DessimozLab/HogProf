@@ -619,45 +619,12 @@ class LSHBuilder:
                                                 savedf = pd.concat([savedf, this_dataframe[['Fam', 'ortho']]])
                                             if self.verbose:
                                                 print(savedf)
-
-                                    '''# original:
-                                    [ forest.add(str(fam),hashes[fam]) for fam in hashes]
-                                    for fam in hashes:
-                                        if len(h5hashes[taxstr]) < fam + 10:
-                                            h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                                        h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
-                                        count += 1
-                                    if self.fileglob:
-                                        if savedf is None:
-                                            savedf = this_dataframe[['Fam', 'ortho']]
-                                        else:
-                                            savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )  
-                                    if t.time() - save_start > 200:
-                                        print( 'saving at :' , t.time() - global_time )
-                                        forest.index()
-                                        print( 'testing forest' )
-                                        print(forest.query( hashes[fam] , k = 10 ) )
-                                        h5flush()
-                                        with open(self.lshforestpath , 'wb') as forestout:
-                                            forestout.write(pickle.dumps(forest, -1))
-                                        if self.verbose == True:
-                                            print('save done at' + str(t.time() - global_time))
-                                        if self.fileglob:
-                                            #save the mapping of fam to orthoxml
-                                            print('saving orthoxml to fam mapping')
-                                            print(savedf)
-
-                                            savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
-                                        save_start = t.time()
-                                    '''
                                     
                                 # Save every 200 seconds
                                 if t.time() - save_start > 200:
                                     print('Saving at:', t.time() - global_time)
                                     forest.index()
                                     print( 'testing forest' )
-                                    #print(hashes)
-                                    #### HERE IS WHERE I LEFT OFF - maybe get fam another way!!!!!!!!!!!!!
                                     testfam = list(hashes.keys())[0]
                                     print(forest.query( hashes[testfam] , k = 10 ) )
                                     h5flush()
@@ -667,9 +634,7 @@ class LSHBuilder:
                                         #print('Saving fam-to-orthoxml mapping')
                                         savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))
                                     save_start = t.time()
-                            #else:
-                                #print('empty dataframe')
-                                #print(this_dataframe)
+
                         # wrap up
                         else:
                             print('\nwrapping up the run')
@@ -678,19 +643,7 @@ class LSHBuilder:
                             with open(self.lshforestpath , 'wb') as forestout:
                                 forestout.write(pickle.dumps(forest, -1))
                             h5flush()
-                            # Ensure fam2orthoxml.csv is saved when slicesubhogs is True
-                            ### changed below with alt
-                            '''
-                            if self.slicesubhogs:
-                                if savedf is not None and not savedf.empty:
-                                    print('saving orthoxml to fam mapping')
-                                    print(savedf.head())
-                                    savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))
-                                else:
-                                    print('Warning: No fam-to-orthoxml mapping found.')
-                                    #pd.DataFrame(columns=['Fam', 'ortho']).to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'), index=False)
-                            '''
-                            ### alt to make sure fam2orthoxml is saved no matter what
+                            ### make sure fam2orthoxml is saved no matter what
                             if self.slicesubhogs:
                                 if savedf is not None and not savedf.empty:
                                     print('saving orthoxml to fam mapping')
