@@ -54,12 +54,13 @@ def get_hashes(subhogs_table, fam2orthoxml_file):
 
 '''function to add some info to the extrected hits about how the origin and strength of coevolution'''
 def find_coevolution_origin(hits_df, treepath):
+    print("Finding coevolution origins...")
     tree = Tree(treepath, format=1)
     node_lookup = {int(n.name): n for n in tree.traverse() if n.name}
     def edge_to_pair(row):
         return frozenset({
-                re.search(r'_(HOG:[^_]+)_', row["source"]).group(1),
-                re.search(r'_(HOG:[^_]+)_', row["target"]).group(1)
+                re.search(r'_(HOG:[^_]+)_', row["query_hog"]).group(1),
+                re.search(r'_(HOG:[^_]+)_', row["target_hog"]).group(1)
             })
     
     @lru_cache(maxsize=None)
@@ -92,7 +93,7 @@ def find_coevolution_origin(hits_df, treepath):
     # 4 add to hits_df column '1st_occurence' with True for the rows that have a taxid in origin_taxids and False otherwise
     hits_df = hits_df.merge(hits_grouped_df[['pair', 'families_score','origin_taxids']], on='pair', how='left')
     hits_df['1st_occurence'] = hits_df.apply(lambda row: row['taxid'] in row['origin_taxids'], axis=1)
-    # 5 remvoe 'pair' column and 'origin_taxids' column
+    # 5 remove 'pair' column and 'origin_taxids' column
     hits_df.drop(columns=['pair', 'origin_taxids'], inplace=True)
     return hits_df
 
