@@ -169,7 +169,9 @@ class LSHBuilder:
                 raise Exception( 'please specify either a list of taxa or a tree' )
         ### if a tree is provided, load it (phyloxml or newick)
         elif masterTree:
-            if 'xml' in masterTree.lower():
+            # if tree is phyloxml based on the extension, use the Phyloxml class to load it
+            if masterTree.endswith('.xml') or masterTree.endswith('.phyloxml') or masterTree.endswith('.phy'):
+            #if 'xml' in masterTree.lower():
                 project = Phyloxml()
                 project.build_from_file(masterTree)
                 trees = [t for t in  project.get_phylogeny()]
