@@ -364,7 +364,7 @@ def main(hogprofoutputfolder, outputdir, profiler_path):
         if bin_pairs_df.shape[0] < 10:
             continue
         print(f"Processing bin: {species_bin}")
-        allvsall_hashmat, p = get_hog_to_hog_jaccards(bin_pairs_df, lshforestfile, hashes_h5, treefile, 
+        allvsall_hashmat = get_hog_to_hog_jaccards(bin_pairs_df, lshforestfile, hashes_h5, treefile, 
                                 fam2orthoxmlfile, outputdir, profiler_path, allvsall=True, suffix=binname)
         
         ### plot all vs all jaccard distribution
