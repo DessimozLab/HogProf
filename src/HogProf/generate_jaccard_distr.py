@@ -270,10 +270,10 @@ def turn_subhogs_to_pairs(subhogs_sampled_pairs_df):
     pairs_df = pd.DataFrame(pairs_list)
     return pairs_df
 
-def taxid_to_name(taxid):
+def taxid_to_name(taxid, expected_root="Metazoa"):
     if taxid == 'internal_0':
-        print("Expected root: Metazoa")
-        return 'root_Metazoa'
+        print(f"Expected root: {expected_root}")
+        return f'root_{expected_root}'
     try:
         taxid = int(taxid)
     ### NOTE: maybe this exception should be handled differently
@@ -288,7 +288,7 @@ def taxid_to_name(taxid):
         #print(name_dict)
     return name_dict[taxid]
 
-def main(hogprofoutputfolder, outputdir, profiler_path):
+def main(hogprofoutputfolder, outputdir, profiler_path, expected_root):
 
     ### get all variables:
     fam2orthoxmlfile = os.path.join(hogprofoutputfolder, "fam2orthoxml.csv")
@@ -416,9 +416,17 @@ def main(hogprofoutputfolder, outputdir, profiler_path):
         bins_thresholds_df = pd.DataFrame(bins_dicts)
         print(bins_thresholds_df.head())
         ### here add idmapper to have taxnames together with the thresholds
+        # Assumes taxids were used in the species tree and taxnames in the orthoxml file.
+        # This is not always the case.
         bins_thresholds_df['taxid'] = bins_thresholds_df['bin'].map(idmapper)
         ### here add actual taxon names
-        bins_thresholds_df['taxname'] = bins_thresholds_df['taxid'].apply(taxid_to_name)
+        bins_thresholds_df['taxname'] = bins_thresholds_df['taxid'].apply(taxid_to_name, expected_root=expected_root)
+        ### check here if the assumption was corrrect - if the column is full of ''
+        if bins_thresholds_df['taxname'].isnull().all() or (bins_thresholds_df['taxname'] == '').all():
+            # remove that column
+            bins_thresholds_df.drop(columns=['taxname'], inplace=True)
+            # rename taxid column to taxname
+            bins_thresholds_df.rename(columns={'taxid': 'taxname'}, inplace=True)
         # Save to CSV
         bins_thresholds_df.to_csv(os.path.join(outputdir, f"bins_jaccard_thresholds.csv"), index=False)
         print(f"Bins thresholds saved to {os.path.join(outputdir, f'bins_jaccard_thresholds.csv')}\n")
@@ -462,6 +470,12 @@ def parse_args():
         help="Folder where the result of HogProf LSHbuilder is stored."
     )
     parser.add_argument(
+            "--expected_root",
+            required=False,
+            default="Metazoa",
+            help="Expected root taxon (to replace 'internal_0')."
+        )
+    parser.add_argument(
         "--output",
         required=True,
         help="Output folder."
@@ -481,7 +495,8 @@ if __name__ == '__main__':
     main(
         args.hogprof_folder,
         args.output,
-        args.profiler_path
+        args.profiler_path,
+        args.expected_root
         )
 
 ### print end time
