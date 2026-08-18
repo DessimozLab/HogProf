@@ -274,7 +274,13 @@ def taxid_to_name(taxid):
     if taxid == 'internal_0':
         print("Expected root: Metazoa")
         return 'root_Metazoa'
-    taxid = int(taxid)
+    try:
+        taxid = int(taxid)
+    ### NOTE: maybe this exception should be handled differently
+    # for now just return empty string
+    except (ValueError, TypeError):
+        print(f"Invalid taxid: {taxid}\nUsing ''.")
+        return ''
     name_dict = ncbi.get_taxid_translator([taxid])#.translate_to_names([taxid])
     #print(name_dict)
     if len(name_dict) > 1:
