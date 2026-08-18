@@ -90,10 +90,10 @@ def create_bins(hogmetadata_df, outputdir, taxidmapper={}, samplesize=21):
     
 
 def get_hog_to_hog_jaccards(subhogs_sampled_pairs_df, lshforestfile, hashes_h5, treefile, 
-                            fam2orthoxmlfile, outputdir, p, allvsall=False, suffix=""):
+                            fam2orthoxmlfile, outputdir, profiler_path, allvsall=False, suffix=""):
     ### import profiler
-    #add_profiler_path(profiler_path)
-    #import profiler
+    add_profiler_path(profiler_path)
+    import profiler
 
     ### check for NaN, there should not be any
     if not allvsall:
