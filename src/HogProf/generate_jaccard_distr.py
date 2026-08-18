@@ -428,7 +428,10 @@ def main(hogprofoutputfolder, outputdir, profiler_path, expected_root):
             # rename taxid column to taxname
             bins_thresholds_df.rename(columns={'taxid': 'taxname'}, inplace=True)
             # replace NaN with root if bin is 0
-            bins_thresholds_df['taxname'] = bins_thresholds_df['taxname'].fillna(f'root_{expected_root}')
+            bins_thresholds_df.loc[
+                (bins_thresholds_df['bin'] == 0) & (bins_thresholds_df['taxname'].isna()),
+                'taxname'
+            ] = f'root_{expected_root}'
         # Save to CSV
         bins_thresholds_df.to_csv(os.path.join(outputdir, f"bins_jaccard_thresholds.csv"), index=False)
         print(f"Bins thresholds saved to {os.path.join(outputdir, f'bins_jaccard_thresholds.csv')}\n")
