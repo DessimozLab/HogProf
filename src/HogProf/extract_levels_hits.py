@@ -10,6 +10,7 @@ import numpy as np
 import seaborn as sns
 import re
 from functools import lru_cache
+import csv
 
 from ete3 import NCBITaxa, Tree
 ncbi = NCBITaxa()
@@ -33,8 +34,15 @@ def create_directory(dirpath):
         os.mkdir(dirpath)
     return dirpath
 
+def get_delimiter(file_path, bytes = 4096):
+    sniffer = csv.Sniffer()
+    data = open(file_path, "r").read(bytes)
+    delimiter = sniffer.sniff(data).delimiter
+    return delimiter
+
 def get_hashes(subhogs_table, fam2orthoxml_file):
-    subhogs_df = pd.read_csv(subhogs_table, sep='\t', index_col=0)
+    sep = get_delimiter(subhogs_table)
+    subhogs_df = pd.read_csv(subhogs_table, sep=sep, index_col=0)
     if 'hashid' in subhogs_df.columns:
         return subhogs_table
     print(f"Extracting hashes from file: {fam2orthoxml_file}")
@@ -46,9 +54,10 @@ def get_hashes(subhogs_table, fam2orthoxml_file):
     # attach hash ids
     subhogs_df['hashid'] = subhogs_df.index.map(subhog_to_hashid)
     # outputqueryfile
-    outputqueryfile = subhogs_table.replace(".tsv","_queries.tsv")
+    outputqueryfile = subhogs_table.replace(f"{os.path.splitext(subhogs_table)[1]}",
+                                            f"_queries{os.path.splitext(subhogs_table)[1]}")
     # save new file with hash ids
-    subhogs_df.to_csv(outputqueryfile, sep='\t')
+    subhogs_df.to_csv(outputqueryfile, sep=sep)
     return outputqueryfile
 
 
@@ -103,7 +112,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
     # Add profiler directory to path and import
     add_profiler_path(profiler_path)
     import profiler
-    subhogs_df = pd.read_csv(subhogs_table, sep='\t', index_col=0)
+    subhogs_df = pd.read_csv(subhogs_table, sep=get_delimiter(subhogs_table), index_col=0)
     ## index label is subhogid
     subhogs_df.index.name = 'subhogid'
     subhog_to_hashid = subhogs_df['hashid'].to_dict()
