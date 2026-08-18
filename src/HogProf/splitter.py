@@ -22,7 +22,7 @@ def add_fastoma_path(fastoma_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Split OrthoXML file by species.")
-    parser.add_argument("orthoxml_dir", help="Path to the directory containing FastOMA_HOGs.orthoxml")
+    parser.add_argument("--orthoxml_dir", required=True, help="Path to the directory containing FastOMA_HOGs.orthoxml")
     parser.add_argument(
         "--fastoma-path",
         required=True,
