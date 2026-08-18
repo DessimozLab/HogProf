@@ -429,7 +429,7 @@ def main(hogprofoutputfolder, outputdir, profiler_path, expected_root):
             bins_thresholds_df.rename(columns={'taxid': 'taxname'}, inplace=True)
             # replace NaN with root if bin is 0
             bins_thresholds_df.loc[
-                (bins_thresholds_df['bin'].astype(str) == '0') & 
+                (bins_thresholds_df['bin'].astype(int) == 0) & 
                 (bins_thresholds_df['taxname'].isna()),
                 'taxname'
             ] = f'root_{expected_root}'
