@@ -121,14 +121,14 @@ def get_hog_to_hog_jaccards(subhogs_sampled_pairs_df, lshforestfile, hashes_h5, 
         return hashmat
 
     ### read lshforest
-    #p = profiler.Profiler(lshforestpath = lshforestfile, 
-    #                        hashes_h5= hashes_h5, 
-    #                        #mat_path= fam2orthoxmlfile ,
-    #                        oma = False , 
-    #                        nsamples = 256 ,
-    #                        mastertree = treefile,
-    #                        slicesubhogs = True
-    #                        )
+    p = profiler.Profiler(lshforestpath = lshforestfile, 
+                            hashes_h5= hashes_h5, 
+                            #mat_path= fam2orthoxmlfile ,
+                            oma = False , 
+                            nsamples = 256 ,
+                            mastertree = treefile,
+                            slicesubhogs = True
+                            )
 
     if not allvsall:
         ### get jaccard similarity for each pair using hog_v_hog(self, hogs)

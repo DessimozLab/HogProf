@@ -90,7 +90,7 @@ The installation process is the same (github only for now).
 
 A fastOMA result folder is expected as input.
 
-**Step 1**: split the orthoxml into HOG-specific orthoxmls, using this script:
+**Step 1**: split the orthoxml into HOG-specific orthoxmls, using this script (requires a fastOMA installation):
 ``` 
 python path/to/HogProf/src/HogProf/splitter.py \
     /path/to/output_directory \
