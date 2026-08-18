@@ -34,6 +34,7 @@ def create_directory(dirpath):
         os.mkdir(dirpath)
     return dirpath
 
+'''https://stackoverflow.com/questions/46135839/auto-detect-the-delimiter-in-a-csv-file-using-pd-read-csv'''
 def get_delimiter(file_path, bytes = 4096):
     sniffer = csv.Sniffer()
     data = open(file_path, "r").read(bytes)
