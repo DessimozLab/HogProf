@@ -421,12 +421,14 @@ def main(hogprofoutputfolder, outputdir, profiler_path, expected_root):
         bins_thresholds_df['taxid'] = bins_thresholds_df['bin'].map(idmapper)
         ### here add actual taxon names
         bins_thresholds_df['taxname'] = bins_thresholds_df['taxid'].apply(taxid_to_name, expected_root=expected_root)
-        ### check here if the assumption was corrrect - if the column is full of ''
+        ### check here if the assumption was correct - if the column is full of ''
         if bins_thresholds_df['taxname'].isnull().all() or (bins_thresholds_df['taxname'] == '').all():
             # remove that column
             bins_thresholds_df.drop(columns=['taxname'], inplace=True)
             # rename taxid column to taxname
             bins_thresholds_df.rename(columns={'taxid': 'taxname'}, inplace=True)
+            # replace NaN with root if bin is 0
+            bins_thresholds_df['taxname'] = bins_thresholds_df['taxname'].fillna(f'root_{expected_root}')
         # Save to CSV
         bins_thresholds_df.to_csv(os.path.join(outputdir, f"bins_jaccard_thresholds.csv"), index=False)
         print(f"Bins thresholds saved to {os.path.join(outputdir, f'bins_jaccard_thresholds.csv')}\n")
@@ -444,10 +446,11 @@ def main(hogprofoutputfolder, outputdir, profiler_path, expected_root):
 
     ### plot bin max to thresholds
     plt.figure(figsize=(max(8, 0.5 * len(bins_thresholds_df)), 5))  # dynamic width
-    plt.scatter(bins_thresholds_df['taxname'], bins_thresholds_df['empirical_t'], marker='o', label='Empirical threshold')
+    x = np.arange(len(bins_thresholds_df))
+    plt.scatter(x, bins_thresholds_df['empirical_t'], marker='o', label='Empirical threshold')
     plt.xlabel('Bin')
     ### rotate x labels
-    plt.xticks(rotation=45, ha='right')
+    plt.xticks(x, bins_thresholds_df['taxname'], rotation=45, ha='right')
     plt.ylabel('Jaccard threshold')
     plt.title('Jaccard Thresholds vs. Bin')
     plt.legend()
