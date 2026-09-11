@@ -65,6 +65,11 @@ def get_hashids(subhogs_table, fam2orthoxml_file):
     subhogs_df.to_csv(outputqueryfile, sep=sep)
     return outputqueryfile
 
+def get_hashids_by_subhogid(subhog_ids, fam2orthoxml_file):
+    fam2orthoxml_df = pd.read_csv(fam2orthoxml_file)
+    subhog_to_hashid = {subhog: idx for idx, subhog in enumerate(fam2orthoxml_df['subhog_id'])}
+    hashids = [subhog_to_hashid[subhog] for subhog in subhog_ids if subhog in subhog_to_hashid]
+    return hashids
 
 '''function to add some info to the extracted hits about how the origin and strength of coevolution'''
 def find_coevolution_origin(hits_df, treepath):
@@ -80,7 +85,7 @@ def find_coevolution_origin(hits_df, treepath):
     @lru_cache(maxsize=None)
     def lineage(taxid):
         node = node_lookup.get(int(taxid))
-        print("taxid:", taxid, "node:", node)
+        #print("taxid:", taxid, "node:", node)
         if node is None:
             return frozenset()
         return frozenset(int(n.name) for n in node.get_ancestors()) | {int(taxid)}
@@ -136,8 +141,8 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
                         mastertree = treepath,
                         slicesubhogs = True
                         )
-    p.slicesubhogs = False ### setting as False to try original hogid2fam function in profiler.py
-    # the reason for this is using family IDS vs hashids for querying. original function used hashids,
+    p.slicesubhogs = False ### setting as False to use original hogid2fam function in profiler.py
+    # the reason for this is using family IDS vs hashids for querying. the original function used hashids,
     # sometimes in levels we want to query everything within a family though.
     print("Pulling hashes...")
     raw_profiles = p.pull_hashes(subhog_to_hashid.values()) # returns hashid to hashsig dict
@@ -193,6 +198,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
     taxa_networks_dict = {}
     network_id_to_hid = {}
     level_to_T_dict = {}
+    taxid_to_taxname_dict = thresholds_df['taxname'].to_dict()
     print("Querying each HOG...")
     for query_subhog_id, querydict in profiles.items():
         ### clean hogids e.g. 14_HOG:0004777_537 where 14 is the internal taxid (bin in thresholds) 
@@ -221,6 +227,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
             scores = get_scores(candidate_hashids,candidate_hashes, query_sig, level_threshold)
         # sort candidate scores descending
         scored_pairs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        '''
         # save info for allvsall
         if allvsall:
             if query_level not in taxa_networks_dict.keys():
@@ -230,6 +237,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
             # add new info
             network_id_to_hid[query_subhog_id] = query_hashid
             taxa_networks_dict[query_level] = network_id_to_hid
+        '''
         # build rows: one row per query-target pair
         for hid, jaccard in scored_pairs:
             target_subhog = local_hashid_to_subhog[hid]
@@ -265,6 +273,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
                 'same_fam': same_fam
             })
     taxa_hsig_dict ={}
+    '''
     ### change info for allvsall
     if allvsall:
         for level, network_id_to_hid in taxa_networks_dict.items():
@@ -272,7 +281,16 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
             ### turn into subhog to hashsig
             network_id_to_hsig = {subhogid:all_raw_profiles[hid] for subhogid, hid in  network_id_to_hid.items()}
             taxa_hsig_dict[level] = [level_to_T_dict[level],network_id_to_hsig]
+        '''
     hits_df = pd.DataFrame(rows)
+
+    if allvsall:
+        target_hogs_per_level = hits_df.groupby('taxid')['target_hog'].unique().to_dict()
+        for level, target_hogs in target_hogs_per_level.items():
+            query_hogs = hits_df[hits_df['taxid'] == level]['query_hog'].unique()
+            target_hogs = np.concatenate([target_hogs, query_hogs])
+            level_hashids = get_hashids_by_subhogid(list(target_hogs), fam2orthoxml_file)
+            taxa_hsig_dict[level] = [level_to_T_dict[level], p.pull_hashes(level_hashids)]
     
     if len(no_hits_subhogs)>0:
         print(f"No hits found for {len(no_hits_subhogs)} subHOGs")
@@ -291,11 +309,12 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
     if treeroot:
         hits_df['taxname'] = hits_df['taxname'].replace(r'^\s*$', np.nan, regex=True)
         hits_df['taxname'] = hits_df['taxname'].fillna(treeroot)
+        taxid_to_taxname_dict[0] = treeroot
     print(hits_df.head())
     ### save to file
     hits_df.to_csv(outputfile, index=False)
     print("Created file:", outputfile)
-    return taxa_hsig_dict
+    return taxa_hsig_dict, taxid_to_taxname_dict
 
 ### from Dave's jupyter notebook, with changes
 def compare_all_vs_all(taxa_hsig_dict, outputfile):
@@ -325,10 +344,14 @@ def compare_all_vs_all(taxa_hsig_dict, outputfile):
         g.savefig(out_eps, format='eps')
         print(f"Created file: {out_eps}")
 
-def compare_all_vs_all(taxa_hsig_dict, outputfile):
+def compare_all_vs_all(taxa_hsig_dict, taxid_to_taxname_dict,outputfile):
     print("Performing all vs all comparison (untested)...")
+    #print(taxa_hsig_dict)
+    print(f"Using {len(taxa_hsig_dict)} taxonomic levels for comparison")
+    print(f"Using {len(taxa_hsig_dict.items())} profiles for comparison")
     for level, [level_T, network_id_to_hsig] in taxa_hsig_dict.items():
-        out_eps = outputfile.replace(".csv", f"{level}.eps")
+        taxname = taxid_to_taxname_dict.get(level, f"taxid_{level}")
+        out_eps = outputfile.replace(".csv", f"_{taxname}.eps")
         ids = list(network_id_to_hsig.keys())
         if len(ids) < 2:
             print(f"Skipping {level}: only {len(ids)} profile(s)")
@@ -377,10 +400,10 @@ def main(lshforestpath, hashes_h5, treepath, outputfile, profiler_path, queries_
     create_directory(os.path.dirname(outputfile))
 
     ### get hits from hashes
-    taxa_hsig_dict = extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, profiler_path,
+    taxa_hsig_dict, taxid_to_taxname_dict = extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, profiler_path,
                                               allvsall, k, queries_file, thresholds_df, treeroot=treeroot)
     if allvsall:
-        compare_all_vs_all(taxa_hsig_dict, outputfile=outputfile.replace(".csv", "_allvsall.csv"))
+        compare_all_vs_all(taxa_hsig_dict, taxid_to_taxname_dict, outputfile=outputfile.replace(".csv", "_allvsall.csv"))
 
 ## Command line argument parsing'''
 def parse_args():
@@ -406,11 +429,11 @@ if __name__ == "__main__":
     args = parse_args()
     #print("Are arguments fixed?")
     inputfolder = args.input
-    lshforestpath = inputfolder + "newlshforest.pkl"
-    hashes_h5 = inputfolder + "hashes.h5"
-    treepath = inputfolder + "speciestree.nwk"
-    treepath = inputfolder + "reformatted_tree.nwk"
-    fam2orthoxml_file = inputfolder + "fam2orthoxml.csv"
+    lshforestpath = os.path.join(inputfolder, "newlshforest.pkl")
+    hashes_h5 = os.path.join(inputfolder, "hashes.h5")
+    treepath = os.path.join(inputfolder, "speciestree.nwk")
+    treepath = os.path.join(inputfolder, "reformatted_tree.nwk")
+    fam2orthoxml_file = os.path.join(inputfolder, "fam2orthoxml.csv")
     queries_file = args.queries_file
     # special case for unknown hashids (subhogid per line, identical to fam2orthoxml)
     queries_file = get_hashids(queries_file, fam2orthoxml_file)
