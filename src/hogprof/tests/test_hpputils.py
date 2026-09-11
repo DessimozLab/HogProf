@@ -1,6 +1,6 @@
 import unittest
 
-from utils import files_utils
+from hogprof.utils import files_utils
 
 
 class HpputilsTest(unittest.TestCase):

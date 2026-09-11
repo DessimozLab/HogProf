@@ -1,6 +1,6 @@
 import unittest
 
-from utils import hashutils
+from hogprof.utils import hashutils
 
 
 class HashutilsTest(unittest.TestCase):
