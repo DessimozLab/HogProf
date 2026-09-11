@@ -198,7 +198,9 @@ class Profiler:
 			#if id2famsubhog_df.index.name is not None:
 			#	id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath)
 			#print(id2famsubhog_df)
+			### fam_dict collects the hashids of all families. it can be used if we want hits for all members of a family
 			fam_dict = self.fam_dict#id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
+			#print(fam_dict)
 			#subhog_dict = id2famsubhog_df.set_index('subhog_id').to_dict(orient='index')
 			if isinstance(hog_entry, int):
 				indices = fam_dict[hog_entry]
