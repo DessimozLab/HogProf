@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 #
 # Generated Mon Jun 27 10:13:43 2011 by generateDS.py version 2.5b.
@@ -11,13 +11,12 @@ import re as re_
 
 etree_ = None
 Verbose_import_ = False
-(   XMLParser_import_none, XMLParser_import_lxml,
-    XMLParser_import_elementtree
-    ) = range(3)
+(XMLParser_import_none, XMLParser_import_lxml, XMLParser_import_elementtree) = range(3)
 XMLParser_import_library = None
 try:
     # lxml
     from lxml import etree as etree_
+
     XMLParser_import_library = XMLParser_import_lxml
     if Verbose_import_:
         print("running with lxml.etree")
@@ -25,6 +24,7 @@ except ImportError:
     try:
         # cElementTree from Python 2.5+
         import xml.etree.cElementTree as etree_
+
         XMLParser_import_library = XMLParser_import_elementtree
         if Verbose_import_:
             print("running with cElementTree on Python 2.5+")
@@ -32,6 +32,7 @@ except ImportError:
         try:
             # ElementTree from Python 2.5+
             import xml.etree.ElementTree as etree_
+
             XMLParser_import_library = XMLParser_import_elementtree
             if Verbose_import_:
                 print("running with ElementTree on Python 2.5+")
@@ -39,6 +40,7 @@ except ImportError:
             try:
                 # normal cElementTree install
                 import cElementTree as etree_
+
                 XMLParser_import_library = XMLParser_import_elementtree
                 if Verbose_import_:
                     print("running with cElementTree")
@@ -46,20 +48,24 @@ except ImportError:
                 try:
                     # normal ElementTree install
                     import elementtree.ElementTree as etree_
+
                     XMLParser_import_library = XMLParser_import_elementtree
                     if Verbose_import_:
                         print("running with ElementTree")
                 except ImportError:
-                    raise ImportError("Failed to import ElementTree from any known place")
+                    raise ImportError(
+                        "Failed to import ElementTree from any known place"
+                    )
+
 
 def parsexml_(*args, **kwargs):
-    if (XMLParser_import_library == XMLParser_import_lxml and
-        'parser' not in kwargs):
+    if XMLParser_import_library == XMLParser_import_lxml and "parser" not in kwargs:
         # Use the lxml ElementTree compatible parser so that, e.g.,
         #   we ignore comments.
-        kwargs['parser'] = etree_.ETCompatXMLParser()
+        kwargs["parser"] = etree_.ETCompatXMLParser()
     doc = etree_.parse(*args, **kwargs)
     return doc
+
 
 #
 # User methods
@@ -73,77 +79,106 @@ try:
 except ImportError as exp:
 
     class GeneratedsSuper(object):
-        def gds_format_string(self, input_data, input_name=''):
+        def gds_format_string(self, input_data, input_name=""):
             return input_data
-        def gds_validate_string(self, input_data, node, input_name=''):
+
+        def gds_validate_string(self, input_data, node, input_name=""):
             return input_data
-        def gds_format_integer(self, input_data, input_name=''):
-            return '%d' % input_data
-        def gds_validate_integer(self, input_data, node, input_name=''):
+
+        def gds_format_integer(self, input_data, input_name=""):
+            return "%d" % input_data
+
+        def gds_validate_integer(self, input_data, node, input_name=""):
             return input_data
-        def gds_format_integer_list(self, input_data, input_name=''):
-            return '%s' % input_data
-        def gds_validate_integer_list(self, input_data, node, input_name=''):
+
+        def gds_format_integer_list(self, input_data, input_name=""):
+            return "%s" % input_data
+
+        def gds_validate_integer_list(self, input_data, node, input_name=""):
             values = input_data.split()
             for value in values:
                 try:
                     fvalue = float(value)
                 except (TypeError, ValueError) as exp:
-                    raise_parse_error(node, 'Requires sequence of integers')
+                    raise_parse_error(node, "Requires sequence of integers")
             return input_data
-        def gds_format_float(self, input_data, input_name=''):
-            return '%f' % input_data
-        def gds_validate_float(self, input_data, node, input_name=''):
+
+        def gds_format_float(self, input_data, input_name=""):
+            return "%f" % input_data
+
+        def gds_validate_float(self, input_data, node, input_name=""):
             return input_data
-        def gds_format_float_list(self, input_data, input_name=''):
-            return '%s' % input_data
-        def gds_validate_float_list(self, input_data, node, input_name=''):
+
+        def gds_format_float_list(self, input_data, input_name=""):
+            return "%s" % input_data
+
+        def gds_validate_float_list(self, input_data, node, input_name=""):
             values = input_data.split()
             for value in values:
                 try:
                     fvalue = float(value)
                 except (TypeError, ValueError) as exp:
-                    raise_parse_error(node, 'Requires sequence of floats')
+                    raise_parse_error(node, "Requires sequence of floats")
             return input_data
-        def gds_format_double(self, input_data, input_name=''):
-            return '%e' % input_data
-        def gds_validate_double(self, input_data, node, input_name=''):
+
+        def gds_format_double(self, input_data, input_name=""):
+            return "%e" % input_data
+
+        def gds_validate_double(self, input_data, node, input_name=""):
             return input_data
-        def gds_format_double_list(self, input_data, input_name=''):
-            return '%s' % input_data
-        def gds_validate_double_list(self, input_data, node, input_name=''):
+
+        def gds_format_double_list(self, input_data, input_name=""):
+            return "%s" % input_data
+
+        def gds_validate_double_list(self, input_data, node, input_name=""):
             values = input_data.split()
             for value in values:
                 try:
                     fvalue = float(value)
                 except (TypeError, ValueError) as exp:
-                    raise_parse_error(node, 'Requires sequence of doubles')
+                    raise_parse_error(node, "Requires sequence of doubles")
             return input_data
-        def gds_format_boolean(self, input_data, input_name=''):
-            return '%s' % input_data
-        def gds_validate_boolean(self, input_data, node, input_name=''):
+
+        def gds_format_boolean(self, input_data, input_name=""):
+            return "%s" % input_data
+
+        def gds_validate_boolean(self, input_data, node, input_name=""):
             return input_data
-        def gds_format_boolean_list(self, input_data, input_name=''):
-            return '%s' % input_data
-        def gds_validate_boolean_list(self, input_data, node, input_name=''):
+
+        def gds_format_boolean_list(self, input_data, input_name=""):
+            return "%s" % input_data
+
+        def gds_validate_boolean_list(self, input_data, node, input_name=""):
             values = input_data.split()
             for value in values:
-                if value not in ('true', '1', 'false', '0', ):
-                    raise_parse_error(node, 'Requires sequence of booleans ("true", "1", "false", "0")')
+                if value not in (
+                    "true",
+                    "1",
+                    "false",
+                    "0",
+                ):
+                    raise_parse_error(
+                        node,
+                        'Requires sequence of booleans ("true", "1", "false", "0")',
+                    )
             return input_data
+
         def gds_str_lower(self, instring):
             return instring.lower()
+
         def get_path_(self, node):
             path_list = []
             self.get_path_list_(node, path_list)
             path_list.reverse()
-            path = '/'.join(path_list)
+            path = "/".join(path_list)
             return path
-        Tag_strip_pattern_ = re_.compile(r'\{.*\}')
+
+        Tag_strip_pattern_ = re_.compile(r"\{.*\}")
+
         def get_path_list_(self, node, path_list):
             if node is None:
                 return
-            tag = GeneratedsSuper.Tag_strip_pattern_.sub('', node.tag)
+            tag = GeneratedsSuper.Tag_strip_pattern_.sub("", node.tag)
             if tag:
                 path_list.append(tag)
             self.get_path_list_(node.getparent(), path_list)
@@ -168,34 +203,35 @@ except ImportError as exp:
 # Globals
 #
 
-ExternalEncoding = 'utf-8'
-Tag_pattern_ = re_.compile(r'({.*})?(.*)')
+ExternalEncoding = "utf-8"
+Tag_pattern_ = re_.compile(r"({.*})?(.*)")
 STRING_CLEANUP_PAT = re_.compile(r"[\n\r\s]+")
 
 #
 # Support/utility functions.
 #
 
+
 def showIndent(outfile, level):
     for idx in range(level):
-        outfile.write('    ')
+        outfile.write("    ")
+
 
 def quote_xml(inStr):
     if not inStr:
-        return ''
-    s1 = (isinstance(inStr, basestring) and inStr or
-          '%s' % inStr)
-    s1 = s1.replace('&', '&amp;')
-    s1 = s1.replace('<', '&lt;')
-    s1 = s1.replace('>', '&gt;')
+        return ""
+    s1 = isinstance(inStr, basestring) and inStr or "%s" % inStr
+    s1 = s1.replace("&", "&amp;")
+    s1 = s1.replace("<", "&lt;")
+    s1 = s1.replace(">", "&gt;")
     return s1
 
+
 def quote_attrib(inStr):
-    s1 = (isinstance(inStr, basestring) and inStr or
-          '%s' % inStr)
-    s1 = s1.replace('&', '&amp;')
-    s1 = s1.replace('<', '&lt;')
-    s1 = s1.replace('>', '&gt;')
+    s1 = isinstance(inStr, basestring) and inStr or "%s" % inStr
+    s1 = s1.replace("&", "&amp;")
+    s1 = s1.replace("<", "&lt;")
+    s1 = s1.replace(">", "&gt;")
     if '"' in s1:
         if "'" in s1:
             s1 = '"%s"' % s1.replace('"', "&quot;")
@@ -205,30 +241,33 @@ def quote_attrib(inStr):
         s1 = '"%s"' % s1
     return s1
 
+
 def quote_python(inStr):
     s1 = inStr
     if s1.find("'") == -1:
-        if s1.find('\n') == -1:
+        if s1.find("\n") == -1:
             return "'%s'" % s1
         else:
             return "'''%s'''" % s1
     else:
         if s1.find('"') != -1:
             s1 = s1.replace('"', '\\"')
-        if s1.find('\n') == -1:
+        if s1.find("\n") == -1:
             return '"%s"' % s1
         else:
             return '"""%s"""' % s1
+
 
 def get_all_text_(node):
     if node.text is not None:
         text = node.text
     else:
-        text = ''
+        text = ""
     for child in node:
         if child.tail is not None:
             text += child.tail
     return text
+
 
 def find_attr_value_(attr_name, node):
     attrs = node.attrib
@@ -238,7 +277,13 @@ def find_attr_value_(attr_name, node):
         # Now try the other possible namespaces.
         namespaces = node.nsmap.itervalues()
         for namespace in namespaces:
-            value = attrs.get('{%s}%s' % (namespace, attr_name, ))
+            value = attrs.get(
+                "{%s}%s"
+                % (
+                    namespace,
+                    attr_name,
+                )
+            )
             if value is not None:
                 break
     return value
@@ -247,11 +292,19 @@ def find_attr_value_(attr_name, node):
 class GDSParseError(Exception):
     pass
 
+
 def raise_parse_error(node, msg):
     if XMLParser_import_library == XMLParser_import_lxml:
-        msg = '%s (element %s/line %d)' % (msg, node.tag, node.sourceline, )
+        msg = "%s (element %s/line %d)" % (
+            msg,
+            node.tag,
+            node.sourceline,
+        )
     else:
-        msg = '%s (element %s)' % (msg, node.tag, )
+        msg = "%s (element %s)" % (
+            msg,
+            node.tag,
+        )
     raise GDSParseError(msg)
 
 
@@ -270,94 +323,144 @@ class MixedContainer:
     TypeDecimal = 5
     TypeDouble = 6
     TypeBoolean = 7
+
     def __init__(self, category, content_type, name, value):
         self.category = category
         self.content_type = content_type
         self.name = name
         self.value = value
+
     def getCategory(self):
         return self.category
+
     def getContenttype(self, content_type):
         return self.content_type
+
     def getValue(self):
         return self.value
+
     def getName(self):
         return self.name
+
     def export(self, outfile, level, name, namespace):
         if self.category == MixedContainer.CategoryText:
             # Prevent exporting empty content as empty lines.
-            if self.value.strip(): 
+            if self.value.strip():
                 outfile.write(self.value)
         elif self.category == MixedContainer.CategorySimple:
             self.exportSimple(outfile, level, name)
-        else:    # category == MixedContainer.CategoryComplex
-            self.value.export(outfile, level, namespace,name)
+        else:  # category == MixedContainer.CategoryComplex
+            self.value.export(outfile, level, namespace, name)
+
     def exportSimple(self, outfile, level, name):
         if self.content_type == MixedContainer.TypeString:
-            outfile.write('<%s>%s</%s>' % (self.name, self.value, self.name))
-        elif self.content_type == MixedContainer.TypeInteger or \
-                self.content_type == MixedContainer.TypeBoolean:
-            outfile.write('<%s>%d</%s>' % (self.name, self.value, self.name))
-        elif self.content_type == MixedContainer.TypeFloat or \
-                self.content_type == MixedContainer.TypeDecimal:
-            outfile.write('<%s>%f</%s>' % (self.name, self.value, self.name))
+            outfile.write("<%s>%s</%s>" % (self.name, self.value, self.name))
+        elif (
+            self.content_type == MixedContainer.TypeInteger
+            or self.content_type == MixedContainer.TypeBoolean
+        ):
+            outfile.write("<%s>%d</%s>" % (self.name, self.value, self.name))
+        elif (
+            self.content_type == MixedContainer.TypeFloat
+            or self.content_type == MixedContainer.TypeDecimal
+        ):
+            outfile.write("<%s>%f</%s>" % (self.name, self.value, self.name))
         elif self.content_type == MixedContainer.TypeDouble:
-            outfile.write('<%s>%g</%s>' % (self.name, self.value, self.name))
+            outfile.write("<%s>%g</%s>" % (self.name, self.value, self.name))
+
     def exportLiteral(self, outfile, level, name):
         if self.category == MixedContainer.CategoryText:
             showIndent(outfile, level)
-            outfile.write('model_.MixedContainer(%d, %d, "%s", "%s"),\n' % \
-                (self.category, self.content_type, self.name, self.value))
+            outfile.write(
+                'model_.MixedContainer(%d, %d, "%s", "%s"),\n'
+                % (self.category, self.content_type, self.name, self.value)
+            )
         elif self.category == MixedContainer.CategorySimple:
             showIndent(outfile, level)
-            outfile.write('model_.MixedContainer(%d, %d, "%s", "%s"),\n' % \
-                (self.category, self.content_type, self.name, self.value))
-        else:    # category == MixedContainer.CategoryComplex
+            outfile.write(
+                'model_.MixedContainer(%d, %d, "%s", "%s"),\n'
+                % (self.category, self.content_type, self.name, self.value)
+            )
+        else:  # category == MixedContainer.CategoryComplex
             showIndent(outfile, level)
-            outfile.write('model_.MixedContainer(%d, %d, "%s",\n' % \
-                (self.category, self.content_type, self.name,))
+            outfile.write(
+                'model_.MixedContainer(%d, %d, "%s",\n'
+                % (
+                    self.category,
+                    self.content_type,
+                    self.name,
+                )
+            )
             self.value.exportLiteral(outfile, level + 1)
             showIndent(outfile, level)
-            outfile.write(')\n')
+            outfile.write(")\n")
 
 
 class MemberSpec_(object):
-    def __init__(self, name='', data_type='', container=0):
+    def __init__(self, name="", data_type="", container=0):
         self.name = name
         self.data_type = data_type
         self.container = container
-    def set_name(self, name): self.name = name
-    def get_name(self): return self.name
-    def set_data_type(self, data_type): self.data_type = data_type
-    def get_data_type_chain(self): return self.data_type
+
+    def set_name(self, name):
+        self.name = name
+
+    def get_name(self):
+        return self.name
+
+    def set_data_type(self, data_type):
+        self.data_type = data_type
+
+    def get_data_type_chain(self):
+        return self.data_type
+
     def get_data_type(self):
         if isinstance(self.data_type, list):
             if len(self.data_type) > 0:
                 return self.data_type[-1]
             else:
-                return 'xs:string'
+                return "xs:string"
         else:
             return self.data_type
-    def set_container(self, container): self.container = container
-    def get_container(self): return self.container
+
+    def set_container(self, container):
+        self.container = container
+
+    def get_container(self):
+        return self.container
+
 
 def _cast(typ, value):
     if typ is None or value is None:
         return value
     return typ(value)
 
+
 #
 # Data representation classes.
 #
+
 
 class orthoXML(GeneratedsSuper):
     """The OrthoXML root element. The source program/database of the file
     for instance OMA or InParanoid. The version number of the file.
     The version or release number of the source program/database at
     time the file was generated."""
+
     subclass = None
     superclass = None
-    def __init__(self, origin=None, version=None, originVersion=None, notes=None, species=None, scores=None, groups=None, valueOf_=None):
+
+    def __init__(
+        self,
+        origin=None,
+        version=None,
+        originVersion=None,
+        notes=None,
+        species=None,
+        scores=None,
+        groups=None,
+        valueOf_=None,
+    ):
         self.origin = _cast(None, origin)
         self.version = _cast(float, version)
         self.originVersion = _cast(None, originVersion)
@@ -368,157 +471,242 @@ class orthoXML(GeneratedsSuper):
             self.species = species
         self.scores = scores
         self.groups = groups
+
     def factory(*args_, **kwargs_):
         if orthoXML.subclass:
             return orthoXML.subclass(*args_, **kwargs_)
         else:
             return orthoXML(*args_, **kwargs_)
+
     factory = staticmethod(factory)
-    def get_notes(self): return self.notes
-    def set_notes(self, notes): self.notes = notes
-    def get_species(self): return self.species
-    def set_species(self, species): self.species = species
-    def add_species(self, value): self.species.append(value)
-    def insert_species(self, index, value): self.species[index] = value
-    def get_scores(self): return self.scores
-    def set_scores(self, scores): self.scores = scores
-    def get_groups(self): return self.groups
-    def set_groups(self, groups): self.groups = groups
-    def get_origin(self): return self.origin
-    def set_origin(self, origin): self.origin = origin
-    def get_version(self): return self.version
-    def set_version(self, version): self.version = version
-    def get_originVersion(self): return self.originVersion
-    def set_originVersion(self, originVersion): self.originVersion = originVersion
-    def export(self, outfile, level, namespace_='ortho:', name_='orthoXML', namespacedef_=''):
+
+    def get_notes(self):
+        return self.notes
+
+    def set_notes(self, notes):
+        self.notes = notes
+
+    def get_species(self):
+        return self.species
+
+    def set_species(self, species):
+        self.species = species
+
+    def add_species(self, value):
+        self.species.append(value)
+
+    def insert_species(self, index, value):
+        self.species[index] = value
+
+    def get_scores(self):
+        return self.scores
+
+    def set_scores(self, scores):
+        self.scores = scores
+
+    def get_groups(self):
+        return self.groups
+
+    def set_groups(self, groups):
+        self.groups = groups
+
+    def get_origin(self):
+        return self.origin
+
+    def set_origin(self, origin):
+        self.origin = origin
+
+    def get_version(self):
+        return self.version
+
+    def set_version(self, version):
+        self.version = version
+
+    def get_originVersion(self):
+        return self.originVersion
+
+    def set_originVersion(self, originVersion):
+        self.originVersion = originVersion
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="orthoXML", namespacedef_=""
+    ):
         showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
         already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='orthoXML')
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="orthoXML"
+        )
         if self.hasContent_():
-            outfile.write('>\n')
+            outfile.write(">\n")
             self.exportChildren(outfile, level + 1, namespace_, name_)
             showIndent(outfile, level)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
+            outfile.write("</%s%s>\n" % (namespace_, name_))
         else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='orthoXML'):
-        if self.origin is not None and 'origin' not in already_processed:
-            already_processed.append('origin')
-            outfile.write(' origin=%s' % (self.gds_format_string(quote_attrib(self.origin).encode(ExternalEncoding), input_name='origin'), ))
-        if self.version is not None and 'version' not in already_processed:
-            already_processed.append('version')
-            outfile.write(' version="%s"' % self.gds_format_float(self.version, input_name='version'))
-        if self.originVersion is not None and 'originVersion' not in already_processed:
-            already_processed.append('originVersion')
-            outfile.write(' originVersion=%s' % (self.gds_format_string(quote_attrib(self.originVersion).encode(ExternalEncoding), input_name='originVersion'), ))
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='orthoXML', fromsubclass_=False):
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="orthoXML"
+    ):
+        if self.origin is not None and "origin" not in already_processed:
+            already_processed.append("origin")
+            outfile.write(
+                " origin=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.origin).encode(ExternalEncoding),
+                        input_name="origin",
+                    ),
+                )
+            )
+        if self.version is not None and "version" not in already_processed:
+            already_processed.append("version")
+            outfile.write(
+                ' version="%s"'
+                % self.gds_format_float(self.version, input_name="version")
+            )
+        if self.originVersion is not None and "originVersion" not in already_processed:
+            already_processed.append("originVersion")
+            outfile.write(
+                " originVersion=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.originVersion).encode(ExternalEncoding),
+                        input_name="originVersion",
+                    ),
+                )
+            )
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="orthoXML", fromsubclass_=False
+    ):
         if self.notes:
-            self.notes.export(outfile, level, namespace_, name_='notes')
+            self.notes.export(outfile, level, namespace_, name_="notes")
         for species_ in self.species:
-            species_.export(outfile, level, namespace_, name_='species')
+            species_.export(outfile, level, namespace_, name_="species")
         if self.scores:
-            self.scores.export(outfile, level, namespace_, name_='scores')
+            self.scores.export(outfile, level, namespace_, name_="scores")
         if self.groups:
-            self.groups.export(outfile, level, namespace_, name_='groups', )
+            self.groups.export(
+                outfile,
+                level,
+                namespace_,
+                name_="groups",
+            )
+
     def hasContent_(self):
         if (
-            self.notes is not None or
-            self.species or
-            self.scores is not None or
-            self.groups is not None
-            ):
+            self.notes is not None
+            or self.species
+            or self.scores is not None
+            or self.groups is not None
+        ):
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='orthoXML'):
+
+    def exportLiteral(self, outfile, level, name_="orthoXML"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        if self.origin is not None and 'origin' not in already_processed:
-            already_processed.append('origin')
+        if self.origin is not None and "origin" not in already_processed:
+            already_processed.append("origin")
             showIndent(outfile, level)
             outfile.write('origin = "%s",\n' % (self.origin,))
-        if self.version is not None and 'version' not in already_processed:
-            already_processed.append('version')
+        if self.version is not None and "version" not in already_processed:
+            already_processed.append("version")
             showIndent(outfile, level)
-            outfile.write('version = %f,\n' % (self.version,))
-        if self.originVersion is not None and 'originVersion' not in already_processed:
-            already_processed.append('originVersion')
+            outfile.write("version = %f,\n" % (self.version,))
+        if self.originVersion is not None and "originVersion" not in already_processed:
+            already_processed.append("originVersion")
             showIndent(outfile, level)
             outfile.write('originVersion = "%s",\n' % (self.originVersion,))
+
     def exportLiteralChildren(self, outfile, level, name_):
         if self.notes is not None:
             showIndent(outfile, level)
-            outfile.write('notes=model_.notes(\n')
+            outfile.write("notes=model_.notes(\n")
             self.notes.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         showIndent(outfile, level)
-        outfile.write('species=[\n')
+        outfile.write("species=[\n")
         level += 1
         for species_ in self.species:
             showIndent(outfile, level)
-            outfile.write('model_.species(\n')
+            outfile.write("model_.species(\n")
             species_.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
         if self.scores is not None:
             showIndent(outfile, level)
-            outfile.write('scores=model_.scores(\n')
+            outfile.write("scores=model_.scores(\n")
             self.scores.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         if self.groups is not None:
             showIndent(outfile, level)
-            outfile.write('groups=model_.groups(\n')
+            outfile.write("groups=model_.groups(\n")
             self.groups.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
-        value = find_attr_value_('origin', node)
-        if value is not None and 'origin' not in already_processed:
-            already_processed.append('origin')
+        value = find_attr_value_("origin", node)
+        if value is not None and "origin" not in already_processed:
+            already_processed.append("origin")
             self.origin = value
-        value = find_attr_value_('version', node)
-        if value is not None and 'version' not in already_processed:
-            already_processed.append('version')
+        value = find_attr_value_("version", node)
+        if value is not None and "version" not in already_processed:
+            already_processed.append("version")
             try:
                 self.version = float(value)
             except ValueError as exp:
-                raise ValueError('Bad float/double attribute (version): %s' % exp)
-        value = find_attr_value_('originVersion', node)
-        if value is not None and 'originVersion' not in already_processed:
-            already_processed.append('originVersion')
+                raise ValueError("Bad float/double attribute (version): %s" % exp)
+        value = find_attr_value_("originVersion", node)
+        if value is not None and "originVersion" not in already_processed:
+            already_processed.append("originVersion")
             self.originVersion = value
-            self.originVersion = ' '.join(self.originVersion.split())
+            self.originVersion = " ".join(self.originVersion.split())
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
-        if nodeName_ == 'notes':
+        if nodeName_ == "notes":
             obj_ = notes.factory()
             obj_.build(child_)
             self.set_notes(obj_)
-        elif nodeName_ == 'species':
+        elif nodeName_ == "species":
             obj_ = species.factory()
             obj_.build(child_)
             self.species.append(obj_)
-        elif nodeName_ == 'scores':
+        elif nodeName_ == "scores":
             obj_ = scores.factory()
             obj_.build(child_)
             self.set_scores(obj_)
-        elif nodeName_ == 'groups':
+        elif nodeName_ == "groups":
             obj_ = groups.factory()
             obj_.build(child_)
             self.set_groups(obj_)
+
+
 # end class orthoXML
 
 
@@ -526,9 +714,13 @@ class species(GeneratedsSuper):
     """The species element contains all sequences of one species. The NCBI
     Taxonomy identifier of the species to identify it unambiguously.
     The name of the species."""
+
     subclass = None
     superclass = None
-    def __init__(self, name=None, NCBITaxId=None, database=None, notes=None, valueOf_=None):
+
+    def __init__(
+        self, name=None, NCBITaxId=None, database=None, notes=None, valueOf_=None
+    ):
         self.name = _cast(None, name)
         self.NCBITaxId = _cast(int, NCBITaxId)
         if database is None:
@@ -536,113 +728,170 @@ class species(GeneratedsSuper):
         else:
             self.database = database
         self.notes = notes
+
     def factory(*args_, **kwargs_):
         if species.subclass:
             return species.subclass(*args_, **kwargs_)
         else:
             return species(*args_, **kwargs_)
+
     factory = staticmethod(factory)
-    def get_database(self): return self.database
-    def set_database(self, database): self.database = database
-    def add_database(self, value): self.database.append(value)
-    def insert_database(self, index, value): self.database[index] = value
-    def get_notes(self): return self.notes
-    def set_notes(self, notes): self.notes = notes
-    def get_name(self): return self.name
-    def set_name(self, name): self.name = name
-    def get_NCBITaxId(self): return self.NCBITaxId
-    def set_NCBITaxId(self, NCBITaxId): self.NCBITaxId = NCBITaxId
-    def export(self, outfile, level, namespace_='ortho:', name_='species', namespacedef_=''):
+
+    def get_database(self):
+        return self.database
+
+    def set_database(self, database):
+        self.database = database
+
+    def add_database(self, value):
+        self.database.append(value)
+
+    def insert_database(self, index, value):
+        self.database[index] = value
+
+    def get_notes(self):
+        return self.notes
+
+    def set_notes(self, notes):
+        self.notes = notes
+
+    def get_name(self):
+        return self.name
+
+    def set_name(self, name):
+        self.name = name
+
+    def get_NCBITaxId(self):
+        return self.NCBITaxId
+
+    def set_NCBITaxId(self, NCBITaxId):
+        self.NCBITaxId = NCBITaxId
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="species", namespacedef_=""
+    ):
         showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
         already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='species')
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="species"
+        )
         if self.hasContent_():
-            outfile.write('>\n')
+            outfile.write(">\n")
             self.exportChildren(outfile, level + 1, namespace_, name_)
             showIndent(outfile, level)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
+            outfile.write("</%s%s>\n" % (namespace_, name_))
         else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='species'):
-        if self.name is not None and 'name' not in already_processed:
-            already_processed.append('name')
-            outfile.write(' name=%s' % (self.gds_format_string(quote_attrib(self.name).encode(ExternalEncoding), input_name='name'), ))
-        if self.NCBITaxId is not None and 'NCBITaxId' not in already_processed:
-            already_processed.append('NCBITaxId')
-            outfile.write(' NCBITaxId="%s"' % self.gds_format_integer(self.NCBITaxId, input_name='NCBITaxId'))
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='species', fromsubclass_=False):
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="species"
+    ):
+        if self.name is not None and "name" not in already_processed:
+            already_processed.append("name")
+            outfile.write(
+                " name=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.name).encode(ExternalEncoding),
+                        input_name="name",
+                    ),
+                )
+            )
+        if self.NCBITaxId is not None and "NCBITaxId" not in already_processed:
+            already_processed.append("NCBITaxId")
+            outfile.write(
+                ' NCBITaxId="%s"'
+                % self.gds_format_integer(self.NCBITaxId, input_name="NCBITaxId")
+            )
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="species", fromsubclass_=False
+    ):
         for database_ in self.database:
-            database_.export(outfile, level, namespace_, name_='database')
+            database_.export(outfile, level, namespace_, name_="database")
         if self.notes:
-            self.notes.export(outfile, level, namespace_, name_='notes')
+            self.notes.export(outfile, level, namespace_, name_="notes")
+
     def hasContent_(self):
-        if (
-            self.database or
-            self.notes is not None
-            ):
+        if self.database or self.notes is not None:
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='species'):
+
+    def exportLiteral(self, outfile, level, name_="species"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        if self.name is not None and 'name' not in already_processed:
-            already_processed.append('name')
+        if self.name is not None and "name" not in already_processed:
+            already_processed.append("name")
             showIndent(outfile, level)
             outfile.write('name = "%s",\n' % (self.name,))
-        if self.NCBITaxId is not None and 'NCBITaxId' not in already_processed:
-            already_processed.append('NCBITaxId')
+        if self.NCBITaxId is not None and "NCBITaxId" not in already_processed:
+            already_processed.append("NCBITaxId")
             showIndent(outfile, level)
-            outfile.write('NCBITaxId = %d,\n' % (self.NCBITaxId,))
+            outfile.write("NCBITaxId = %d,\n" % (self.NCBITaxId,))
+
     def exportLiteralChildren(self, outfile, level, name_):
         showIndent(outfile, level)
-        outfile.write('database=[\n')
+        outfile.write("database=[\n")
         level += 1
         for database_ in self.database:
             showIndent(outfile, level)
-            outfile.write('model_.database(\n')
+            outfile.write("model_.database(\n")
             database_.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
         if self.notes is not None:
             showIndent(outfile, level)
-            outfile.write('notes=model_.notes(\n')
+            outfile.write("notes=model_.notes(\n")
             self.notes.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
-        value = find_attr_value_('name', node)
-        if value is not None and 'name' not in already_processed:
-            already_processed.append('name')
+        value = find_attr_value_("name", node)
+        if value is not None and "name" not in already_processed:
+            already_processed.append("name")
             self.name = value
-        value = find_attr_value_('NCBITaxId', node)
-        if value is not None and 'NCBITaxId' not in already_processed:
-            already_processed.append('NCBITaxId')
+        value = find_attr_value_("NCBITaxId", node)
+        if value is not None and "NCBITaxId" not in already_processed:
+            already_processed.append("NCBITaxId")
             try:
                 self.NCBITaxId = int(value)
             except ValueError as exp:
-                raise_parse_error(node, 'Bad integer attribute: %s' % exp)
+                raise_parse_error(node, "Bad integer attribute: %s" % exp)
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
-        if nodeName_ == 'database':
+        if nodeName_ == "database":
             obj_ = database.factory()
             obj_.build(child_)
             self.database.append(obj_)
-        elif nodeName_ == 'notes':
+        elif nodeName_ == "notes":
             obj_ = notes.factory()
             obj_.build(child_)
             self.set_notes(obj_)
+
+
 # end class species
 
 
@@ -656,213 +905,363 @@ class database(GeneratedsSuper):
     Identifier (URI) pointing to the protein. A Uniform Resource
     Identifier (URI) pointing to the transcript. Version number of
     the database."""
+
     subclass = None
     superclass = None
-    def __init__(self, transcriptLink=None, protLink=None, geneLink=None, name=None, version=None, genes=None, valueOf_=None):
+
+    def __init__(
+        self,
+        transcriptLink=None,
+        protLink=None,
+        geneLink=None,
+        name=None,
+        version=None,
+        genes=None,
+        valueOf_=None,
+    ):
         self.transcriptLink = _cast(None, transcriptLink)
         self.protLink = _cast(None, protLink)
         self.geneLink = _cast(None, geneLink)
         self.name = _cast(None, name)
         self.version = _cast(None, version)
         self.genes = genes
+
     def factory(*args_, **kwargs_):
         if database.subclass:
             return database.subclass(*args_, **kwargs_)
         else:
             return database(*args_, **kwargs_)
+
     factory = staticmethod(factory)
-    def get_genes(self): return self.genes
-    def set_genes(self, genes): self.genes = genes
-    def get_transcriptLink(self): return self.transcriptLink
-    def set_transcriptLink(self, transcriptLink): self.transcriptLink = transcriptLink
-    def get_protLink(self): return self.protLink
-    def set_protLink(self, protLink): self.protLink = protLink
-    def get_geneLink(self): return self.geneLink
-    def set_geneLink(self, geneLink): self.geneLink = geneLink
-    def get_name(self): return self.name
-    def set_name(self, name): self.name = name
-    def get_version(self): return self.version
-    def set_version(self, version): self.version = version
-    def export(self, outfile, level, namespace_='ortho:', name_='database', namespacedef_=''):
+
+    def get_genes(self):
+        return self.genes
+
+    def set_genes(self, genes):
+        self.genes = genes
+
+    def get_transcriptLink(self):
+        return self.transcriptLink
+
+    def set_transcriptLink(self, transcriptLink):
+        self.transcriptLink = transcriptLink
+
+    def get_protLink(self):
+        return self.protLink
+
+    def set_protLink(self, protLink):
+        self.protLink = protLink
+
+    def get_geneLink(self):
+        return self.geneLink
+
+    def set_geneLink(self, geneLink):
+        self.geneLink = geneLink
+
+    def get_name(self):
+        return self.name
+
+    def set_name(self, name):
+        self.name = name
+
+    def get_version(self):
+        return self.version
+
+    def set_version(self, version):
+        self.version = version
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="database", namespacedef_=""
+    ):
         showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
         already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='database')
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="database"
+        )
         if self.hasContent_():
-            outfile.write('>\n')
+            outfile.write(">\n")
             self.exportChildren(outfile, level + 1, namespace_, name_)
             showIndent(outfile, level)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
+            outfile.write("</%s%s>\n" % (namespace_, name_))
         else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='database'):
-        if self.transcriptLink is not None and 'transcriptLink' not in already_processed:
-            already_processed.append('transcriptLink')
-            outfile.write(' transcriptLink=%s' % (self.gds_format_string(quote_attrib(self.transcriptLink).encode(ExternalEncoding), input_name='transcriptLink'), ))
-        if self.protLink is not None and 'protLink' not in already_processed:
-            already_processed.append('protLink')
-            outfile.write(' protLink=%s' % (self.gds_format_string(quote_attrib(self.protLink).encode(ExternalEncoding), input_name='protLink'), ))
-        if self.geneLink is not None and 'geneLink' not in already_processed:
-            already_processed.append('geneLink')
-            outfile.write(' geneLink=%s' % (self.gds_format_string(quote_attrib(self.geneLink).encode(ExternalEncoding), input_name='geneLink'), ))
-        if self.name is not None and 'name' not in already_processed:
-            already_processed.append('name')
-            outfile.write(' name=%s' % (self.gds_format_string(quote_attrib(self.name).encode(ExternalEncoding), input_name='name'), ))
-        if self.version is not None and 'version' not in already_processed:
-            already_processed.append('version')
-            outfile.write(' version=%s' % (self.gds_format_string(quote_attrib(self.version).encode(ExternalEncoding), input_name='version'), ))
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='database', fromsubclass_=False):
-        if self.genes:
-            self.genes.export(outfile, level, namespace_, name_='genes', )
-    def hasContent_(self):
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="database"
+    ):
         if (
-            self.genes is not None
-            ):
+            self.transcriptLink is not None
+            and "transcriptLink" not in already_processed
+        ):
+            already_processed.append("transcriptLink")
+            outfile.write(
+                " transcriptLink=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.transcriptLink).encode(ExternalEncoding),
+                        input_name="transcriptLink",
+                    ),
+                )
+            )
+        if self.protLink is not None and "protLink" not in already_processed:
+            already_processed.append("protLink")
+            outfile.write(
+                " protLink=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.protLink).encode(ExternalEncoding),
+                        input_name="protLink",
+                    ),
+                )
+            )
+        if self.geneLink is not None and "geneLink" not in already_processed:
+            already_processed.append("geneLink")
+            outfile.write(
+                " geneLink=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.geneLink).encode(ExternalEncoding),
+                        input_name="geneLink",
+                    ),
+                )
+            )
+        if self.name is not None and "name" not in already_processed:
+            already_processed.append("name")
+            outfile.write(
+                " name=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.name).encode(ExternalEncoding),
+                        input_name="name",
+                    ),
+                )
+            )
+        if self.version is not None and "version" not in already_processed:
+            already_processed.append("version")
+            outfile.write(
+                " version=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.version).encode(ExternalEncoding),
+                        input_name="version",
+                    ),
+                )
+            )
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="database", fromsubclass_=False
+    ):
+        if self.genes:
+            self.genes.export(
+                outfile,
+                level,
+                namespace_,
+                name_="genes",
+            )
+
+    def hasContent_(self):
+        if self.genes is not None:
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='database'):
+
+    def exportLiteral(self, outfile, level, name_="database"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        if self.transcriptLink is not None and 'transcriptLink' not in already_processed:
-            already_processed.append('transcriptLink')
+        if (
+            self.transcriptLink is not None
+            and "transcriptLink" not in already_processed
+        ):
+            already_processed.append("transcriptLink")
             showIndent(outfile, level)
             outfile.write('transcriptLink = "%s",\n' % (self.transcriptLink,))
-        if self.protLink is not None and 'protLink' not in already_processed:
-            already_processed.append('protLink')
+        if self.protLink is not None and "protLink" not in already_processed:
+            already_processed.append("protLink")
             showIndent(outfile, level)
             outfile.write('protLink = "%s",\n' % (self.protLink,))
-        if self.geneLink is not None and 'geneLink' not in already_processed:
-            already_processed.append('geneLink')
+        if self.geneLink is not None and "geneLink" not in already_processed:
+            already_processed.append("geneLink")
             showIndent(outfile, level)
             outfile.write('geneLink = "%s",\n' % (self.geneLink,))
-        if self.name is not None and 'name' not in already_processed:
-            already_processed.append('name')
+        if self.name is not None and "name" not in already_processed:
+            already_processed.append("name")
             showIndent(outfile, level)
             outfile.write('name = "%s",\n' % (self.name,))
-        if self.version is not None and 'version' not in already_processed:
-            already_processed.append('version')
+        if self.version is not None and "version" not in already_processed:
+            already_processed.append("version")
             showIndent(outfile, level)
             outfile.write('version = "%s",\n' % (self.version,))
+
     def exportLiteralChildren(self, outfile, level, name_):
         if self.genes is not None:
             showIndent(outfile, level)
-            outfile.write('genes=model_.genes(\n')
+            outfile.write("genes=model_.genes(\n")
             self.genes.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
-        value = find_attr_value_('transcriptLink', node)
-        if value is not None and 'transcriptLink' not in already_processed:
-            already_processed.append('transcriptLink')
+        value = find_attr_value_("transcriptLink", node)
+        if value is not None and "transcriptLink" not in already_processed:
+            already_processed.append("transcriptLink")
             self.transcriptLink = value
-        value = find_attr_value_('protLink', node)
-        if value is not None and 'protLink' not in already_processed:
-            already_processed.append('protLink')
+        value = find_attr_value_("protLink", node)
+        if value is not None and "protLink" not in already_processed:
+            already_processed.append("protLink")
             self.protLink = value
-        value = find_attr_value_('geneLink', node)
-        if value is not None and 'geneLink' not in already_processed:
-            already_processed.append('geneLink')
+        value = find_attr_value_("geneLink", node)
+        if value is not None and "geneLink" not in already_processed:
+            already_processed.append("geneLink")
             self.geneLink = value
-        value = find_attr_value_('name', node)
-        if value is not None and 'name' not in already_processed:
-            already_processed.append('name')
+        value = find_attr_value_("name", node)
+        if value is not None and "name" not in already_processed:
+            already_processed.append("name")
             self.name = value
-        value = find_attr_value_('version', node)
-        if value is not None and 'version' not in already_processed:
-            already_processed.append('version')
+        value = find_attr_value_("version", node)
+        if value is not None and "version" not in already_processed:
+            already_processed.append("version")
             self.version = value
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
-        if nodeName_ == 'genes':
+        if nodeName_ == "genes":
             obj_ = genes.factory()
             obj_.build(child_)
             self.set_genes(obj_)
+
+
 # end class database
 
 
 class genes(GeneratedsSuper):
     """A gene element represents a list of genes."""
+
     subclass = None
     superclass = None
+
     def __init__(self, gene=None, valueOf_=None):
         if gene is None:
             self.gene = []
         else:
             self.gene = gene
+
     def factory(*args_, **kwargs_):
         if genes.subclass:
             return genes.subclass(*args_, **kwargs_)
         else:
             return genes(*args_, **kwargs_)
+
     factory = staticmethod(factory)
-    def get_gene(self): return self.gene
-    def set_gene(self, gene): self.gene = gene
-    def add_gene(self, value): self.gene.append(value)
-    def insert_gene(self, index, value): self.gene[index] = value
-    def export(self, outfile, level, namespace_='ortho:', name_='genes', namespacedef_=''):
+
+    def get_gene(self):
+        return self.gene
+
+    def set_gene(self, gene):
+        self.gene = gene
+
+    def add_gene(self, value):
+        self.gene.append(value)
+
+    def insert_gene(self, index, value):
+        self.gene[index] = value
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="genes", namespacedef_=""
+    ):
         showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
         already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='genes')
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="genes"
+        )
         if self.hasContent_():
-            outfile.write('>\n')
+            outfile.write(">\n")
             self.exportChildren(outfile, level + 1, namespace_, name_)
             showIndent(outfile, level)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
+            outfile.write("</%s%s>\n" % (namespace_, name_))
         else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='genes'):
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="genes"
+    ):
         pass
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='genes', fromsubclass_=False):
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="genes", fromsubclass_=False
+    ):
         for gene_ in self.gene:
-            gene_.export(outfile, level, namespace_, name_='gene')
+            gene_.export(outfile, level, namespace_, name_="gene")
+
     def hasContent_(self):
-        if (
-            self.gene
-            ):
+        if self.gene:
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='genes'):
+
+    def exportLiteral(self, outfile, level, name_="genes"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
         pass
+
     def exportLiteralChildren(self, outfile, level, name_):
         showIndent(outfile, level)
-        outfile.write('gene=[\n')
+        outfile.write("gene=[\n")
         level += 1
         for gene_ in self.gene:
             showIndent(outfile, level)
-            outfile.write('model_.gene(\n')
+            outfile.write("model_.gene(\n")
             gene_.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
         pass
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
-        if nodeName_ == 'gene':
+        if nodeName_ == "gene":
             obj_ = gene.factory()
             obj_.build(child_)
             self.gene.append(obj_)
+
+
 # end class genes
 
 
@@ -884,190 +1283,300 @@ class gene(GeneratedsSuper):
     the gene via the geneRef elements. Identifier of the protein in
     the source database. Identifier of the transcript in the source
     database."""
+
     subclass = None
     superclass = None
-    def __init__(self, protId=None, id=None, geneId=None, transcriptId=None, valueOf_=None):
+
+    def __init__(
+        self, protId=None, id=None, geneId=None, transcriptId=None, valueOf_=None
+    ):
         self.protId = _cast(None, protId)
         self.id = _cast(int, id)
         self.geneId = _cast(None, geneId)
         self.transcriptId = _cast(None, transcriptId)
         pass
+
     def factory(*args_, **kwargs_):
         if gene.subclass:
             return gene.subclass(*args_, **kwargs_)
         else:
             return gene(*args_, **kwargs_)
-    factory = staticmethod(factory)
-    def get_protId(self): return self.protId
-    def set_protId(self, protId): self.protId = protId
-    def get_id(self): return self.id
-    def set_id(self, id): self.id = id
-    def get_geneId(self): return self.geneId
-    def set_geneId(self, geneId): self.geneId = geneId
-    def get_transcriptId(self): return self.transcriptId
-    def set_transcriptId(self, transcriptId): self.transcriptId = transcriptId
-    def export(self, outfile, level, namespace_='ortho:', name_='gene', namespacedef_=''):
-        showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
-        already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='gene')
-        if self.hasContent_():
-            outfile.write('>\n')
-            self.exportChildren(outfile, level + 1, namespace_, name_)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
-        else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='gene'):
-        if self.protId is not None and 'protId' not in already_processed:
-            already_processed.append('protId')
-            outfile.write(' protId=%s' % (self.gds_format_string(quote_attrib(self.protId).encode(ExternalEncoding), input_name='protId'), ))
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
-            outfile.write(' id="%s"' % self.gds_format_integer(self.id, input_name='id'))
-        if self.geneId is not None and 'geneId' not in already_processed:
-            already_processed.append('geneId')
-            outfile.write(' geneId=%s' % (self.gds_format_string(quote_attrib(self.geneId).encode(ExternalEncoding), input_name='geneId'), ))
-        if self.transcriptId is not None and 'transcriptId' not in already_processed:
-            already_processed.append('transcriptId')
-            outfile.write(' transcriptId=%s' % (self.gds_format_string(quote_attrib(self.transcriptId).encode(ExternalEncoding), input_name='transcriptId'), ))
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='gene', fromsubclass_=False):
-        pass
-    def hasContent_(self):
-        if (
 
-            ):
+    factory = staticmethod(factory)
+
+    def get_protId(self):
+        return self.protId
+
+    def set_protId(self, protId):
+        self.protId = protId
+
+    def get_id(self):
+        return self.id
+
+    def set_id(self, id):
+        self.id = id
+
+    def get_geneId(self):
+        return self.geneId
+
+    def set_geneId(self, geneId):
+        self.geneId = geneId
+
+    def get_transcriptId(self):
+        return self.transcriptId
+
+    def set_transcriptId(self, transcriptId):
+        self.transcriptId = transcriptId
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="gene", namespacedef_=""
+    ):
+        showIndent(outfile, level)
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
+        already_processed = []
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="gene"
+        )
+        if self.hasContent_():
+            outfile.write(">\n")
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            outfile.write("</%s%s>\n" % (namespace_, name_))
+        else:
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="gene"
+    ):
+        if self.protId is not None and "protId" not in already_processed:
+            already_processed.append("protId")
+            outfile.write(
+                " protId=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.protId).encode(ExternalEncoding),
+                        input_name="protId",
+                    ),
+                )
+            )
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
+            outfile.write(
+                ' id="%s"' % self.gds_format_integer(self.id, input_name="id")
+            )
+        if self.geneId is not None and "geneId" not in already_processed:
+            already_processed.append("geneId")
+            outfile.write(
+                " geneId=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.geneId).encode(ExternalEncoding),
+                        input_name="geneId",
+                    ),
+                )
+            )
+        if self.transcriptId is not None and "transcriptId" not in already_processed:
+            already_processed.append("transcriptId")
+            outfile.write(
+                " transcriptId=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.transcriptId).encode(ExternalEncoding),
+                        input_name="transcriptId",
+                    ),
+                )
+            )
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="gene", fromsubclass_=False
+    ):
+        pass
+
+    def hasContent_(self):
+        if ():
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='gene'):
+
+    def exportLiteral(self, outfile, level, name_="gene"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        if self.protId is not None and 'protId' not in already_processed:
-            already_processed.append('protId')
+        if self.protId is not None and "protId" not in already_processed:
+            already_processed.append("protId")
             showIndent(outfile, level)
             outfile.write('protId = "%s",\n' % (self.protId,))
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
             showIndent(outfile, level)
-            outfile.write('id = %d,\n' % (self.id,))
-        if self.geneId is not None and 'geneId' not in already_processed:
-            already_processed.append('geneId')
+            outfile.write("id = %d,\n" % (self.id,))
+        if self.geneId is not None and "geneId" not in already_processed:
+            already_processed.append("geneId")
             showIndent(outfile, level)
             outfile.write('geneId = "%s",\n' % (self.geneId,))
-        if self.transcriptId is not None and 'transcriptId' not in already_processed:
-            already_processed.append('transcriptId')
+        if self.transcriptId is not None and "transcriptId" not in already_processed:
+            already_processed.append("transcriptId")
             showIndent(outfile, level)
             outfile.write('transcriptId = "%s",\n' % (self.transcriptId,))
+
     def exportLiteralChildren(self, outfile, level, name_):
         pass
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
-        value = find_attr_value_('protId', node)
-        if value is not None and 'protId' not in already_processed:
-            already_processed.append('protId')
+        value = find_attr_value_("protId", node)
+        if value is not None and "protId" not in already_processed:
+            already_processed.append("protId")
             self.protId = value
-        value = find_attr_value_('id', node)
-        if value is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        value = find_attr_value_("id", node)
+        if value is not None and "id" not in already_processed:
+            already_processed.append("id")
             try:
                 self.id = int(value)
             except ValueError as exp:
-                raise_parse_error(node, 'Bad integer attribute: %s' % exp)
-        value = find_attr_value_('geneId', node)
-        if value is not None and 'geneId' not in already_processed:
-            already_processed.append('geneId')
+                raise_parse_error(node, "Bad integer attribute: %s" % exp)
+        value = find_attr_value_("geneId", node)
+        if value is not None and "geneId" not in already_processed:
+            already_processed.append("geneId")
             self.geneId = value
-        value = find_attr_value_('transcriptId', node)
-        if value is not None and 'transcriptId' not in already_processed:
-            already_processed.append('transcriptId')
+        value = find_attr_value_("transcriptId", node)
+        if value is not None and "transcriptId" not in already_processed:
+            already_processed.append("transcriptId")
             self.transcriptId = value
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
         pass
+
+
 # end class gene
 
 
 class scores(GeneratedsSuper):
     """A list of score definitions."""
+
     subclass = None
     superclass = None
+
     def __init__(self, scoreDef=None, valueOf_=None):
         if scoreDef is None:
             self.scoreDef = []
         else:
             self.scoreDef = scoreDef
+
     def factory(*args_, **kwargs_):
         if scores.subclass:
             return scores.subclass(*args_, **kwargs_)
         else:
             return scores(*args_, **kwargs_)
+
     factory = staticmethod(factory)
-    def get_scoreDef(self): return self.scoreDef
-    def set_scoreDef(self, scoreDef): self.scoreDef = scoreDef
-    def add_scoreDef(self, value): self.scoreDef.append(value)
-    def insert_scoreDef(self, index, value): self.scoreDef[index] = value
-    def export(self, outfile, level, namespace_='ortho:', name_='scores', namespacedef_=''):
+
+    def get_scoreDef(self):
+        return self.scoreDef
+
+    def set_scoreDef(self, scoreDef):
+        self.scoreDef = scoreDef
+
+    def add_scoreDef(self, value):
+        self.scoreDef.append(value)
+
+    def insert_scoreDef(self, index, value):
+        self.scoreDef[index] = value
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="scores", namespacedef_=""
+    ):
         showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
         already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='scores')
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="scores"
+        )
         if self.hasContent_():
-            outfile.write('>\n')
+            outfile.write(">\n")
             self.exportChildren(outfile, level + 1, namespace_, name_)
             showIndent(outfile, level)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
+            outfile.write("</%s%s>\n" % (namespace_, name_))
         else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='scores'):
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="scores"
+    ):
         pass
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='scores', fromsubclass_=False):
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="scores", fromsubclass_=False
+    ):
         for scoreDef_ in self.scoreDef:
-            scoreDef_.export(outfile, level, namespace_, name_='scoreDef')
+            scoreDef_.export(outfile, level, namespace_, name_="scoreDef")
+
     def hasContent_(self):
-        if (
-            self.scoreDef
-            ):
+        if self.scoreDef:
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='scores'):
+
+    def exportLiteral(self, outfile, level, name_="scores"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
         pass
+
     def exportLiteralChildren(self, outfile, level, name_):
         showIndent(outfile, level)
-        outfile.write('scoreDef=[\n')
+        outfile.write("scoreDef=[\n")
         level += 1
         for scoreDef_ in self.scoreDef:
             showIndent(outfile, level)
-            outfile.write('model_.scoreDef(\n')
+            outfile.write("model_.scoreDef(\n")
             scoreDef_.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
         pass
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
-        if nodeName_ == 'scoreDef':
+        if nodeName_ == "scoreDef":
             obj_ = scoreDef.factory()
             obj_.build(child_)
             self.scoreDef.append(obj_)
+
+
 # end class scores
 
 
@@ -1075,79 +1584,116 @@ class groups(GeneratedsSuper):
     """Represents the list of ortholog groups. Note that the purpose of
     OrthoXML is to store orthology assignment hence on the top level
     only ortholog groups are allowed."""
+
     subclass = None
     superclass = None
+
     def __init__(self, orthologGroup=None, valueOf_=None):
         if orthologGroup is None:
             self.orthologGroup = []
         else:
             self.orthologGroup = orthologGroup
+
     def factory(*args_, **kwargs_):
         if groups.subclass:
             return groups.subclass(*args_, **kwargs_)
         else:
             return groups(*args_, **kwargs_)
+
     factory = staticmethod(factory)
-    def get_orthologGroup(self): return self.orthologGroup
-    def set_orthologGroup(self, orthologGroup): self.orthologGroup = orthologGroup
-    def add_orthologGroup(self, value): self.orthologGroup.append(value)
-    def insert_orthologGroup(self, index, value): self.orthologGroup[index] = value
-    def export(self, outfile, level, namespace_='ortho:', name_='groups', namespacedef_=''):
+
+    def get_orthologGroup(self):
+        return self.orthologGroup
+
+    def set_orthologGroup(self, orthologGroup):
+        self.orthologGroup = orthologGroup
+
+    def add_orthologGroup(self, value):
+        self.orthologGroup.append(value)
+
+    def insert_orthologGroup(self, index, value):
+        self.orthologGroup[index] = value
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="groups", namespacedef_=""
+    ):
         showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
         already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='groups')
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="groups"
+        )
         if self.hasContent_():
-            outfile.write('>\n')
+            outfile.write(">\n")
             self.exportChildren(outfile, level + 1, namespace_, name_)
             showIndent(outfile, level)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
+            outfile.write("</%s%s>\n" % (namespace_, name_))
         else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='groups'):
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="groups"
+    ):
         pass
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='groups', fromsubclass_=False):
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="groups", fromsubclass_=False
+    ):
         for orthologGroup_ in self.orthologGroup:
-            orthologGroup_.export(outfile, level, namespace_, name_='orthologGroup')
+            orthologGroup_.export(outfile, level, namespace_, name_="orthologGroup")
+
     def hasContent_(self):
-        if (
-            self.orthologGroup
-            ):
+        if self.orthologGroup:
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='groups'):
+
+    def exportLiteral(self, outfile, level, name_="groups"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
         pass
+
     def exportLiteralChildren(self, outfile, level, name_):
         showIndent(outfile, level)
-        outfile.write('orthologGroup=[\n')
+        outfile.write("orthologGroup=[\n")
         level += 1
         for orthologGroup_ in self.orthologGroup:
             showIndent(outfile, level)
-            outfile.write('model_.group(\n')
-            orthologGroup_.exportLiteral(outfile, level, name_='group')
+            outfile.write("model_.group(\n")
+            orthologGroup_.exportLiteral(outfile, level, name_="group")
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
         pass
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
-        if nodeName_ == 'orthologGroup':
+        if nodeName_ == "orthologGroup":
             obj_ = group.factory()
             obj_.build(child_)
             self.orthologGroup.append(obj_)
+
+
 # end class groups
 
 
@@ -1165,9 +1711,21 @@ class group(GeneratedsSuper):
     the resource. This attribute is not required but if your
     resource provides identifiers for the ortholog groups we
     strongly recommend to use it at least for the top level groups."""
+
     subclass = None
     superclass = None
-    def __init__(self, id=None, score=None, property=None, geneRef=None, paralogGroup=None, orthologGroup=None, notes=None, valueOf_=None):
+
+    def __init__(
+        self,
+        id=None,
+        score=None,
+        property=None,
+        geneRef=None,
+        paralogGroup=None,
+        orthologGroup=None,
+        notes=None,
+        valueOf_=None,
+    ):
         self.id = _cast(None, id)
         if score is None:
             self.score = []
@@ -1190,189 +1748,273 @@ class group(GeneratedsSuper):
         else:
             self.orthologGroup = orthologGroup
         self.notes = notes
+
     def factory(*args_, **kwargs_):
         if group.subclass:
             return group.subclass(*args_, **kwargs_)
         else:
             return group(*args_, **kwargs_)
+
     factory = staticmethod(factory)
-    def get_score(self): return self.score
-    def set_score(self, score): self.score = score
-    def add_score(self, value): self.score.append(value)
-    def insert_score(self, index, value): self.score[index] = value
-    def get_property(self): return self.property
-    def set_property(self, property): self.property = property
-    def add_property(self, value): self.property.append(value)
-    def insert_property(self, index, value): self.property[index] = value
-    def get_geneRef(self): return self.geneRef
-    def set_geneRef(self, geneRef): self.geneRef = geneRef
-    def add_geneRef(self, value): self.geneRef.append(value)
-    def insert_geneRef(self, index, value): self.geneRef[index] = value
-    def get_paralogGroup(self): return self.paralogGroup
-    def set_paralogGroup(self, paralogGroup): self.paralogGroup = paralogGroup
-    def add_paralogGroup(self, value): self.paralogGroup.append(value)
-    def insert_paralogGroup(self, index, value): self.paralogGroup[index] = value
-    def get_orthologGroup(self): return self.orthologGroup
-    def set_orthologGroup(self, orthologGroup): self.orthologGroup = orthologGroup
-    def add_orthologGroup(self, value): self.orthologGroup.append(value)
-    def insert_orthologGroup(self, index, value): self.orthologGroup[index] = value
-    def get_notes(self): return self.notes
-    def set_notes(self, notes): self.notes = notes
-    def get_id(self): return self.id
-    def set_id(self, id): self.id = id
-    def export(self, outfile, level, namespace_='ortho:', name_='group', namespacedef_=''):
+
+    def get_score(self):
+        return self.score
+
+    def set_score(self, score):
+        self.score = score
+
+    def add_score(self, value):
+        self.score.append(value)
+
+    def insert_score(self, index, value):
+        self.score[index] = value
+
+    def get_property(self):
+        return self.property
+
+    def set_property(self, property):
+        self.property = property
+
+    def add_property(self, value):
+        self.property.append(value)
+
+    def insert_property(self, index, value):
+        self.property[index] = value
+
+    def get_geneRef(self):
+        return self.geneRef
+
+    def set_geneRef(self, geneRef):
+        self.geneRef = geneRef
+
+    def add_geneRef(self, value):
+        self.geneRef.append(value)
+
+    def insert_geneRef(self, index, value):
+        self.geneRef[index] = value
+
+    def get_paralogGroup(self):
+        return self.paralogGroup
+
+    def set_paralogGroup(self, paralogGroup):
+        self.paralogGroup = paralogGroup
+
+    def add_paralogGroup(self, value):
+        self.paralogGroup.append(value)
+
+    def insert_paralogGroup(self, index, value):
+        self.paralogGroup[index] = value
+
+    def get_orthologGroup(self):
+        return self.orthologGroup
+
+    def set_orthologGroup(self, orthologGroup):
+        self.orthologGroup = orthologGroup
+
+    def add_orthologGroup(self, value):
+        self.orthologGroup.append(value)
+
+    def insert_orthologGroup(self, index, value):
+        self.orthologGroup[index] = value
+
+    def get_notes(self):
+        return self.notes
+
+    def set_notes(self, notes):
+        self.notes = notes
+
+    def get_id(self):
+        return self.id
+
+    def set_id(self, id):
+        self.id = id
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="group", namespacedef_=""
+    ):
         showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
         already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='group')
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="group"
+        )
         if self.hasContent_():
-            outfile.write('>\n')
+            outfile.write(">\n")
             self.exportChildren(outfile, level + 1, namespace_, name_)
             showIndent(outfile, level)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
+            outfile.write("</%s%s>\n" % (namespace_, name_))
         else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='group'):
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
-            outfile.write(' id=%s' % (self.gds_format_string(quote_attrib(self.id).encode(ExternalEncoding), input_name='id'), ))
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='group', fromsubclass_=False):
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="group"
+    ):
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
+            outfile.write(
+                " id=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.id).encode(ExternalEncoding), input_name="id"
+                    ),
+                )
+            )
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="group", fromsubclass_=False
+    ):
         for score_ in self.score:
-            score_.export(outfile, level, namespace_, name_='score')
+            score_.export(outfile, level, namespace_, name_="score")
         for property_ in self.property:
-            property_.export(outfile, level, namespace_, name_='property')
+            property_.export(outfile, level, namespace_, name_="property")
         for geneRef_ in self.geneRef:
-            geneRef_.export(outfile, level, namespace_, name_='geneRef')
+            geneRef_.export(outfile, level, namespace_, name_="geneRef")
         for paralogGroup_ in self.paralogGroup:
-            paralogGroup_.export(outfile, level, namespace_, name_='paralogGroup')
+            paralogGroup_.export(outfile, level, namespace_, name_="paralogGroup")
         for orthologGroup_ in self.orthologGroup:
-            orthologGroup_.export(outfile, level, namespace_, name_='orthologGroup')
+            orthologGroup_.export(outfile, level, namespace_, name_="orthologGroup")
         if self.notes:
-            self.notes.export(outfile, level, namespace_, name_='notes')
+            self.notes.export(outfile, level, namespace_, name_="notes")
+
     def hasContent_(self):
         if (
-            self.score or
-            self.property or
-            self.geneRef or
-            self.paralogGroup or
-            self.orthologGroup or
-            self.notes is not None
-            ):
+            self.score
+            or self.property
+            or self.geneRef
+            or self.paralogGroup
+            or self.orthologGroup
+            or self.notes is not None
+        ):
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='group'):
+
+    def exportLiteral(self, outfile, level, name_="group"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
             showIndent(outfile, level)
             outfile.write('id = "%s",\n' % (self.id,))
+
     def exportLiteralChildren(self, outfile, level, name_):
         showIndent(outfile, level)
-        outfile.write('score=[\n')
+        outfile.write("score=[\n")
         level += 1
         for score_ in self.score:
             showIndent(outfile, level)
-            outfile.write('model_.score(\n')
+            outfile.write("model_.score(\n")
             score_.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
         showIndent(outfile, level)
-        outfile.write('property=[\n')
+        outfile.write("property=[\n")
         level += 1
         for property_ in self.property:
             showIndent(outfile, level)
-            outfile.write('model_.property(\n')
+            outfile.write("model_.property(\n")
             property_.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
         showIndent(outfile, level)
-        outfile.write('geneRef=[\n')
+        outfile.write("geneRef=[\n")
         level += 1
         for geneRef_ in self.geneRef:
             showIndent(outfile, level)
-            outfile.write('model_.geneRef(\n')
+            outfile.write("model_.geneRef(\n")
             geneRef_.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
         showIndent(outfile, level)
-        outfile.write('paralogGroup=[\n')
+        outfile.write("paralogGroup=[\n")
         level += 1
         for paralogGroup_ in self.paralogGroup:
             showIndent(outfile, level)
-            outfile.write('model_.group(\n')
-            paralogGroup_.exportLiteral(outfile, level, name_='group')
+            outfile.write("model_.group(\n")
+            paralogGroup_.exportLiteral(outfile, level, name_="group")
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
         showIndent(outfile, level)
-        outfile.write('orthologGroup=[\n')
+        outfile.write("orthologGroup=[\n")
         level += 1
         for orthologGroup_ in self.orthologGroup:
             showIndent(outfile, level)
-            outfile.write('model_.group(\n')
-            orthologGroup_.exportLiteral(outfile, level, name_='group')
+            outfile.write("model_.group(\n")
+            orthologGroup_.exportLiteral(outfile, level, name_="group")
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
         if self.notes is not None:
             showIndent(outfile, level)
-            outfile.write('notes=model_.notes(\n')
+            outfile.write("notes=model_.notes(\n")
             self.notes.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
-        value = find_attr_value_('id', node)
-        if value is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        value = find_attr_value_("id", node)
+        if value is not None and "id" not in already_processed:
+            already_processed.append("id")
             self.id = value
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
-        if nodeName_ == 'score':
+        if nodeName_ == "score":
             obj_ = score.factory()
             obj_.build(child_)
             self.score.append(obj_)
-        elif nodeName_ == 'property':
+        elif nodeName_ == "property":
             obj_ = property.factory()
             obj_.build(child_)
             self.property.append(obj_)
-        elif nodeName_ == 'geneRef':
+        elif nodeName_ == "geneRef":
             obj_ = geneRef.factory()
             obj_.build(child_)
             self.geneRef.append(obj_)
-        elif nodeName_ == 'paralogGroup':
+        elif nodeName_ == "paralogGroup":
             obj_ = group.factory()
             obj_.build(child_)
             self.paralogGroup.append(obj_)
-        elif nodeName_ == 'orthologGroup':
+        elif nodeName_ == "orthologGroup":
             obj_ = group.factory()
             obj_.build(child_)
             self.orthologGroup.append(obj_)
-        elif nodeName_ == 'notes':
+        elif nodeName_ == "notes":
             obj_ = notes.factory()
             obj_.build(child_)
             self.set_notes(obj_)
+
+
 # end class group
 
 
@@ -1386,8 +2028,10 @@ class geneRef(GeneratedsSuper):
     InParanoid, for example, we could use it to mark the seed
     orthologs). Internal identifier for a gene element defined under
     the species element."""
+
     subclass = None
     superclass = None
+
     def __init__(self, id=None, score=None, notes=None, valueOf_=None):
         self.id = _cast(int, id)
         if score is None:
@@ -1395,100 +2039,144 @@ class geneRef(GeneratedsSuper):
         else:
             self.score = score
         self.notes = notes
+
     def factory(*args_, **kwargs_):
         if geneRef.subclass:
             return geneRef.subclass(*args_, **kwargs_)
         else:
             return geneRef(*args_, **kwargs_)
+
     factory = staticmethod(factory)
-    def get_score(self): return self.score
-    def set_score(self, score): self.score = score
-    def add_score(self, value): self.score.append(value)
-    def insert_score(self, index, value): self.score[index] = value
-    def get_notes(self): return self.notes
-    def set_notes(self, notes): self.notes = notes
-    def get_id(self): return self.id
-    def set_id(self, id): self.id = id
-    def export(self, outfile, level, namespace_='ortho:', name_='geneRef', namespacedef_=''):
+
+    def get_score(self):
+        return self.score
+
+    def set_score(self, score):
+        self.score = score
+
+    def add_score(self, value):
+        self.score.append(value)
+
+    def insert_score(self, index, value):
+        self.score[index] = value
+
+    def get_notes(self):
+        return self.notes
+
+    def set_notes(self, notes):
+        self.notes = notes
+
+    def get_id(self):
+        return self.id
+
+    def set_id(self, id):
+        self.id = id
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="geneRef", namespacedef_=""
+    ):
         showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
         already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='geneRef')
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="geneRef"
+        )
         if self.hasContent_():
-            outfile.write('>\n')
+            outfile.write(">\n")
             self.exportChildren(outfile, level + 1, namespace_, name_)
             showIndent(outfile, level)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
+            outfile.write("</%s%s>\n" % (namespace_, name_))
         else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='geneRef'):
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
-            outfile.write(' id="%s"' % self.gds_format_integer(self.id, input_name='id'))
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='geneRef', fromsubclass_=False):
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="geneRef"
+    ):
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
+            outfile.write(
+                ' id="%s"' % self.gds_format_integer(self.id, input_name="id")
+            )
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="geneRef", fromsubclass_=False
+    ):
         for score_ in self.score:
-            score_.export(outfile, level, namespace_, name_='score')
+            score_.export(outfile, level, namespace_, name_="score")
         if self.notes:
-            self.notes.export(outfile, level, namespace_, name_='notes')
+            self.notes.export(outfile, level, namespace_, name_="notes")
+
     def hasContent_(self):
-        if (
-            self.score or
-            self.notes is not None
-            ):
+        if self.score or self.notes is not None:
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='geneRef'):
+
+    def exportLiteral(self, outfile, level, name_="geneRef"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
             showIndent(outfile, level)
-            outfile.write('id = %d,\n' % (self.id,))
+            outfile.write("id = %d,\n" % (self.id,))
+
     def exportLiteralChildren(self, outfile, level, name_):
         showIndent(outfile, level)
-        outfile.write('score=[\n')
+        outfile.write("score=[\n")
         level += 1
         for score_ in self.score:
             showIndent(outfile, level)
-            outfile.write('model_.score(\n')
+            outfile.write("model_.score(\n")
             score_.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
         level -= 1
         showIndent(outfile, level)
-        outfile.write('],\n')
+        outfile.write("],\n")
         if self.notes is not None:
             showIndent(outfile, level)
-            outfile.write('notes=model_.notes(\n')
+            outfile.write("notes=model_.notes(\n")
             self.notes.exportLiteral(outfile, level)
             showIndent(outfile, level)
-            outfile.write('),\n')
+            outfile.write("),\n")
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
-        value = find_attr_value_('id', node)
-        if value is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        value = find_attr_value_("id", node)
+        if value is not None and "id" not in already_processed:
+            already_processed.append("id")
             try:
                 self.id = int(value)
             except ValueError as exp:
-                raise_parse_error(node, 'Bad integer attribute: %s' % exp)
+                raise_parse_error(node, "Bad integer attribute: %s" % exp)
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
-        if nodeName_ == 'score':
+        if nodeName_ == "score":
             obj_ = score.factory()
             obj_.build(child_)
             self.score.append(obj_)
-        elif nodeName_ == 'notes':
+        elif nodeName_ == "notes":
             obj_ = notes.factory()
             obj_.build(child_)
             self.set_notes(obj_)
+
+
 # end class geneRef
 
 
@@ -1501,81 +2189,126 @@ class scoreDef(GeneratedsSuper):
     defined to apply to either groups or geneRefs. It is possible to
     define multiple scores. An internal identifier to link to the
     scoreDef from a score element. Description of the score."""
+
     subclass = None
     superclass = None
+
     def __init__(self, id=None, desc=None, valueOf_=None):
         self.id = _cast(None, id)
         self.desc = _cast(None, desc)
         pass
+
     def factory(*args_, **kwargs_):
         if scoreDef.subclass:
             return scoreDef.subclass(*args_, **kwargs_)
         else:
             return scoreDef(*args_, **kwargs_)
-    factory = staticmethod(factory)
-    def get_id(self): return self.id
-    def set_id(self, id): self.id = id
-    def get_desc(self): return self.desc
-    def set_desc(self, desc): self.desc = desc
-    def export(self, outfile, level, namespace_='ortho:', name_='scoreDef', namespacedef_=''):
-        showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
-        already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='scoreDef')
-        if self.hasContent_():
-            outfile.write('>\n')
-            self.exportChildren(outfile, level + 1, namespace_, name_)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
-        else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='scoreDef'):
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
-            outfile.write(' id=%s' % (quote_attrib(self.id), ))
-        if self.desc is not None and 'desc' not in already_processed:
-            already_processed.append('desc')
-            outfile.write(' desc=%s' % (self.gds_format_string(quote_attrib(self.desc).encode(ExternalEncoding), input_name='desc'), ))
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='scoreDef', fromsubclass_=False):
-        pass
-    def hasContent_(self):
-        if (
 
-            ):
+    factory = staticmethod(factory)
+
+    def get_id(self):
+        return self.id
+
+    def set_id(self, id):
+        self.id = id
+
+    def get_desc(self):
+        return self.desc
+
+    def set_desc(self, desc):
+        self.desc = desc
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="scoreDef", namespacedef_=""
+    ):
+        showIndent(outfile, level)
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
+        already_processed = []
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="scoreDef"
+        )
+        if self.hasContent_():
+            outfile.write(">\n")
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            outfile.write("</%s%s>\n" % (namespace_, name_))
+        else:
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="scoreDef"
+    ):
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
+            outfile.write(" id=%s" % (quote_attrib(self.id),))
+        if self.desc is not None and "desc" not in already_processed:
+            already_processed.append("desc")
+            outfile.write(
+                " desc=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.desc).encode(ExternalEncoding),
+                        input_name="desc",
+                    ),
+                )
+            )
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="scoreDef", fromsubclass_=False
+    ):
+        pass
+
+    def hasContent_(self):
+        if ():
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='scoreDef'):
+
+    def exportLiteral(self, outfile, level, name_="scoreDef"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
             showIndent(outfile, level)
             outfile.write('id = "%s",\n' % (self.id,))
-        if self.desc is not None and 'desc' not in already_processed:
-            already_processed.append('desc')
+        if self.desc is not None and "desc" not in already_processed:
+            already_processed.append("desc")
             showIndent(outfile, level)
             outfile.write('desc = "%s",\n' % (self.desc,))
+
     def exportLiteralChildren(self, outfile, level, name_):
         pass
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
-        value = find_attr_value_('id', node)
-        if value is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        value = find_attr_value_("id", node)
+        if value is not None and "id" not in already_processed:
+            already_processed.append("id")
             self.id = value
-        value = find_attr_value_('desc', node)
-        if value is not None and 'desc' not in already_processed:
-            already_processed.append('desc')
+        value = find_attr_value_("desc", node)
+        if value is not None and "desc" not in already_processed:
+            already_processed.append("desc")
             self.desc = value
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
         pass
+
+
 # end class scoreDef
 
 
@@ -1586,84 +2319,123 @@ class score(GeneratedsSuper):
     An identifier linking to the scoreDef element, which defines the
     score. The actual value of the score. For instance a confidence
     score of a group member."""
+
     subclass = None
     superclass = None
+
     def __init__(self, id=None, value=None, valueOf_=None):
         self.id = _cast(None, id)
         self.value = _cast(float, value)
         pass
+
     def factory(*args_, **kwargs_):
         if score.subclass:
             return score.subclass(*args_, **kwargs_)
         else:
             return score(*args_, **kwargs_)
-    factory = staticmethod(factory)
-    def get_id(self): return self.id
-    def set_id(self, id): self.id = id
-    def get_value(self): return self.value
-    def set_value(self, value): self.value = value
-    def export(self, outfile, level, namespace_='ortho:', name_='score', namespacedef_=''):
-        showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
-        already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='score')
-        if self.hasContent_():
-            outfile.write('>\n')
-            self.exportChildren(outfile, level + 1, namespace_, name_)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
-        else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='score'):
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
-            outfile.write(' id=%s' % (quote_attrib(self.id), ))
-        if self.value is not None and 'value' not in already_processed:
-            already_processed.append('value')
-            outfile.write(' value="%s"' % self.gds_format_float(self.value, input_name='value'))
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='score', fromsubclass_=False):
-        pass
-    def hasContent_(self):
-        if (
 
-            ):
+    factory = staticmethod(factory)
+
+    def get_id(self):
+        return self.id
+
+    def set_id(self, id):
+        self.id = id
+
+    def get_value(self):
+        return self.value
+
+    def set_value(self, value):
+        self.value = value
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="score", namespacedef_=""
+    ):
+        showIndent(outfile, level)
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
+        already_processed = []
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="score"
+        )
+        if self.hasContent_():
+            outfile.write(">\n")
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            outfile.write("</%s%s>\n" % (namespace_, name_))
+        else:
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="score"
+    ):
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
+            outfile.write(" id=%s" % (quote_attrib(self.id),))
+        if self.value is not None and "value" not in already_processed:
+            already_processed.append("value")
+            outfile.write(
+                ' value="%s"' % self.gds_format_float(self.value, input_name="value")
+            )
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="score", fromsubclass_=False
+    ):
+        pass
+
+    def hasContent_(self):
+        if ():
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='score'):
+
+    def exportLiteral(self, outfile, level, name_="score"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        if self.id is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        if self.id is not None and "id" not in already_processed:
+            already_processed.append("id")
             showIndent(outfile, level)
             outfile.write('id = "%s",\n' % (self.id,))
-        if self.value is not None and 'value' not in already_processed:
-            already_processed.append('value')
+        if self.value is not None and "value" not in already_processed:
+            already_processed.append("value")
             showIndent(outfile, level)
-            outfile.write('value = %f,\n' % (self.value,))
+            outfile.write("value = %f,\n" % (self.value,))
+
     def exportLiteralChildren(self, outfile, level, name_):
         pass
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
-        value = find_attr_value_('id', node)
-        if value is not None and 'id' not in already_processed:
-            already_processed.append('id')
+        value = find_attr_value_("id", node)
+        if value is not None and "id" not in already_processed:
+            already_processed.append("id")
             self.id = value
-        value = find_attr_value_('value', node)
-        if value is not None and 'value' not in already_processed:
-            already_processed.append('value')
+        value = find_attr_value_("value", node)
+        if value is not None and "value" not in already_processed:
+            already_processed.append("value")
             try:
                 self.value = float(value)
             except ValueError as exp:
-                raise ValueError('Bad float/double attribute (value): %s' % exp)
+                raise ValueError("Bad float/double attribute (value): %s" % exp)
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
         pass
+
+
 # end class score
 
 
@@ -1672,81 +2444,134 @@ class property(GeneratedsSuper):
     the group members. The key of the key-value annotation pair. The
     value of the key-value annotation pair. Optional to allow flag
     like annotations."""
+
     subclass = None
     superclass = None
+
     def __init__(self, name=None, value=None, valueOf_=None):
         self.name = _cast(None, name)
         self.value = _cast(None, value)
         pass
+
     def factory(*args_, **kwargs_):
         if property.subclass:
             return property.subclass(*args_, **kwargs_)
         else:
             return property(*args_, **kwargs_)
-    factory = staticmethod(factory)
-    def get_name(self): return self.name
-    def set_name(self, name): self.name = name
-    def get_value(self): return self.value
-    def set_value(self, value): self.value = value
-    def export(self, outfile, level, namespace_='ortho:', name_='property', namespacedef_=''):
-        showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
-        already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='property')
-        if self.hasContent_():
-            outfile.write('>\n')
-            self.exportChildren(outfile, level + 1, namespace_, name_)
-            outfile.write('</%s%s>\n' % (namespace_, name_))
-        else:
-            outfile.write('/>\n')
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='property'):
-        if self.name is not None and 'name' not in already_processed:
-            already_processed.append('name')
-            outfile.write(' name=%s' % (self.gds_format_string(quote_attrib(self.name).encode(ExternalEncoding), input_name='name'), ))
-        if self.value is not None and 'value' not in already_processed:
-            already_processed.append('value')
-            outfile.write(' value=%s' % (self.gds_format_string(quote_attrib(self.value).encode(ExternalEncoding), input_name='value'), ))
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='property', fromsubclass_=False):
-        pass
-    def hasContent_(self):
-        if (
 
-            ):
+    factory = staticmethod(factory)
+
+    def get_name(self):
+        return self.name
+
+    def set_name(self, name):
+        self.name = name
+
+    def get_value(self):
+        return self.value
+
+    def set_value(self, value):
+        self.value = value
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="property", namespacedef_=""
+    ):
+        showIndent(outfile, level)
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
+        already_processed = []
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="property"
+        )
+        if self.hasContent_():
+            outfile.write(">\n")
+            self.exportChildren(outfile, level + 1, namespace_, name_)
+            outfile.write("</%s%s>\n" % (namespace_, name_))
+        else:
+            outfile.write("/>\n")
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="property"
+    ):
+        if self.name is not None and "name" not in already_processed:
+            already_processed.append("name")
+            outfile.write(
+                " name=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.name).encode(ExternalEncoding),
+                        input_name="name",
+                    ),
+                )
+            )
+        if self.value is not None and "value" not in already_processed:
+            already_processed.append("value")
+            outfile.write(
+                " value=%s"
+                % (
+                    self.gds_format_string(
+                        quote_attrib(self.value).encode(ExternalEncoding),
+                        input_name="value",
+                    ),
+                )
+            )
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="property", fromsubclass_=False
+    ):
+        pass
+
+    def hasContent_(self):
+        if ():
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='property'):
+
+    def exportLiteral(self, outfile, level, name_="property"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
-        if self.name is not None and 'name' not in already_processed:
-            already_processed.append('name')
+        if self.name is not None and "name" not in already_processed:
+            already_processed.append("name")
             showIndent(outfile, level)
             outfile.write('name = "%s",\n' % (self.name,))
-        if self.value is not None and 'value' not in already_processed:
-            already_processed.append('value')
+        if self.value is not None and "value" not in already_processed:
+            already_processed.append("value")
             showIndent(outfile, level)
             outfile.write('value = "%s",\n' % (self.value,))
+
     def exportLiteralChildren(self, outfile, level, name_):
         pass
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
-        value = find_attr_value_('name', node)
-        if value is not None and 'name' not in already_processed:
-            already_processed.append('name')
+        value = find_attr_value_("name", node)
+        if value is not None and "name" not in already_processed:
+            already_processed.append("name")
             self.name = value
-        value = find_attr_value_('value', node)
-        if value is not None and 'value' not in already_processed:
-            already_processed.append('value')
+        value = find_attr_value_("value", node)
+        if value is not None and "value" not in already_processed:
+            already_processed.append("value")
             self.value = value
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
         pass
+
+
 # end class property
 
 
@@ -1759,8 +2584,10 @@ class notes(GeneratedsSuper):
     the root element orthoXML, the species element, the
     orthologGroup element, the paralogGroup element, or the geneRef
     element."""
+
     subclass = None
     superclass = None
+
     def __init__(self, valueOf_=None, mixedclass_=None, content_=None):
         self.valueOf_ = valueOf_
         if mixedclass_ is None:
@@ -1772,68 +2599,102 @@ class notes(GeneratedsSuper):
         else:
             self.content_ = content_
         self.valueOf_ = valueOf_
+
     def factory(*args_, **kwargs_):
         if notes.subclass:
             return notes.subclass(*args_, **kwargs_)
         else:
             return notes(*args_, **kwargs_)
+
     factory = staticmethod(factory)
-    def get_valueOf_(self): return self.valueOf_
-    def set_valueOf_(self, valueOf_): self.valueOf_ = valueOf_
-    def export(self, outfile, level, namespace_='ortho:', name_='notes', namespacedef_=''):
+
+    def get_valueOf_(self):
+        return self.valueOf_
+
+    def set_valueOf_(self, valueOf_):
+        self.valueOf_ = valueOf_
+
+    def export(
+        self, outfile, level, namespace_="ortho:", name_="notes", namespacedef_=""
+    ):
         showIndent(outfile, level)
-        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        outfile.write(
+            "<%s%s%s"
+            % (
+                namespace_,
+                name_,
+                namespacedef_ and " " + namespacedef_ or "",
+            )
+        )
         already_processed = []
-        self.exportAttributes(outfile, level, already_processed, namespace_, name_='notes')
-        outfile.write('>')
+        self.exportAttributes(
+            outfile, level, already_processed, namespace_, name_="notes"
+        )
+        outfile.write(">")
         self.exportChildren(outfile, level + 1, namespace_, name_)
-        outfile.write('</%s%s>\n' % (namespace_, name_))
-    def exportAttributes(self, outfile, level, already_processed, namespace_='ortho:', name_='notes'):
+        outfile.write("</%s%s>\n" % (namespace_, name_))
+
+    def exportAttributes(
+        self, outfile, level, already_processed, namespace_="ortho:", name_="notes"
+    ):
         pass
-    def exportChildren(self, outfile, level, namespace_='ortho:', name_='notes', fromsubclass_=False):
+
+    def exportChildren(
+        self, outfile, level, namespace_="ortho:", name_="notes", fromsubclass_=False
+    ):
         pass
+
     def hasContent_(self):
-        if (
-            self.valueOf_
-            ):
+        if self.valueOf_:
             return True
         else:
             return False
-    def exportLiteral(self, outfile, level, name_='notes'):
+
+    def exportLiteral(self, outfile, level, name_="notes"):
         level += 1
         self.exportLiteralAttributes(outfile, level, [], name_)
         if self.hasContent_():
             self.exportLiteralChildren(outfile, level, name_)
         showIndent(outfile, level)
         outfile.write('valueOf_ = """%s""",\n' % (self.valueOf_,))
+
     def exportLiteralAttributes(self, outfile, level, already_processed, name_):
         pass
+
     def exportLiteralChildren(self, outfile, level, name_):
         pass
+
     def build(self, node):
         self.buildAttributes(node, node.attrib, [])
         self.valueOf_ = get_all_text_(node)
         if node.text is not None:
-            obj_ = self.mixedclass_(MixedContainer.CategoryText,
-                MixedContainer.TypeNone, '', node.text)
+            obj_ = self.mixedclass_(
+                MixedContainer.CategoryText, MixedContainer.TypeNone, "", node.text
+            )
             self.content_.append(obj_)
         for child in node:
             nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
             self.buildChildren(child, node, nodeName_)
+
     def buildAttributes(self, node, attrs, already_processed):
         pass
+
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
         if not fromsubclass_ and child_.tail is not None:
-            obj_ = self.mixedclass_(MixedContainer.CategoryText,
-                MixedContainer.TypeNone, '', child_.tail)
+            obj_ = self.mixedclass_(
+                MixedContainer.CategoryText, MixedContainer.TypeNone, "", child_.tail
+            )
             self.content_.append(obj_)
         pass
+
+
 # end class notes
 
 
 USAGE_TEXT = """
 Usage: python <Parser>.py [ -s ] <in_xml_file>
 """
+
 
 def usage():
     print(USAGE_TEXT)
@@ -1851,33 +2712,34 @@ def parse(inFileName):
     rootNode = doc.getroot()
     rootTag, rootClass = get_root_tag(rootNode)
     if rootClass is None:
-        rootTag = 'orthoXML'
+        rootTag = "orthoXML"
         rootClass = orthoXML
     rootObj = rootClass.factory()
     rootObj.build(rootNode)
     # Enable Python to collect the space used by the DOM.
     doc = None
-##     sys.stdout.write('<?xml version="1.0" ?>\n')
-##     rootObj.export(sys.stdout, 0, name_=rootTag, 
-##         namespacedef_='xmlns:ortho="http://orthoXML.org/2011/"')
+    ##     sys.stdout.write('<?xml version="1.0" ?>\n')
+    ##     rootObj.export(sys.stdout, 0, name_=rootTag,
+    ##         namespacedef_='xmlns:ortho="http://orthoXML.org/2011/"')
     return rootObj
 
 
 def parseString(inString):
     from StringIO import StringIO
+
     doc = parsexml_(StringIO(inString))
     rootNode = doc.getroot()
     rootTag, rootClass = get_root_tag(rootNode)
     if rootClass is None:
-        rootTag = 'orthoXML'
+        rootTag = "orthoXML"
         rootClass = orthoXML
     rootObj = rootClass.factory()
     rootObj.build(rootNode)
     # Enable Python to collect the space used by the DOM.
     doc = None
-##     sys.stdout.write('<?xml version="1.0" ?>\n')
-##     rootObj.export(sys.stdout, 0, name_="orthoXML",
-##         namespacedef_='xmlns:ortho="http://orthoXML.org/2011/"')
+    ##     sys.stdout.write('<?xml version="1.0" ?>\n')
+    ##     rootObj.export(sys.stdout, 0, name_="orthoXML",
+    ##         namespacedef_='xmlns:ortho="http://orthoXML.org/2011/"')
     return rootObj
 
 
@@ -1886,17 +2748,17 @@ def parseLiteral(inFileName):
     rootNode = doc.getroot()
     rootTag, rootClass = get_root_tag(rootNode)
     if rootClass is None:
-        rootTag = 'orthoXML'
+        rootTag = "orthoXML"
         rootClass = orthoXML
     rootObj = rootClass.factory()
     rootObj.build(rootNode)
     # Enable Python to collect the space used by the DOM.
     doc = None
-##     sys.stdout.write('#from orthoxml import *\n\n')
-##     sys.stdout.write('import orthoxml as model_\n\n')
-##     sys.stdout.write('rootObj = model_.rootTag(\n')
-##     rootObj.exportLiteral(sys.stdout, 0, name_=rootTag)
-##     sys.stdout.write(')\n')
+    ##     sys.stdout.write('#from orthoxml import *\n\n')
+    ##     sys.stdout.write('import orthoxml as model_\n\n')
+    ##     sys.stdout.write('rootObj = model_.rootTag(\n')
+    ##     rootObj.exportLiteral(sys.stdout, 0, name_=rootTag)
+    ##     sys.stdout.write(')\n')
     return rootObj
 
 
@@ -1908,8 +2770,8 @@ def main():
         usage()
 
 
-if __name__ == '__main__':
-    #import pdb; pdb.set_trace()
+if __name__ == "__main__":
+    # import pdb; pdb.set_trace()
     main()
 
 
@@ -1926,5 +2788,5 @@ __all__ = [
     "score",
     "scoreDef",
     "scores",
-    "species"
-    ]
+    "species",
+]
