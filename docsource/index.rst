@@ -57,7 +57,7 @@ Once the database is completed it can be interogated using a profiler object. Co
 
 
 .. code-block:: python
-   import HogProf
+   import hogprof
    myproject.do_x()
 
 

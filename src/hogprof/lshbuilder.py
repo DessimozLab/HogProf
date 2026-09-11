@@ -18,7 +18,7 @@ import h5py
 import time
 import gc
 from pyoma.browser import db
-from HogProf.utils import pyhamutils, hashutils, files_utils
+from hogprof.utils import pyhamutils, hashutils, files_utils
 import numpy as np
 import tqdm
 import random
