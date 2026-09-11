@@ -1,15 +1,17 @@
-from __future__ import print_function
+
+import multiprocessing as mp
+import pickle
+import time
 
 from goatools import semantic
-from pyoma.browser.models import ProteinEntry
-from goatools.obo_parser import GODag
-from . import hashutils
-import pickle
 from goatools.go_enrichment import GOEnrichmentStudy
+from goatools.obo_parser import GODag
 from pyoma.browser import db
-import multiprocessing as mp
+from pyoma.browser.models import ProteinEntry
 from tables import *
-import time
+
+from . import hashutils
+
 ##############enrichment##############################################
 
 
@@ -23,7 +25,7 @@ def return_enrichment_study_obj(gaf_taxfiltered, obo=None):
         obodag = GODag(obo)
 
     goeaobj = GOEnrichmentStudy(
-        gaf_taxfiltered.keys(),  #
+        gaf_taxfiltered.keys(),
         gaf_taxfiltered,  # geneid/GO associations possible with tree used for DB
         obodag,  # Ontologies
         propagate_counts=False,
@@ -240,4 +242,4 @@ def goterm2id(go_term_to_modif):
 
 
 def id2goterm(go_term_to_modif):
-    return "GO:{:07d}".format(go_term_to_modif)
+    return f"GO:{go_term_to_modif:07d}"

@@ -1,8 +1,6 @@
-import datasketch
-import itertools
-import ete3
 import copy
-import math
+
+import datasketch
 import numpy as np
 import pandas as pd
 

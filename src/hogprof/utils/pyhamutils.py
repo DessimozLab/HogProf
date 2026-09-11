@@ -1,9 +1,8 @@
-import pyham
-import xml.etree.cElementTree as ET
-import ete3
 import os
-import pickle
-import traceback
+import xml.etree.ElementTree as ET
+
+import ete3
+import pyham
 
 
 def get_orthoxml_oma(fam, db_obj):

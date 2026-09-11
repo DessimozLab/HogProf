@@ -1,24 +1,22 @@
-from pyoma.browser import db
-import pickle
-import pandas as pd
-import h5py
-import random
-from tables import *
-import numpy as np
-import random
-import ete3
-
-# from validation import validation_semantic_similarity
-from hogprof.utils import hashutils, pyhamutils, files_utils
-from time import time
-import multiprocessing as mp
 import functools
-import numpy as np
-import time
 import gc
 import logging
+import multiprocessing as mp
 import os
+import pickle
+import random
+import time
+from time import time
+
+import ete3
+import h5py
+import numpy as np
+import pandas as pd
 from pyoma.browser import db
+from tables import *
+
+# from validation import validation_semantic_similarity
+from hogprof.utils import files_utils, hashutils, pyhamutils
 
 np.random.seed(0)
 random.seed(0)

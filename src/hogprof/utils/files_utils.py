@@ -1,9 +1,8 @@
-import ete3
-import pandas as pd
-from Bio import Entrez
 import copy
 import pickle
-import os
+
+import ete3
+from Bio import Entrez
 
 
 def get_tree(taxa, genomes, outdir=None):

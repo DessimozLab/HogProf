@@ -1,13 +1,11 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 #
 # Generated Mon Jun 27 10:13:43 2011 by generateDS.py version 2.5b.
 #
 
-import sys
-import getopt
 import re as re_
+import sys
 
 etree_ = None
 Verbose_import_ = False
@@ -23,7 +21,7 @@ try:
 except ImportError:
     try:
         # cElementTree from Python 2.5+
-        import xml.etree.cElementTree as etree_
+        import xml.etree.ElementTree as etree_
 
         XMLParser_import_library = XMLParser_import_elementtree
         if Verbose_import_:
@@ -76,9 +74,9 @@ def parsexml_(*args, **kwargs):
 
 try:
     from generatedssuper import GeneratedsSuper
-except ImportError as exp:
+except ImportError:
 
-    class GeneratedsSuper(object):
+    class GeneratedsSuper:
         def gds_format_string(self, input_data, input_name=""):
             return input_data
 
@@ -99,7 +97,7 @@ except ImportError as exp:
             for value in values:
                 try:
                     fvalue = float(value)
-                except (TypeError, ValueError) as exp:
+                except (TypeError, ValueError):
                     raise_parse_error(node, "Requires sequence of integers")
             return input_data
 
@@ -117,7 +115,7 @@ except ImportError as exp:
             for value in values:
                 try:
                     fvalue = float(value)
-                except (TypeError, ValueError) as exp:
+                except (TypeError, ValueError):
                     raise_parse_error(node, "Requires sequence of floats")
             return input_data
 
@@ -135,7 +133,7 @@ except ImportError as exp:
             for value in values:
                 try:
                     fvalue = float(value)
-                except (TypeError, ValueError) as exp:
+                except (TypeError, ValueError):
                     raise_parse_error(node, "Requires sequence of doubles")
             return input_data
 
@@ -369,13 +367,7 @@ class MixedContainer:
             outfile.write("<%s>%g</%s>" % (self.name, self.value, self.name))
 
     def exportLiteral(self, outfile, level, name):
-        if self.category == MixedContainer.CategoryText:
-            showIndent(outfile, level)
-            outfile.write(
-                'model_.MixedContainer(%d, %d, "%s", "%s"),\n'
-                % (self.category, self.content_type, self.name, self.value)
-            )
-        elif self.category == MixedContainer.CategorySimple:
+        if self.category == MixedContainer.CategoryText or self.category == MixedContainer.CategorySimple:
             showIndent(outfile, level)
             outfile.write(
                 'model_.MixedContainer(%d, %d, "%s", "%s"),\n'
@@ -396,7 +388,7 @@ class MixedContainer:
             outfile.write(")\n")
 
 
-class MemberSpec_(object):
+class MemberSpec_:
     def __init__(self, name="", data_type="", container=0):
         self.name = name
         self.data_type = data_type
@@ -1294,7 +1286,6 @@ class gene(GeneratedsSuper):
         self.id = _cast(int, id)
         self.geneId = _cast(None, geneId)
         self.transcriptId = _cast(None, transcriptId)
-        pass
 
     def factory(*args_, **kwargs_):
         if gene.subclass:
@@ -2196,7 +2187,6 @@ class scoreDef(GeneratedsSuper):
     def __init__(self, id=None, desc=None, valueOf_=None):
         self.id = _cast(None, id)
         self.desc = _cast(None, desc)
-        pass
 
     def factory(*args_, **kwargs_):
         if scoreDef.subclass:
@@ -2326,7 +2316,6 @@ class score(GeneratedsSuper):
     def __init__(self, id=None, value=None, valueOf_=None):
         self.id = _cast(None, id)
         self.value = _cast(float, value)
-        pass
 
     def factory(*args_, **kwargs_):
         if score.subclass:
@@ -2451,7 +2440,6 @@ class property(GeneratedsSuper):
     def __init__(self, name=None, value=None, valueOf_=None):
         self.name = _cast(None, name)
         self.value = _cast(None, value)
-        pass
 
     def factory(*args_, **kwargs_):
         if property.subclass:
@@ -2685,7 +2673,6 @@ class notes(GeneratedsSuper):
                 MixedContainer.CategoryText, MixedContainer.TypeNone, "", child_.tail
             )
             self.content_.append(obj_)
-        pass
 
 
 # end class notes

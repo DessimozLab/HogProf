@@ -1,30 +1,27 @@
-#
-from tables import *
-import functools
 import argparse
-import sys
-import multiprocessing as mp
-import glob
-import pandas as pd
-import time as t
-import pickle
-import xml.etree.cElementTree as ET
-from ete3 import Phyloxml
-
-import traceback
-from datasketch import MinHashLSHForest, WeightedMinHashGenerator
-from datetime import datetime
-import h5py
-import time
+import functools
 import gc
-from pyoma.browser import db
-from hogprof.utils import pyhamutils, hashutils, files_utils
-import numpy as np
-import tqdm
-import random
-import tqdm
+import glob
+import multiprocessing as mp
 import os
+import pickle
+import random
+import sys
+import time
+import time as t
+from datetime import datetime
+
 import ete3
+import h5py
+import numpy as np
+import pandas as pd
+import tqdm
+from datasketch import MinHashLSHForest, WeightedMinHashGenerator
+from ete3 import Phyloxml
+from pyoma.browser import db
+from tables import *
+
+from hogprof.utils import files_utils, hashutils, pyhamutils
 
 random.seed(0)
 np.random.seed(0)
@@ -93,7 +90,7 @@ class LSHBuilder:
         self.use_phyloxml = False
         self.fileglob = fileglob
         self.idmapper = None
-        self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
+        self.date_string = f"{datetime.now():%B_%d_%Y_%H_%M}"
         if saving_name:
             self.saving_name = saving_name
             if self.saving_name[-1] != "/":
@@ -332,11 +329,9 @@ class LSHBuilder:
             while True:
                 prots = univerq.get()
                 for row in df.iterrows():
-                    for ID in row.prots.tolist():
-                        universeout.write(ID)
-                else:
-                    print("Universe saver done" + str(i))
-                    break
+                    universeout.writelines(row.prots.tolist())
+                print("Universe saver done" + str(i))
+                break
 
     def worker(self, i, q, retq, matq, l):
         if self.verbose == True:
