@@ -344,7 +344,7 @@ def compare_all_vs_all(taxa_hsig_dict, outputfile):
         g.savefig(out_eps, format='eps')
         print(f"Created file: {out_eps}")
 
-def compare_all_vs_all(taxa_hsig_dict, taxid_to_taxname_dict,outputfile):
+def compare_all_vs_all(taxa_hsig_dict, taxid_to_taxname_dict,outputfile, heatmap=False):
     print("Performing all vs all comparison (untested)...")
     #print(taxa_hsig_dict)
     print(f"Using {len(taxa_hsig_dict)} taxonomic levels for comparison")
@@ -366,20 +366,29 @@ def compare_all_vs_all(taxa_hsig_dict, taxid_to_taxname_dict,outputfile):
         # distance for clustering
         dist = 1 - jkern
         # --- threshold ONLY for display ---
-        jkern_plot = jkern.copy()
-        jkern_plot[jkern_plot < level_T] = 0
-        g = sns.clustermap(
-            dist,
-            xticklabels=ids,
-            yticklabels=ids,
-            figsize=(20, 20),
-            cmap="viridis_r"
-        )
-        g.savefig(out_eps, format='eps')
-        print(f"Created file: {out_eps}")
+        #jkern_plot = jkern.copy()
+        #jkern_plot[jkern_plot < level_T] = 0
+        # threshold only for exported similarity matrix
+        sim_df = pd.DataFrame(jkern, index=ids, columns=ids)
+        sim_df[sim_df < level_T] = 0
+        ### save to csv
+        sim_csv = outputfile.replace(".csv", f"{level}_similarity_matrix.csv")
+        sim_df.to_csv(sim_csv)
+        print(f"Created similarity matrix file: {sim_csv}")
+
+        if heatmap:
+            g = sns.clustermap(
+                dist,
+                xticklabels=ids,
+                yticklabels=ids,
+                figsize=(20, 20),
+                cmap="viridis_r"
+            )
+            g.savefig(out_eps, format='eps')
+            print(f"Created file: {out_eps}")
 
 def main(lshforestpath, hashes_h5, treepath, outputfile, profiler_path, queries_file,thresholds_file,
-         allvsall = False, k= 1000, treeroot=""):
+         allvsall = False, heatmap=False, k= 1000, treeroot=""):
     ### print arguments
     print("\n📋 Running with the following parameters:")
     print(f"  • LSH Forest path: {lshforestpath}")
@@ -389,6 +398,7 @@ def main(lshforestpath, hashes_h5, treepath, outputfile, profiler_path, queries_
     print(f"  • Profiler path: {profiler_path}")
     print(f"  • Queries file: {queries_file}")
     print(f"  • All vs all: {allvsall}")
+    print(f"  • Heatmap: {heatmap}")
     print(f"  • k: {k}")
     print(f"  • thresholds table: {thresholds_file}")
     print("\n")
@@ -402,8 +412,10 @@ def main(lshforestpath, hashes_h5, treepath, outputfile, profiler_path, queries_
     ### get hits from hashes
     taxa_hsig_dict, taxid_to_taxname_dict = extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, profiler_path,
                                               allvsall, k, queries_file, thresholds_df, treeroot=treeroot)
+    if heatmap and not allvsall:
+        print("Warning: heatmap option is only relevant for allvsall mode. Ignoring heatmap option.")
     if allvsall:
-        compare_all_vs_all(taxa_hsig_dict, taxid_to_taxname_dict, outputfile=outputfile.replace(".csv", "_allvsall.csv"))
+        compare_all_vs_all(taxa_hsig_dict, taxid_to_taxname_dict, heatmap=heatmap, outputfile=outputfile.replace(".csv", "_allvsall.csv"))
 
 ## Command line argument parsing'''
 def parse_args():
@@ -419,6 +431,7 @@ def parse_args():
     parser.add_argument("--profilerpath", default="profiler.py")
     parser.add_argument("--k", type=int, default=1000, help="Number of top hits to extract for each query.")
     parser.add_argument("--allvsall",type=bool, help="Run all vs all mode additionally to the main hit extraction (may take a long time).", default=False)
+    parser.add_argument("--heatmap",type=bool, help="Generate a heatmap of the all vs all comparisons.", default=False)
     parser.add_argument("--treeroot", default="", help="Root of the tree to be used in output table as a taxon name. " \
     "The root is often called 'internal_0' so by default, if there is no taxon name it would get an empty string in " \
     "the results table. Specify it here to avoid this")
@@ -445,6 +458,7 @@ if __name__ == "__main__":
         outputfile=args.outputfile,
         profiler_path = args.profilerpath,
         allvsall=args.allvsall,
+        heatmap=args.heatmap,
         k=args.k,
         queries_file = queries_file,
         thresholds_file=args.thresholds,
