@@ -11,7 +11,11 @@ import seaborn as sns
 import re
 from functools import lru_cache
 import csv
-
+from tqdm import tqdm
+from scipy.spatial.distance import squareform
+from scipy.cluster.hierarchy import linkage
+# test to see if this fixes heatmap issue
+sys.setrecursionlimit(10000)
 from ete3 import NCBITaxa, Tree
 ncbi = NCBITaxa()
 
@@ -344,27 +348,75 @@ def compare_all_vs_all(taxa_hsig_dict, outputfile):
         g.savefig(out_eps, format='eps')
         print(f"Created file: {out_eps}")
 
+'''original idea to get the matrix'''
+def jaccard_similarity_matrix(sigs):
+    return np.array([[sig1.jaccard(sig2) for sig2 in sigs]
+            for sig1 in sigs])
+
+'''faster way to get the matrix'''
+def jaccard_similarity_matrix(sigs):
+    ### Get the hash values of all signatures as a 2D array
+    hashvalues = np.array([sig.hashvalues for sig in sigs])
+    #print("hashvalues shape:", hashvalues.shape)
+    ### Compare all pairs of signatures
+    # Vectorized pairwise Jaccard from matching MinHash values 
+    jkern = np.mean(hashvalues[:, np.newaxis, :, :] ==
+                    hashvalues[np.newaxis, :, :, :],
+                    axis=(2, 3))
+    #print("jkern shape:", jkern.shape)
+    return jkern
+
+'''visualize the similarity matrix as a heatmap with hierarchical clustering'''
+def make_similarity_heatmap(jkern, ids, taxname, outputfile,format="png"):
+    dist = 1 - jkern
+    # Convert square distance matrix to condensed form for scipy
+    condensed_dist = squareform(dist, checks=False)
+    # Hierarchical clustering from the precomputed distances
+    linkage_matrix = linkage(condensed_dist, method="average")
+    g = sns.clustermap(
+        jkern,
+        row_linkage=linkage_matrix,
+        col_linkage=linkage_matrix,
+        xticklabels=ids,
+        yticklabels=ids,
+        figsize=(20, 20),
+        cmap="viridis",
+        vmin=0,
+        vmax=1
+    )
+    ### only run eps for quite small datasets
+    if format == "eps":
+        outputfile = outputfile.replace(".csv", f"_{taxname}.eps")
+        g.savefig(outputfile, format="eps", bbox_inches='tight')
+    ### png is a good default for larger datasets
+    elif format == "png":
+        outputfile = outputfile.replace(".csv", f"_{taxname}.png")
+        g.savefig(outputfile, dpi=600, format="png", bbox_inches='tight')
+    else:
+        raise ValueError(f"Unsupported format: {format}")
+    print(f"Created file: {outputfile}")
+
+'''compare all vs all for each taxonomic level'''
 def compare_all_vs_all(taxa_hsig_dict, taxid_to_taxname_dict,outputfile, heatmap=False):
-    print("Performing all vs all comparison (untested)...")
+    print("\nPerforming all vs all comparison (untested)...")
     #print(taxa_hsig_dict)
     print(f"Using {len(taxa_hsig_dict)} taxonomic levels for comparison")
-    print(f"Using {len(taxa_hsig_dict.items())} profiles for comparison")
-    for level, [level_T, network_id_to_hsig] in taxa_hsig_dict.items():
+    n_profiles = sum(len(network_id_to_hsig)
+                     for level_T, network_id_to_hsig in taxa_hsig_dict.values())
+    print(f"Using {n_profiles} profiles for comparison")
+    for level, [level_T, network_id_to_hsig] in tqdm(taxa_hsig_dict.items(),
+                                                     desc="Taxonomic levels"):
         taxname = taxid_to_taxname_dict.get(level, f"taxid_{level}")
-        out_eps = outputfile.replace(".csv", f"_{taxname}.eps")
         ids = list(network_id_to_hsig.keys())
         if len(ids) < 2:
             print(f"Skipping {level}: only {len(ids)} profile(s)")
             continue
         sigs = [network_id_to_hsig[i] for i in ids]
         # similarity matrix
-        jkern = np.array([
-            [sig1.jaccard(sig2) for sig2 in sigs]
-            for sig1 in sigs
-        ])
+        jkern = jaccard_similarity_matrix(sigs)
         np.fill_diagonal(jkern, 1.0)
         # distance for clustering
-        dist = 1 - jkern
+        #dist = 1 - jkern
         # --- threshold ONLY for display ---
         #jkern_plot = jkern.copy()
         #jkern_plot[jkern_plot < level_T] = 0
@@ -372,20 +424,11 @@ def compare_all_vs_all(taxa_hsig_dict, taxid_to_taxname_dict,outputfile, heatmap
         sim_df = pd.DataFrame(jkern, index=ids, columns=ids)
         sim_df[sim_df < level_T] = 0
         ### save to csv
-        sim_csv = outputfile.replace(".csv", f"{level}_similarity_matrix.csv")
+        sim_csv = outputfile.replace(".csv", f"_{level}_similarity_matrix.csv")
         sim_df.to_csv(sim_csv)
         print(f"Created similarity matrix file: {sim_csv}")
-
         if heatmap:
-            g = sns.clustermap(
-                dist,
-                xticklabels=ids,
-                yticklabels=ids,
-                figsize=(20, 20),
-                cmap="viridis_r"
-            )
-            g.savefig(out_eps, format='eps')
-            print(f"Created file: {out_eps}")
+            make_similarity_heatmap(jkern, ids, taxname, outputfile)
 
 def main(lshforestpath, hashes_h5, treepath, outputfile, profiler_path, queries_file,thresholds_file,
          allvsall = False, heatmap=False, k= 1000, treeroot=""):
