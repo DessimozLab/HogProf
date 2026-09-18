@@ -7,7 +7,7 @@ HogProf is an extensible and tunable approach to phylogenetic profiling using or
   - Taxonomic levels and evolutionary event types (presence, loss, duplication) can have custom weight in profile construction
   - Optimization of weights using machine learning
 
-If you run into any problems feel free to contact me at [dmoi@unil.ch](dmoi@unil.ch)
+If you run into any problems, feel free to contact me at [dmoi@unil.ch](dmoi@unil.ch)
 
 # Quickstart
 ## Install from PyPI (recommended)
@@ -56,7 +56,7 @@ Let's now compile a database containing all HOGs and our desired taxonomic level
 If you are using an OMA release before 2022 you will need to use the NCBI tree. This is the default tree used by HogProf.
 
 ```
-$python lshbuilder.py --outpath YourHogProfDirectory --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores         
+lshbuilder --outpath YourHogProfDirectory --dbtype all --OMA YourOmaDirectory/OmaServer.h5 --nthreads numberOfCPUcores         
 
 ```
 
