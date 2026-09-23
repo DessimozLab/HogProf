@@ -41,7 +41,8 @@ class LSHBuilder:
     with a list of taxonomic codes for all the species in your db
     """
 
-    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False):
+    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False,
+                 limit_species = 10):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -57,6 +58,8 @@ class LSHBuilder:
             - taxfilter (str): path to a file containing a list of taxonomic codes to filter from the tree
             - taxmask (str): path to a file containing a list of taxonomic codes to mask from the tree
             - verbose (bool): whether to print verbose output (default: False)
+            - limit_species (int): the minimum number of species in a subHOG that is included in the database (default: 10)
+            
 
         """
         if h5_oma:
@@ -77,6 +80,7 @@ class LSHBuilder:
         self.fileglob = fileglob
         self.idmapper = None
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
+        self.limit_species = limit_species
         if saving_name:
             self.saving_name= saving_name 
             if self.saving_name[-1]!= '/':
@@ -190,10 +194,12 @@ class LSHBuilder:
 
         if self.h5OMA:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None ) 
+                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None,
+                                                  ) 
         else:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
-                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None )         
+                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None,
+                                                  )         
         
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
@@ -469,7 +475,7 @@ class LSHBuilder:
             gc.collect()
             print('DONE!')
 
-        mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(100))
+        mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(size=100, minhog_size=self.limit_species))
         return self.hashes_path, self.lshforestpath , self.mat_path
 
 
@@ -494,6 +500,9 @@ def main():
     parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
     parser.add_argument('--verbose', help='print verbose output' , type = bool)
     parser.add_argument('--reformat_names', help='try to correct broken species trees by replacing all names with numbers.' , type = bool)
+    parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
+    parser.add_argument('--eventslim', help='minimum number of events (loss/duplication) in a subhog' , type = int, default=0)
+    
     dbdict = {
         'all': { 'taxfilter': None , 'taxmask': None },
         'plants': { 'taxfilter': None , 'taxmask': 33090 },
@@ -595,12 +604,14 @@ def main():
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
             treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , 
-            lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose )
+            lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose,
+             limit_species=args['specieslim'])
             lsh_builder.run_pipeline(threads)
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
         treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
-          masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose)
+          masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose,
+          limit_species=args['specieslim'])
         lsh_builder.run_pipeline(threads)
     print(time.time() - start)
     #save corrected tree
