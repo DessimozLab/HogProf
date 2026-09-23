@@ -501,8 +501,7 @@ def main():
     parser.add_argument('--verbose', help='print verbose output' , type = bool)
     parser.add_argument('--reformat_names', help='try to correct broken species trees by replacing all names with numbers.' , type = bool)
     parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
-    parser.add_argument('--eventslim', help='minimum number of events (loss/duplication) in a subhog' , type = int, default=0)
-    
+
     dbdict = {
         'all': { 'taxfilter': None , 'taxmask': None },
         'plants': { 'taxfilter': None , 'taxmask': 33090 },
