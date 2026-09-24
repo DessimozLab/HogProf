@@ -19,7 +19,7 @@ dependencies = [
   "numpy",
   "pandas",
   "pyham>=1.1.10",
-  "pyoma",
+  "pyoma>=0.14.2",
   "tables",
   "tqdm",
 ]
