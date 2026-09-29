@@ -23,17 +23,74 @@ import tqdm
 import random
 import tqdm
 import os
+import logging
 from utils import phylo
+
+logger = logging.getLogger(__name__)
 
 random.seed(0)
 np.random.seed(0)
 
 
-def _validate_tree(filename: Optional[Path]):
-    # validate name
-    valid = (filename is None) or filename.suffix.lower() in [".nwk", ".newick"]
-    if not valid:
-        raise ValueError("Input tree must be in the newick format")
+class TreeValidator:
+    def __init__(self, filename: Optional[Path],
+                 swap_ids: bool,
+                 reformat_names: bool,
+                 orthoXML_as_string: bool):
+        self.filename = filename
+        self.swap_ids = swap_ids
+        self.reformat_names = reformat_names
+        self.orthoXML_as_string = orthoXML_as_string
+
+    def run(self):
+        # empty filename is valid (no tree provided),
+        # otherwise run checks
+        if self.filename:
+            self._validate_format()
+            self._validate_tree()
+
+    def _validate_format(self):
+        # validate name
+        valid = self.filename.suffix.lower() in [".nwk", ".newick"]
+        if not valid:
+            raise ValueError("Input tree must be in the newick format")
+
+    def _validate_tree(self):
+        try:
+            tree_string = phylo.from_file(self.filename)
+        except TypeError as e:
+            logger.debug(str(e))
+            # Capture the exception and format the traceback
+            full_error_message = str(e)
+            if 'maps to an ancestral name, not a leaf' in full_error_message:
+                # species name from bullshit error
+                # TypeError: species name '3515' maps to an ancestral name, not a leaf of the taxono
+                species = full_error_message.split('species name ')[1].split(' ')[0].replace('\'', '')
+                if self.swap_ids == False and self.reformat_names == False:
+                    species = ' '.join(full_error_message.split('species name ')[1].split(' ')[0:2]).replace('\'', '')
+
+                # print( 'trim tree : '+species)
+                if self.reformat_names == True and self.orthoXML_as_string == True:
+                    species = str(species)
+
+                tree = phylo.from_string(tree_string)
+                # select all nodes with name = species
+
+                nodes = tree.search_nodes(name=species)
+
+                # print( 'nodes' , nodes)
+                # print( 'children' , nodes[0].get_children())
+                # get the first node
+                node = nodes[0]
+                # get parent
+                parent = node.up
+
+                # create polytomy with children and internal node
+                for child in node.get_children():
+                    child.detach()
+                    parent.add_child(child)
+                # remove node
+                phylo.to_file(tree, 'fallback.nwk')
 
 
 
@@ -584,7 +641,12 @@ def main():
     else:
         mastertree=None
 
-    _validate_tree(mastertree)
+    if mastertree:
+        tv = TreeValidator(mastertree,
+                           swap_ids=taxcodes,
+                           reformat_names=reformat_names,
+                           orthoXML_as_string=omafile)
+        tv.run()
 
     # Disabled currently to sort out tree problems one by one
     # in version 0.0.13.

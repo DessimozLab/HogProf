@@ -110,69 +110,17 @@ def get_ham_treemap_from_row(row, tree_string,
             quoted = False
         else:
             quoted = True
-        try:
-            # return multiple treemaps corresponding to slices at different levels
-            ham_obj = pyham.Ham(tree_string, orthoxml,
-                                type_hog_file="orthoxml",
-                                tree_format="newick_string",
-                                use_internal_name=use_internal_name,
-                                orthoXML_as_string=orthoXML_as_string)
-            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
-            #check for losses / events and n leaves
-            return tp.treemap
-        except Exception as e:
-            # Capture the exception and format the traceback
-            full_error_message = str(e)
-            if 'maps to an ancestral name, not a leaf' in full_error_message:
-                #species name from bullshit error
-                #TypeError: species name '3515' maps to an ancestral name, not a leaf of the taxono
-                species = full_error_message.split('species name ')[1].split(' ')[0].replace('\'','')
-                if swap_ids == False and reformat_names == False:
-                    species = ' '.join( full_error_message.split('species name ')[1].split(' ')[0:2] ).replace('\'','')
 
-                #print( 'trim tree : '+species)
-                if reformat_names == True and orthoXML_as_string == True:
-                    species = str(species)
+        # return multiple treemaps corresponding to slices at different levels
+        ham_obj = pyham.Ham(tree_string, orthoxml,
+                            type_hog_file="orthoxml",
+                            tree_format="newick_string",
+                            use_internal_name=use_internal_name,
+                            orthoXML_as_string=orthoXML_as_string)
+        tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
+        #check for losses / events and n leaves
+        return tp.treemap
 
-                tree = phylo.from_string(tree_string)
-                #select all nodes with name = species
-
-                nodes = tree.search_nodes(name = species)
-
-                #print( 'nodes' , nodes)
-                #print( 'children' , nodes[0].get_children())
-                #get the first node
-                node = nodes[0]
-                #get parent
-                parent = node.up
-
-                #create polytomy with children and internal node
-                for child in node.get_children():
-                    child.detach()
-                    parent.add_child(child)
-                #remove node
-                phylo.to_file(tree, 'fallback.nwk')
-
-                tree_string = phylo.to_string(tree)
-
-
-                #make sure node names are correctly formatted
-                try:
-                    #rerun with trimmed tree
-                    return get_ham_treemap_from_row(row, tree_string,
-                                                    levels=levels, swap_ids=swap_ids,
-                                                    orthoXML_as_string=orthoXML_as_string,
-                                                    use_internal_name=use_internal_name,
-                                                    reformat_names=reformat_names,
-                                                    orthomapper=orthomapper,
-                                                    fallback='fallback.nwk')
-                except Exception as e:
-                    print('error' , full_error_message)
-                    return None
-            else:
-                #print('error' , full_error_message)
-                #return None
-                raise e
 
 
 def yield_families(h5file, start_fam):
