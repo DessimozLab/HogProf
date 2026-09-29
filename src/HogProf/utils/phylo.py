@@ -242,7 +242,7 @@ class TreeValidator:
         self._check_missing_duplicated_species(tree, nodes_by_name)
 
         repaired = []
-        # Postorder also handles the unlikely case of nested species nodes.
+        # Postorder also handles the unlikely case of nested species nodes
         for node in tree.traverse("postorder"):
             if node.name not in self.species_names or node.is_leaf():
                 continue

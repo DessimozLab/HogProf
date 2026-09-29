@@ -148,10 +148,10 @@ class LSHBuilder:
 
         if self.h5OMA:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree_string=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names ,
-                                                  orthoXML_as_string = True , orthomapper = self.idmapper , levels = None )
+                                                  orthoXML_as_string = True , orthomapper = self.idmapper)
         else:
             self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree_string=self.tree_string ,  swap_ids=self.swap2taxcode  ,
-                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , orthomapper = self.idmapper , levels = None )
+                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , orthomapper = self.idmapper)
         
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
@@ -177,7 +177,8 @@ class LSHBuilder:
     def _get_species_names(self):
         """Read the DB or orthoxml to extract the list of species"""
         if self.h5OMA:
-            values = self.h5OMA.root.Genome.read(field="NCBITaxonId")
+            field = "NCBITaxonId" if self.swap2taxcode else "SciName"
+            values = self.h5OMA.root.Genome.read(field=field)
             return {
                 value.decode("utf-8") if isinstance(value, bytes) else str(value)
                 for value in values

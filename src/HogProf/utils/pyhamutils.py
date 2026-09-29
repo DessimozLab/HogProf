@@ -1,6 +1,8 @@
 import xml.etree.ElementTree as ET
-
+import logging
 import pyham
+
+logger = logging.getLogger(__name__)
 
 
 def get_orthoxml_oma(fam, db_obj):
@@ -84,7 +86,7 @@ def orthoxml2numerical(orthoxml , mapper):
     return orthoxml 
 
 def get_ham_treemap_from_row(row, tree_string,
-                             levels=None, swap_ids=True, orthoXML_as_string=True,
+                             swap_ids=True, orthoXML_as_string=True,
                              use_internal_name=True, reformat_names=False,
                              orthomapper=None):
     _, orthoxml = row
@@ -104,7 +106,9 @@ def get_ham_treemap_from_row(row, tree_string,
         tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
         #check for losses / events and n leaves
         return tp.treemap
-
+    else:
+        logger.warning("Empty orthoxml provided")
+        return None
 
 
 def yield_families(h5file, start_fam):
