@@ -1,9 +1,10 @@
 import pyham
 import xml.etree.cElementTree as ET
-import ete3
 import os
 import pickle
 import traceback
+from HogProf.utils import phylo
+
 
 def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()    
@@ -85,17 +86,20 @@ def orthoxml2numerical(orthoxml , mapper):
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml 
 
-def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= False, orthomapper = None , fallback = None):
+def get_ham_treemap_from_row(row, tree_string,
+                             levels=None, swap_ids=True, orthoXML_as_string=True,
+                             use_internal_name=True, reformat_names=False,
+                             orthomapper=None, fallback=None):
     fam, orthoxml = row
-    format = 'newick_string'
-    if use_phyloxml:
-        format = 'phyloxml'
-    
-    if os.path.exists('fallback.nwk'):
-        tree = ete3.Tree('fallback.nwk' , format = 1 ).write(format = 1)
+
+    fallback_path = "fallback.nwk"
+    if os.path.exists(fallback_path):
+        tree = phylo.from_file(fallback_path)
+        tree_string = phylo.to_string(tree)
 
     if fallback:
-        tree = ete3.Tree(fallback , format = 1 ).write(format = 1)
+        tree = phylo.from_file(fallback)
+        tree_string = phylo.to_string(tree)
 
     if orthoxml:
         if swap_ids == True and orthoXML_as_string == True:
@@ -108,9 +112,13 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
             quoted = True
         try:
             # return multiple treemaps corresponding to slices at different levels
-            ham_obj = pyham.Ham(tree, orthoxml, type_hog_file="orthoxml" , tree_format = format  , use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string )            
-            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
-            #check for losses / events and n leaves 
+            ham_obj = pyham.Ham(tree_string, orthoxml,
+                                type_hog_file="orthoxml",
+                                tree_format="newick_string",
+                                use_internal_name=use_internal_name,
+                                orthoXML_as_string=orthoXML_as_string)
+            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
+            #check for losses / events and n leaves
             return tp.treemap
         except Exception as e:
             # Capture the exception and format the traceback
@@ -126,13 +134,12 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
                 if reformat_names == True and orthoXML_as_string == True:
                     species = str(species)
 
-
-                tree = ete3.Tree(tree , format = 1 )
+                tree = phylo.from_string(tree_string)
                 #select all nodes with name = species
 
                 nodes = tree.search_nodes(name = species)
 
-                #print( 'nodes' , nodes) 
+                #print( 'nodes' , nodes)
                 #print( 'children' , nodes[0].get_children())
                 #get the first node
                 node = nodes[0]
@@ -144,20 +151,28 @@ def get_ham_treemap_from_row(row, tree , levels = None , swap_ids = True , ortho
                     child.detach()
                     parent.add_child(child)
                 #remove node
-                tree.write(     outfile = 'fallback.nwk' , format = 1)
-                
-               
-                #make sure node names are correctly formatted   
+                phylo.to_file(tree, 'fallback.nwk')
+
+                tree_string = phylo.to_string(tree)
+
+
+                #make sure node names are correctly formatted
                 try:
                     #rerun with trimmed tree
-                    return get_ham_treemap_from_row(row, tree.write(format = 1) , levels = levels , swap_ids = swap_ids , orthoXML_as_string = orthoXML_as_string , use_phyloxml = use_phyloxml ,
-                                                     use_internal_name = use_internal_name ,reformat_names= reformat_names, orthomapper = orthomapper , fallback= 'fallback.nwk' )
+                    return get_ham_treemap_from_row(row, tree_string,
+                                                    levels=levels, swap_ids=swap_ids,
+                                                    orthoXML_as_string=orthoXML_as_string,
+                                                    use_internal_name=use_internal_name,
+                                                    reformat_names=reformat_names,
+                                                    orthomapper=orthomapper,
+                                                    fallback='fallback.nwk')
                 except Exception as e:
                     print('error' , full_error_message)
                     return None
             else:
-                print('error' , full_error_message)
-                return None
+                #print('error' , full_error_message)
+                #return None
+                raise e
 
 
 def yield_families(h5file, start_fam):

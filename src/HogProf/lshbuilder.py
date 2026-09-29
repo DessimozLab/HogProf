@@ -1,4 +1,3 @@
-#
 from tables import *
 import functools
 import argparse
@@ -9,8 +8,8 @@ import pandas as pd
 import time as t
 import pickle
 import xml.etree.cElementTree as ET
-from ete3 import Phyloxml
-
+from pathlib import Path
+from typing import Optional
 import traceback
 from datasketch import MinHashLSHForest , WeightedMinHashGenerator
 from datetime import datetime
@@ -18,18 +17,27 @@ import h5py
 import time
 import gc
 from pyoma.browser import db
-from HogProf.utils import pyhamutils, hashutils , files_utils
+from HogProf.utils import pyhamutils, hashutils , phylo
 import numpy as np
 import tqdm
 import random
 import tqdm
 import os
-import ete3
+from utils import phylo
+
 random.seed(0)
 np.random.seed(0)
 
-class LSHBuilder:
 
+def _validate_tree(filename: Optional[Path]):
+    # validate name
+    valid = (filename is None) or filename.suffix.lower() in [".nwk", ".newick"]
+    if not valid:
+        raise ValueError("Input tree must be in the newick format")
+
+
+
+class LSHBuilder:
     """
     This class contains the stuff you need to make 
     a phylogenetic profiling 
@@ -41,7 +49,22 @@ class LSHBuilder:
     with a list of taxonomic codes for all the species in your db
     """
 
-    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False):
+    def __init__(self,
+                 h5_oma=None,
+                 fileglob=None,
+                 taxa=None,
+                 masterTree: Optional[Path] = None,
+                 saving_name=None,
+                 numperm=256,
+                 treeweights=None,
+                 taxfilter=None,
+                 taxmask=None,
+                 lossonly=False,
+                 duplonly=False,
+                 verbose=False,
+                 use_taxcodes=False,
+                 datetime=datetime.now(),
+                 reformat_names=False):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -73,7 +96,6 @@ class LSHBuilder:
         self.tax_mask = taxmask
         self.verbose = verbose
         self.datetime = datetime
-        self.use_phyloxml = False
         self.fileglob = fileglob
         self.idmapper = None
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
@@ -87,68 +109,42 @@ class LSHBuilder:
         else:
             raise Exception( 'please specify an output location' )
         self.errorfile = self.saving_path + 'errors.txt'
+
         if masterTree is None:
             if h5_oma:
                 genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
                 genomes = [ str(g) for g in genomes]
                 taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
-                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa, genomes = genomes , outdir=self.saving_path )
+                self.tree_string , self.tree = phylo.get_tree(taxa=taxa, genomes = genomes, outdir=self.saving_path)
             elif taxa:
                 with open(taxa, 'r') as taxin:
                     taxlist = [ int(line) for line in taxin ]
-                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist  , outdir=self.saving_path)
+                self.tree_string , self.tree = phylo.get_tree(taxa=taxlist, outdir=self.saving_path)
             else:
                 raise Exception( 'please specify either a list of taxa or a tree' )
-        elif masterTree:
-            if 'xml' in masterTree.lower():
-                project = Phyloxml()
-                project.build_from_file(masterTree)
-                trees = [t for t in  project.get_phylogeny()]
-                self.tree_ete3 = [ n for n in trees[0] ][0]
-                self.use_phyloxml = True
-                print('using phyloxml')
-                self.tree_string = masterTree
-            else:
-                try:
-                    self.tree_ete3 = ete3.Tree(masterTree, format=1 , quoted_node_names= True)
-                except:
-                    self.tree_ete3 = ete3.Tree(masterTree, format=0)
-            
-            #self.tree_string = self.tree_ete3.write(format=0)
+        else:
+            self.tree = phylo.from_file(masterTree)
         
             if h5_oma:
-                with open(masterTree) as treein:
-                    self.tree_string = treein.read( )
-                tree = ete3.Tree(self.tree_string, format=1 , quoted_node_names= True)
-                #make sure the tree has no singletons
-                tree = self.tree_ete3
-                #if a node has a single descendant thats a leaf, make it a sister node
-                for n in tree.traverse():
-                    if n.is_leaf():
-                        continue
-                    if len(n.get_children()) == 1 and n.get_children()[0].is_leaf():
-                        print( 'detaching node' , n.name)
-                        child = n.get_children()[0]
-                        n.detach()
-                        n.up.add_child(child)
-                        print( 'attaching node' , child.name)
-                self.tree_ete3 = tree
-                #save master tree 
-                with open( self.saving_path + 'master_tree.corrected.nwk', 'w') as treeout:
-                    treeout.write(self.tree_ete3.write(format=0 ))
-                self.tree_string = self.tree_ete3.write(format=1)
-            
-        else:
-            raise Exception( 'please specify a tree in either phylo xml or nwk format' )
+
+                # make sure the tree has no singletons
+                self.tree = phylo.promote_single_leafs(self.tree)
+
+                # save master tree
+                corrected_tree_path = os.path.join(self.saving_path, 'master_tree.corrected.nwk')
+                phylo.to_file(self.tree, corrected_tree_path)
+
+                # load master tree as string
+                self.tree_string = phylo.to_string(self.tree)
 
         if self.reformat_names:
-            self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
+            self.tree, self.idmapper = pyhamutils.tree2numerical(self.tree)
             with open( self.saving_path + 'reformatted_tree.nwk', 'w') as treeout:
-                treeout.write(self.tree_ete3.write(format=0 ))
+                treeout.write(self.tree.write(format=0))
             with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
                 idout.write( pickle.dumps(self.idmapper))
             print( 'idmapper saved to ' + self.saving_path + 'idmapper.pkl')
-            self.tree_string = self.tree_ete3.write(format=1) 
+            self.tree_string = self.tree.write(format=1)
             #remap taxfilter and taxmask
             if taxfilter:
                 self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
@@ -158,14 +154,14 @@ class LSHBuilder:
 
 
         self.swap2taxcode = use_taxcodes
-        self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
+        self.taxaIndex, self.reverse = phylo.generate_taxa_index(self.tree, self.tax_filter, self.tax_mask)
         
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
         self.numperm = numperm
         if treeweights is None:
             #generate aconfig_utilsll ones
-            self.treeweights = hashutils.generate_treeweights(self.tree_ete3  , self.taxaIndex , self.tax_filter,  self.tax_mask)
+            self.treeweights = hashutils.generate_treeweights(self.tree, self.taxaIndex, self.tax_filter, self.tax_mask)
         else:
             #load machine learning weights
             self.treeweights = treeweights
@@ -181,19 +177,16 @@ class LSHBuilder:
         print( 'configuring pyham functions')
         print( 'swap ids', self.swap2taxcode)
         print( 'reformat names', self.reformat_names)
-        print( 'use phyloxml', self.use_phyloxml)
         print( 'use taxcodes', self.swap2taxcode)
         print( 'lossonly', lossonly)
         print( 'duplonly', duplonly)
-        
-
 
         if self.h5OMA:
-            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None ) 
+            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree_string=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names ,
+                                                  orthoXML_as_string = True , orthomapper = self.idmapper , levels = None )
         else:
-            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
-                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None )         
+            self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree_string=self.tree_string ,  swap_ids=self.swap2taxcode  ,
+                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , orthomapper = self.idmapper , levels = None )
         
         self.HASH_PIPELINE = functools.partial( hashutils.row2hash , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
         if self.h5OMA:
@@ -265,7 +258,7 @@ class LSHBuilder:
 
     def universe_saver(self, i, q, retq, matq,univerq, l):
         #only useful to save all prots within a taxonomic range as db is being compiled
-        allowed = set( [ n.name for n in self.tree_ete3.get_leaves() ] )
+        allowed = set([n.name for n in self.tree.get_leaves()])
         with open(self.saving_path+'universe.txt') as universeout:
             while True:
                 prots = univerq.get()
@@ -587,9 +580,17 @@ def main():
     else:
         weights = None
     if args['mastertree']:
-        mastertree = args['mastertree']
+        mastertree = Path(args['mastertree'])
     else:
         mastertree=None
+
+    _validate_tree(mastertree)
+
+    # Disabled currently to sort out tree problems one by one
+    # in version 0.0.13.
+    if reformat_names:
+        raise NotImplementedError("--reformat_names is temporarily disabled")
+
     start = time.time()
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:

@@ -2,7 +2,6 @@
 
 import datasketch
 import itertools
-import ete3
 import copy
 import math
 import numpy as np
