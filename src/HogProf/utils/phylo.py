@@ -12,7 +12,7 @@ import copy
 import pickle
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Union, Iterable
 import ete3
 from Bio import Entrez
 
@@ -49,28 +49,6 @@ def to_string(tree: ete3.Tree, **kwargs) -> str:
     ete3_kwargs = default_kwargs.copy()
     ete3_kwargs.update(kwargs)
     return tree.write(**ete3_kwargs)
-
-
-def promote_single_leafs(tree: ete3.Tree) -> ete3.Tree:
-    """
-    If a node has a single descendant that's a leaf,
-    makes it a sister node
-    """
-    new_tree = tree
-
-    for n in new_tree.traverse():
-        if n.is_leaf():
-            continue
-
-        if len(n.get_children()) == 1 and n.get_children()[0].is_leaf():
-            logger.debug('detaching node', n.name)
-            child = n.get_children()[0]
-            n.detach()
-            n.up.add_child(child)
-            logger.debug('attaching node', child.name)
-
-    return new_tree
-
 
 
 def add_orphans(orphan_info, tree, genome_ids_list, verbose=False):
@@ -138,7 +116,7 @@ def add_orphans(orphan_info, tree, genome_ids_list, verbose=False):
     return tree
 
 
-def get_tree(taxa, genomes, outdir=None):
+def get_tree(genomes, outdir=None):
     """
     Generates a taxonomic tree using the ncbi taxonomy and
     :param oma:  a pyoma db object
@@ -147,13 +125,9 @@ def get_tree(taxa, genomes, outdir=None):
 
     """
     ncbi = ete3.NCBITaxa()
-    tax = set(taxa)
     genomes = set(genomes)
-    tax.remove(0)
-    print(len(tax))
     tree = ete3.PhyloTree(name='-1')
     topo = ncbi.get_topology(genomes, collapse_subspecies=False)
-    tax = set([str(taxid) for taxid in tax])
     tree.add_child(topo)
     orphans = list(genomes - set([x.name for x in tree.get_leaves()]))
     print('missing taxa:')
@@ -208,3 +182,115 @@ def generate_taxa_index(tree , taxfilter= None, taxmask=None):
         taxa_index[n.name] = i-1
 
     return taxa_index, taxa_index_reverse
+
+
+class TreeValidator:
+    """Validate and repair a species tree before starting worker processes."""
+
+    def __init__(self, filename: Path, species_names: Iterable[str] = ()):
+        self.filename = Path(filename)
+        self.species_names = {str(name) for name in species_names}
+
+    def run(self):
+        self._validate_format()
+        tree = from_file(self.filename)
+        self._fix_internal_species(tree)
+        tree = self._promote_single_leafs(tree)
+        return tree
+
+    def _validate_format(self):
+        # validate name
+        valid = self.filename.suffix.lower() in [".nwk", ".newick"]
+        if not valid:
+            raise ValueError("Input tree must be in the newick format")
+
+    def _check_missing_duplicated_species(self, tree, nodes_by_name):
+        if not self.species_names:
+            return
+
+        # check if species list has the names not existing in the tree
+        missing = self.species_names - nodes_by_name.keys()
+        duplicated = {
+            name for name, nodes in nodes_by_name.items() if len(nodes) != 1
+        }
+        if missing or duplicated:
+            problems = []
+            if missing:
+                problems.append("missing species: " + ", ".join(sorted(missing)))
+            if duplicated:
+                problems.append(
+                    "species mapped to multiple tree nodes: "
+                    + ", ".join(sorted(duplicated))
+                )
+            raise ValueError("Invalid species tree (" + "; ".join(problems) + ")")
+
+
+    def _fix_internal_species(self, tree):
+        """
+        Pyham raises the following error
+        `TypeError: species name 'XXX' maps to an ancestral name, not a leaf of the taxonomy`
+        if an internal node is marked as species. Repair the input tree for these cases
+        """
+        if not self.species_names:
+            return
+
+        nodes_by_name = {}
+        for node in tree.traverse():
+            if node.name in self.species_names:
+                nodes_by_name.setdefault(node.name, []).append(node)
+
+        self._check_missing_duplicated_species(tree, nodes_by_name)
+
+        repaired = []
+        # Postorder also handles the unlikely case of nested species nodes.
+        for node in tree.traverse("postorder"):
+            if node.name not in self.species_names or node.is_leaf():
+                continue
+            if node.is_root():
+                raise ValueError(
+                    f"Species {node.name!r} maps to the root of a non-trivial tree"
+                )
+
+            parent = node.up
+            for child in list(node.get_children()):
+                child.detach()
+                parent.add_child(child)
+            repaired.append(node.name)
+
+        if repaired:
+            logger.warning(
+                "Converted %d internal species nodes to leaves: %s",
+                len(repaired),
+                ", ".join(sorted(repaired)),
+            )
+
+        invalid = [
+            name
+            for name, nodes in nodes_by_name.items()
+            if len(nodes) != 1 or not nodes[0].is_leaf()
+        ]
+        if invalid:
+            raise ValueError(
+                "Species did not resolve to leaves after tree repair: "
+                + ", ".join(sorted(invalid))
+            )
+
+    def _promote_single_leafs(self, tree: ete3.Tree) -> ete3.Tree:
+        """
+        If a node has a single descendant that's a leaf,
+        makes it a sister node
+        """
+        new_tree = tree
+
+        for n in new_tree.traverse():
+            if n.is_leaf():
+                continue
+
+            if len(n.get_children()) == 1 and n.get_children()[0].is_leaf():
+                logger.warning("detaching node %s", n.name)
+                child = n.get_children()[0]
+                n.detach()
+                n.up.add_child(child)
+                logger.warning("attaching node %s", child.name)
+
+        return new_tree

@@ -1,9 +1,6 @@
+import xml.etree.ElementTree as ET
+
 import pyham
-import xml.etree.cElementTree as ET
-import os
-import pickle
-import traceback
-from HogProf.utils import phylo
 
 
 def get_orthoxml_oma(fam, db_obj):
@@ -89,27 +86,14 @@ def orthoxml2numerical(orthoxml , mapper):
 def get_ham_treemap_from_row(row, tree_string,
                              levels=None, swap_ids=True, orthoXML_as_string=True,
                              use_internal_name=True, reformat_names=False,
-                             orthomapper=None, fallback=None):
-    fam, orthoxml = row
-
-    fallback_path = "fallback.nwk"
-    if os.path.exists(fallback_path):
-        tree = phylo.from_file(fallback_path)
-        tree_string = phylo.to_string(tree)
-
-    if fallback:
-        tree = phylo.from_file(fallback)
-        tree_string = phylo.to_string(tree)
+                             orthomapper=None):
+    _, orthoxml = row
 
     if orthoxml:
         if swap_ids == True and orthoXML_as_string == True:
             orthoxml = switch_name_ncbi_id(orthoxml)
-            quoted = False
         elif reformat_names == True and orthoXML_as_string == True:
             orthoxml = orthoxml2numerical(orthoxml , orthomapper)
-            quoted = False
-        else:
-            quoted = True
 
         # return multiple treemaps corresponding to slices at different levels
         ham_obj = pyham.Ham(tree_string, orthoxml,

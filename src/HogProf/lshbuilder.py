@@ -1,96 +1,34 @@
-from tables import *
-import functools
 import argparse
-import sys
-import multiprocessing as mp
+import functools
+import gc
 import glob
-import pandas as pd
-import time as t
+import logging
+import multiprocessing as mp
+import os
 import pickle
-import xml.etree.cElementTree as ET
+import random
+import sys
+import time
+import time as t
+import xml.etree.ElementTree as ET
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import traceback
-from datasketch import MinHashLSHForest , WeightedMinHashGenerator
-from datetime import datetime
+
 import h5py
-import time
-import gc
-from pyoma.browser import db
-from HogProf.utils import pyhamutils, hashutils , phylo
 import numpy as np
+import pandas as pd
 import tqdm
-import random
-import tqdm
-import os
-import logging
-from utils import phylo
+from datasketch import MinHashLSHForest, WeightedMinHashGenerator
+from pyoma.browser import db
+from tables import open_file
+
+from HogProf.utils import hashutils, phylo, pyhamutils
 
 logger = logging.getLogger(__name__)
 
 random.seed(0)
 np.random.seed(0)
-
-
-class TreeValidator:
-    def __init__(self, filename: Optional[Path],
-                 swap_ids: bool,
-                 reformat_names: bool,
-                 orthoXML_as_string: bool):
-        self.filename = filename
-        self.swap_ids = swap_ids
-        self.reformat_names = reformat_names
-        self.orthoXML_as_string = orthoXML_as_string
-
-    def run(self):
-        # empty filename is valid (no tree provided),
-        # otherwise run checks
-        if self.filename:
-            self._validate_format()
-            self._validate_tree()
-
-    def _validate_format(self):
-        # validate name
-        valid = self.filename.suffix.lower() in [".nwk", ".newick"]
-        if not valid:
-            raise ValueError("Input tree must be in the newick format")
-
-    def _validate_tree(self):
-        try:
-            tree_string = phylo.from_file(self.filename)
-        except TypeError as e:
-            logger.debug(str(e))
-            # Capture the exception and format the traceback
-            full_error_message = str(e)
-            if 'maps to an ancestral name, not a leaf' in full_error_message:
-                # species name from bullshit error
-                # TypeError: species name '3515' maps to an ancestral name, not a leaf of the taxono
-                species = full_error_message.split('species name ')[1].split(' ')[0].replace('\'', '')
-                if self.swap_ids == False and self.reformat_names == False:
-                    species = ' '.join(full_error_message.split('species name ')[1].split(' ')[0:2]).replace('\'', '')
-
-                # print( 'trim tree : '+species)
-                if self.reformat_names == True and self.orthoXML_as_string == True:
-                    species = str(species)
-
-                tree = phylo.from_string(tree_string)
-                # select all nodes with name = species
-
-                nodes = tree.search_nodes(name=species)
-
-                # print( 'nodes' , nodes)
-                # print( 'children' , nodes[0].get_children())
-                # get the first node
-                node = nodes[0]
-                # get parent
-                parent = node.up
-
-                # create polytomy with children and internal node
-                for child in node.get_children():
-                    child.detach()
-                    parent.add_child(child)
-                # remove node
-                phylo.to_file(tree, 'fallback.nwk')
 
 
 
@@ -109,7 +47,6 @@ class LSHBuilder:
     def __init__(self,
                  h5_oma=None,
                  fileglob=None,
-                 taxa=None,
                  masterTree: Optional[Path] = None,
                  saving_name=None,
                  numperm=256,
@@ -129,7 +66,6 @@ class LSHBuilder:
             Args:
             - tarfile_ortho (str):  path to an ensembl tarfile containing orthoxml files
             - h5_oma (str): path to an OMA hdf5 file
-            - taxa (str): path to a file containing a list of taxonomic codes for all the species in the db
             - masterTree (str): path to a newick tree file
             - saving_name (str): path to the directory where the output files will be saved
             - numperm (int): the number of permutations to use in the MinHash generation (default: 256)
@@ -149,6 +85,7 @@ class LSHBuilder:
             self.oma_id_obj = None
         
         self.reformat_names = reformat_names
+        self.swap2taxcode = use_taxcodes
         self.tax_filter = taxfilter
         self.tax_mask = taxmask
         self.verbose = verbose
@@ -167,50 +104,21 @@ class LSHBuilder:
             raise Exception( 'please specify an output location' )
         self.errorfile = self.saving_path + 'errors.txt'
 
+        species = self._get_species_names()
         if masterTree is None:
-            if h5_oma:
-                genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
-                genomes = [ str(g) for g in genomes]
-                taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
-                self.tree_string , self.tree = phylo.get_tree(taxa=taxa, genomes = genomes, outdir=self.saving_path)
-            elif taxa:
-                with open(taxa, 'r') as taxin:
-                    taxlist = [ int(line) for line in taxin ]
-                self.tree_string , self.tree = phylo.get_tree(taxa=taxlist, outdir=self.saving_path)
-            else:
-                raise Exception( 'please specify either a list of taxa or a tree' )
+            if not h5_oma:
+                raise TypeError('Please specify either a database or a tree')
+
+            self.tree_string, self.tree = phylo.get_tree(genomes=species, outdir=self.saving_path)
         else:
-            self.tree = phylo.from_file(masterTree)
-        
-            if h5_oma:
+            # validate tree
+            self.tree = phylo.TreeValidator(masterTree, species).run()
 
-                # make sure the tree has no singletons
-                self.tree = phylo.promote_single_leafs(self.tree)
+            # save the corrected tree
+            corrected_tree_path = os.path.join(self.saving_path, 'master_tree.corrected.nwk')
+            phylo.to_file(self.tree, corrected_tree_path)
+            self.tree_string = phylo.to_string(self.tree)
 
-                # save master tree
-                corrected_tree_path = os.path.join(self.saving_path, 'master_tree.corrected.nwk')
-                phylo.to_file(self.tree, corrected_tree_path)
-
-                # load master tree as string
-                self.tree_string = phylo.to_string(self.tree)
-
-        if self.reformat_names:
-            self.tree, self.idmapper = pyhamutils.tree2numerical(self.tree)
-            with open( self.saving_path + 'reformatted_tree.nwk', 'w') as treeout:
-                treeout.write(self.tree.write(format=0))
-            with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
-                idout.write( pickle.dumps(self.idmapper))
-            print( 'idmapper saved to ' + self.saving_path + 'idmapper.pkl')
-            self.tree_string = self.tree.write(format=1)
-            #remap taxfilter and taxmask
-            if taxfilter:
-                self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
-            if taxmask:
-                self.tax_mask = self.idmapper[taxmask]
-                print( 'masking at taxonomic level:', self.tax_mask)
-
-
-        self.swap2taxcode = use_taxcodes
         self.taxaIndex, self.reverse = phylo.generate_taxa_index(self.tree, self.tax_filter, self.tax_mask)
         
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
@@ -265,6 +173,23 @@ class LSHBuilder:
         self.columns = len(self.taxaIndex)
         self.verbose = verbose
         print('done')
+
+    def _get_species_names(self):
+        """Read the DB or orthoxml to extract the list of species"""
+        if self.h5OMA:
+            values = self.h5OMA.root.Genome.read(field="NCBITaxonId")
+            return {
+                value.decode("utf-8") if isinstance(value, bytes) else str(value)
+                for value in values
+            }
+        else:
+            names = set()
+            for filename in self.fileglob:
+                root = ET.parse(filename).getroot()
+                for child in root:
+                    if child.tag.rsplit("}", 1)[-1] == "species":
+                        names.add(child.attrib["name"])
+            return names
 
     def load_one(self, fam):
         #test function to try out the pipeline on one orthoxml
@@ -641,18 +566,6 @@ def main():
     else:
         mastertree=None
 
-    if mastertree:
-        tv = TreeValidator(mastertree,
-                           swap_ids=taxcodes,
-                           reformat_names=reformat_names,
-                           orthoXML_as_string=omafile)
-        tv.run()
-
-    # Disabled currently to sort out tree problems one by one
-    # in version 0.0.13.
-    if reformat_names:
-        raise NotImplementedError("--reformat_names is temporarily disabled")
-
     start = time.time()
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
@@ -666,14 +579,6 @@ def main():
           masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose)
         lsh_builder.run_pipeline(threads)
     print(time.time() - start)
-    #save corrected tree
-    if os.path.isfile('fallback.nwk'):
-        with open( dbname + 'corrected_tree.nwk', 'w') as treeout:
-            #copy the fallback tree
-            with open('fallback.nwk') as fallbackin:
-                treeout.write(fallbackin.read())   
-        #remove fallback tree
-        os.remove('fallback.nwk')
     print('DONE')
 
 
