@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,6 +7,11 @@ name = "HogProf"
 version = "0.0.12"
 authors = [
   { name = "Dave Moi", email = "dmoi@unil.ch" },
+  { name = "Athina Gavriilidou", email = "athina.gavriilidou@unil.ch" },
+  { name = "Nikolai Romashchenko", email = "nikolai.romashchenko@unil.ch" },
+]
+maintainers = [
+  { name = "Nikolai Romashchenko", email = "nikolai.romashchenko@unil.ch" },
 ]
 dependencies = [
   "biopython",
@@ -25,14 +30,21 @@ dependencies = [
 ]
 description = "Phylogenetic Profiling with OMA and minhashing"
 readme = "README.md"
-license = { file = "LICENSE" }
-requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11,<3.14"
 
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
+
+[project.optional-dependencies]
+ml = ["keras"]
+
 [project.urls]
 "Homepage" = "https://github.com/DessimozLab/HogProf"
 "Bug Tracker" = "https://github.com/DessimozLab/HogProf/issues"
