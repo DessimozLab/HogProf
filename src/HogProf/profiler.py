@@ -6,9 +6,8 @@ import random
 from tables import *
 import numpy as np
 import random
-import ete3
 #from validation import validation_semantic_similarity
-from HogProf.utils import hashutils , pyhamutils , files_utils
+from HogProf.utils import hashutils , pyhamutils , phylo
 from time import time
 import multiprocessing as mp
 import functools
@@ -26,7 +25,17 @@ class Profiler:
 	A profiler object allows the user to query the LSH with HOGs and get a list of result HOGs back
 
 	"""
-	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False , nsamples = 256 , mastertree = None , reformat_names = False , swap2taxcode = False , use_phyloxml = False , taxfilter = None , taxmask = None ):
+	def __init__(self,
+				 lshforestpath=None,
+				 hashes_h5=None,
+				 mat_path=None,
+				 oma=False,
+				 nsamples=256,
+				 mastertree=None,
+				 reformat_names=False,
+				 swap2taxcode=False,
+				 taxfilter=None,
+				 taxmask=None):
 		"""
 		The Profiler class initializes a profiler object for querying the LSH with HOGs and returning a list of result HOGs.
 
@@ -61,24 +70,10 @@ class Profiler:
 		self.hashes_h5 = h5py.File(hashes_h5, mode='r')
 		print('h5' , self.hashes_h5 , self.hashes_h5.keys())
 		self.nsamples = nsamples
-		if 'xml' in mastertree.lower():
-			project = Phyloxml()
-			project.build_from_file(mastertree)
-			trees = [t for t in  project.get_phylogeny()]
-			self.tree = [ n for n in trees[0] ][0]
-			self.use_phyloxml = True
-			print('using phyloxml')
-			print( 'loaded tree:' , self.tree )
-			self.tree_string = mastertree
-		else:
-			try:
-				self.tree = ete3.Tree(mastertree, format=1 , quoted_node_names= True)
-				print( 'loaded tree:', self.tree )
-			except:
-				self.tree = ete3.Tree(mastertree, format=0)
-		with open(mastertree) as treein:
-			self.tree_string = treein.read()
-		#self.tree_string = self.tree_ete3.write(format=0)
+
+		self.tree = phylo.from_file(mastertree)
+		print('loaded tree:', self.tree)
+		self.tree_string = phylo.to_string(self.tree)
         
 		if oma:
 			self.reformat_names = reformat_names
@@ -89,30 +84,35 @@ class Profiler:
 				os.makedirs(self.saving_path)
 			
 			if self.reformat_names:
-				self.tree, self.idmapper = pyhamutils.tree2numerical(self.tree)
-				self.tree_string = self.tree.write(format=1)
-				with open( self.saving_path + 'reformatted_tree.nwk', 'w') as treeout:
-					treeout.write(self.tree.write(format=0 ))
-				with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
-					idout.write( pickle.dumps(self.idmapper))
-				print('reformatted tree')
-				print( self.tree )
-				self.tree_string = self.tree.write(format=1) 
-				#remap taxfilter and taxmask
-				if taxfilter:
-					self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
-				if taxmask:
-					self.tax_mask = self.idmapper[taxmask]
+				raise NotImplementedError("--reformat_names is temporarily disabled")
+
+				# Disabled currently to sort out tree problems one by one
+			    # in version 0.0.13. Will be either removed as an option or
+			    # reimplemented later. The original logic is commented below
+				#
+				# self.tree, self.idmapper = pyhamutils.tree2numerical(self.tree)
+				# self.tree_string = self.tree.write(format=1)
+				# with open( self.saving_path + 'reformatted_tree.nwk', 'w') as treeout:
+				# 	treeout.write(self.tree.write(format=0 ))
+				# with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
+				# 	idout.write( pickle.dumps(self.idmapper))
+				# print('reformatted tree')
+				# print( self.tree )
+				# self.tree_string = self.tree.write(format=1)
+				# #remap taxfilter and taxmask
+				# if taxfilter:
+				# 	self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
+				# if taxmask:
+				# 	self.tax_mask = self.idmapper[taxmask]
 			else:
 				self.idmapper = None
 				self.tax_filter = taxfilter
 				self.tax_mask = taxmask
 				self.tree_string = self.tree.write(format=1)
 			
-			self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
+			self.taxaIndex, self.ReverseTaxaIndex = phylo.generate_taxa_index(self.tree)
 			self.treeweights = hashutils.generate_treeweights(self.tree , self.taxaIndex , None, None )
 			self.swap2taxcode = swap2taxcode
-			self.use_phyloxml = use_phyloxml
 			self.tax_filter = None
 			self.tax_mask = None
 			
@@ -123,11 +123,11 @@ class Profiler:
 			self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
 			
 			self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-												  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper ) 
+												  orthoXML_as_string = True, orthomapper = self.idmapper )
 
 			self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )
 		
-		self.taxaIndex, self.ReverseTaxaIndex = files_utils.generate_taxa_index(self.tree)
+		self.taxaIndex, self.ReverseTaxaIndex = phylo.generate_taxa_index(self.tree)
 
 		print('DONE')
 

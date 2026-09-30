@@ -19,14 +19,14 @@ dependencies = [
   "numpy",
   "pandas",
   "pyham>=1.1.10",
-  "pyoma",
+  "pyoma>=0.14.2",
   "tables",
   "tqdm",
 ]
 description = "Phylogenetic Profiling with OMA and minhashing"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.7"
+requires-python = ">=3.11"
 
 classifiers = [
     "Programming Language :: Python :: 3",
