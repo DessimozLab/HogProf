@@ -92,7 +92,6 @@ class LSHBuilder:
                 os.mkdir(path=self.saving_path)
         else:
             raise Exception( 'please specify an output location' )
-        self.errorfile = self.saving_path + 'errors.txt'
 
         species = self._get_species_names()
         if masterTree is None:
@@ -281,86 +280,85 @@ class LSHBuilder:
             taxstr+= 'NoMask'
         else:
             taxstr = str(self.tax_filter)
-        self.errorfile = self.saving_path + 'errors.txt'
-        with open(self.errorfile, 'w') as hashes_error_files:
-            with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
-                datasets = {}
 
-                hash_width = 2 * self.numperm
-                dataset = h5hashes.create_dataset(
-                    taxstr,
-                    (chunk_size, hash_width),
-                    maxshape=(None, hash_width),
-                    dtype="int32",
-                )
+        with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
+            datasets = {}
 
-                if taxstr not in h5hashes:
-                    if self.verbose:
-                        print('creating dataset')
-                        print('filtered at taxonomic level:', taxstr)
+            hash_width = 2 * self.numperm
+            dataset = h5hashes.create_dataset(
+                taxstr,
+                (chunk_size, hash_width),
+                maxshape=(None, hash_width),
+                dtype="int32",
+            )
 
-                    if self.verbose:
-                        print(datasets)
-                    h5flush = h5hashes.flush
+            if taxstr not in h5hashes:
+                if self.verbose:
+                    print('creating dataset')
+                    print('filtered at taxonomic level:', taxstr)
 
-                print('saver init ' + str(i))
-                while True:
-                    this_dataframe = retq.get()
-                    if this_dataframe is not None:
-                        if not this_dataframe.empty:
-                            hashes = this_dataframe['hash'].to_dict()
-                            #print(str(this_dataframe.Fam.max())+ 'fam num')
-                            #print(str(count) + ' done')
+                if self.verbose:
+                    print(datasets)
+                h5flush = h5hashes.flush
 
-                            hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
-                            for fam in hashes:
-                                forest.add(str(fam), hashes[fam])
+            print('saver init ' + str(i))
+            while True:
+                this_dataframe = retq.get()
+                if this_dataframe is not None:
+                    if not this_dataframe.empty:
+                        hashes = this_dataframe['hash'].to_dict()
+                        #print(str(this_dataframe.Fam.max())+ 'fam num')
+                        #print(str(count) + ' done')
 
-                            for fam in hashes:
-                                # if all rows are filled, allocate the next chunk
-                                if dataset.shape[0] <= fam:
-                                    dataset.resize(fam + chunk_size, axis=0)
+                        hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
+                        for fam in hashes:
+                            forest.add(str(fam), hashes[fam])
 
-                                dataset[fam, :] = hashes[fam].hashvalues.ravel()
-                                count += 1
+                        for fam in hashes:
+                            # if all rows are filled, allocate the next chunk
+                            if dataset.shape[0] <= fam:
+                                dataset.resize(fam + chunk_size, axis=0)
 
-                            if self.fileglob:
-                                if savedf is None:
-                                    savedf = this_dataframe[['Fam', 'ortho']]
-                                else:
-                                    savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )  
-                            if t.time() - save_start > 200:
-                                print( 'saving at :' , t.time() - global_time )
-                                forest.index()
-                                print( 'testing forest' )
-                                print(forest.query( hashes[fam] , k = 10 ) )
-                                h5flush()
-                                with open(self.lshforestpath , 'wb') as forestout:
-                                    forestout.write(pickle.dumps(forest, -1))
-                                if self.verbose == True:
-                                    print('save done at' + str(t.time() - global_time))
-                                if self.fileglob:
-                                    #save the mapping of fam to orthoxml
-                                    print('saving orthoxml to fam mapping')
-                                    print(savedf)
+                            dataset[fam, :] = hashes[fam].hashvalues.ravel()
+                            count += 1
 
-                                    savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
-                                save_start = t.time()
-                        else:
-                            print(this_dataframe)
-                    else:
-                        print('wrapping up the run')
-                        print('saving at :' , t.time() - global_time )
-                        forest.index()
-                        with open(self.lshforestpath , 'wb') as forestout:
-                            forestout.write(pickle.dumps(forest, -1))
-                        h5flush()
                         if self.fileglob:
-                            print('saving orthoxml to fam mapping')
-                            savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
-                        
-                        print('DONE SAVER' + str(i))
-                        break
+                            if savedf is None:
+                                savedf = this_dataframe[['Fam', 'ortho']]
+                            else:
+                                savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )
+                        if t.time() - save_start > 200:
+                            print( 'saving at :' , t.time() - global_time )
+                            forest.index()
+                            print( 'testing forest' )
+                            print(forest.query( hashes[fam] , k = 10 ) )
+                            h5flush()
+                            with open(self.lshforestpath , 'wb') as forestout:
+                                forestout.write(pickle.dumps(forest, -1))
+                            if self.verbose == True:
+                                print('save done at' + str(t.time() - global_time))
+                            if self.fileglob:
+                                #save the mapping of fam to orthoxml
+                                print('saving orthoxml to fam mapping')
+                                print(savedf)
+
+                                savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
+                            save_start = t.time()
+                    else:
+                        print(this_dataframe)
+                else:
+                    print('wrapping up the run')
+                    print('saving at :' , t.time() - global_time )
+                    forest.index()
+                    with open(self.lshforestpath , 'wb') as forestout:
+                        forestout.write(pickle.dumps(forest, -1))
+                    h5flush()
+                    if self.fileglob:
+                        print('saving orthoxml to fam mapping')
+                        savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
+
+                    print('DONE SAVER' + str(i))
+                    break
                 
 
     def matrix_updater(self, iprocess , q, retq, matq, l):
