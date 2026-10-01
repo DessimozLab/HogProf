@@ -286,14 +286,23 @@ class LSHBuilder:
             with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
                 datasets = {}
 
-                if taxstr not in h5hashes.keys():
-                    if self.verbose == True:
+                hash_width = 2 * self.numperm
+                dataset = h5hashes.create_dataset(
+                    taxstr,
+                    (chunk_size, hash_width),
+                    maxshape=(None, hash_width),
+                    dtype="int32",
+                )
+
+                if taxstr not in h5hashes:
+                    if self.verbose:
                         print('creating dataset')
-                        print('filtered at taxonomic level: '+taxstr)
-                    h5hashes.create_dataset(taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
-                    if self.verbose == True:
+                        print('filtered at taxonomic level:', taxstr)
+
+                    if self.verbose:
                         print(datasets)
                     h5flush = h5hashes.flush
+
                 print('saver init ' + str(i))
                 while True:
                     this_dataframe = retq.get()
@@ -302,13 +311,19 @@ class LSHBuilder:
                             hashes = this_dataframe['hash'].to_dict()
                             #print(str(this_dataframe.Fam.max())+ 'fam num')
                             #print(str(count) + ' done')
+
                             hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
-                            [ forest.add(str(fam),hashes[fam]) for fam in hashes]
                             for fam in hashes:
-                                if len(h5hashes[taxstr]) < fam + 10:
-                                    h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                                h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
+                                forest.add(str(fam), hashes[fam])
+
+                            for fam in hashes:
+                                # if all rows are filled, allocate the next chunk
+                                if dataset.shape[0] <= fam:
+                                    dataset.resize(fam + chunk_size, axis=0)
+
+                                dataset[fam, :] = hashes[fam].hashvalues.ravel()
                                 count += 1
+
                             if self.fileglob:
                                 if savedf is None:
                                     savedf = this_dataframe[['Fam', 'ortho']]
@@ -383,9 +398,13 @@ class LSHBuilder:
         print('DONE MAT UPDATER' + str(i))
 
     def run_pipeline(self , threads):
-        print( 'run w n threads:', threads)
-        functype_dict = {'worker': (self.worker, threads , True), 'updater': (self.saver, 1, False),
-                         'matrix_updater': (self.matrix_updater, 0, False) }
+        print('run w n threads:', threads)
+        functype_dict = {
+            'worker': (self.worker, threads , True),
+            'updater': (self.saver, 1, False),
+            'matrix_updater': (self.matrix_updater, 0, False)
+        }
+
         def mp_with_timeout(functypes, data_generator):
             work_processes = {}
             update_processes = {}
