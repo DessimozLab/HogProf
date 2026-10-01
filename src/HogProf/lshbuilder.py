@@ -242,44 +242,58 @@ class LSHBuilder:
                     break
 
     def worker(self, i, q, retq, matq, l):
-        if self.verbose == True:
-            print('worker init ' + str(i))
+        logger.debug('Starting worker #%d', i)
+
         while True:
             df = q.get()
-            if df is not None :
-
-
-                df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-                #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
-                #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
-                #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
-
-                df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
-                if self.fileglob:
-                    retq.put(df[['Fam', 'hash', 'ortho']])
-                else:
-                    retq.put(df[['Fam', 'hash']])
-            
-            else:
-                if self.verbose == True:
-                    print('Worker done' + str(i))
+            if df is None:
+                logger.debug('Worker #%d done', i)
                 break
+
+            df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+            #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
+            #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
+            #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
+
+            df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+            if self.fileglob:
+                retq.put(df[['Fam', 'hash', 'ortho']])
+            else:
+                retq.put(df[['Fam', 'hash']])
+
+
+                
+    def _make_tax_str(self):
+        taxstr = ""
+        if self.tax_filter is None:
+            taxstr = "NoFilter"
+        if self.tax_mask is None:
+            taxstr += "NoMask"
+        else:
+            taxstr = str(self.tax_filter)
+        return taxstr
+
+    def _index_and_save(self, forest):
+        logger.debug("Saving forest at: %.2f", t.time() - self.start_time)
+
+        forest.index()
+        with open(self.lshforestpath, "wb") as forest_out:
+            forest_out.write(pickle.dumps(forest, -1))
+
+        logger.debug("Save done at: %.2f", t.time() - self.start_time)
+
 
     def saver(self, i, q, retq, matq, l ):
         print_start = t.time()
         save_start = t.time()
         global_time = t.time()
+        self.start_time = global_time
+
         chunk_size = 100
         count = 0
         forest = MinHashLSHForest(num_perm=self.numperm)
-        taxstr = ''
         savedf = None
-        if self.tax_filter is None:
-            taxstr = 'NoFilter'
-        if self.tax_mask is None:
-            taxstr+= 'NoMask'
-        else:
-            taxstr = str(self.tax_filter)
+        taxstr = self._make_tax_str()
 
         with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
             datasets = {}
@@ -291,18 +305,14 @@ class LSHBuilder:
                 maxshape=(None, hash_width),
                 dtype="int32",
             )
+            h5hashes.flush()
+            logger.debug('Creating dataset filtered at taxonomic level: %s', taxstr)
+            logger.debug(datasets)
+            h5flush = h5hashes.flush
 
-            if taxstr not in h5hashes:
-                if self.verbose:
-                    print('creating dataset')
-                    print('filtered at taxonomic level:', taxstr)
-
-                if self.verbose:
-                    print(datasets)
-                h5flush = h5hashes.flush
-
-            print('saver init ' + str(i))
-            while True:
+            logger.info("Starting saver...")
+            done = False
+            while not done:
                 this_dataframe = retq.get()
                 if this_dataframe is not None:
                     if not this_dataframe.empty:
@@ -310,7 +320,7 @@ class LSHBuilder:
                         #print(str(this_dataframe.Fam.max())+ 'fam num')
                         #print(str(count) + ' done')
 
-                        hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
+                        hashes = { fam:hashes[fam] for fam in hashes if hashes[fam]}
                         for fam in hashes:
                             forest.add(str(fam), hashes[fam])
 
@@ -327,16 +337,14 @@ class LSHBuilder:
                                 savedf = this_dataframe[['Fam', 'ortho']]
                             else:
                                 savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )
-                        if t.time() - save_start > 200:
-                            print( 'saving at :' , t.time() - global_time )
-                            forest.index()
-                            print( 'testing forest' )
-                            print(forest.query( hashes[fam] , k = 10 ) )
+
+                        if t.time() - save_start > 200:                            
+                            logger.debug('Testing forest')
+                            logger.debug(forest.query(hashes[fam] , k = 10))
+
                             h5flush()
-                            with open(self.lshforestpath , 'wb') as forestout:
-                                forestout.write(pickle.dumps(forest, -1))
-                            if self.verbose == True:
-                                print('save done at' + str(t.time() - global_time))
+                            self._index_and_save(forest)
+
                             if self.fileglob:
                                 #save the mapping of fam to orthoxml
                                 print('saving orthoxml to fam mapping')
@@ -348,17 +356,16 @@ class LSHBuilder:
                         print(this_dataframe)
                 else:
                     print('wrapping up the run')
-                    print('saving at :' , t.time() - global_time )
-                    forest.index()
-                    with open(self.lshforestpath , 'wb') as forestout:
-                        forestout.write(pickle.dumps(forest, -1))
+
+                    self._index_and_save(forest)
+
                     h5flush()
                     if self.fileglob:
                         print('saving orthoxml to fam mapping')
                         savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
 
-                    print('DONE SAVER' + str(i))
-                    break
+                    logger.debug('Saver done')
+                    done = True
                 
 
     def matrix_updater(self, iprocess , q, retq, matq, l):
@@ -475,7 +482,7 @@ def main():
     parser.add_argument('--lossonly', help='only compile loss events' , type = bool)
     parser.add_argument('--duplonly', help='only compile duplication events' , type = bool)
     parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
-    parser.add_argument('--verbose', help='print verbose output' , type = bool)
+    parser.add_argument('--verbose', help='print verbose output', action='store_true')
     parser.add_argument('--reformat_names', help='try to correct broken species trees by replacing all names with numbers.' , type = bool)
     parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
 
@@ -545,10 +552,8 @@ def main():
     
     print('taxcodes', taxcodes)
 
-    if args['verbose'] == 'True':
-        verbose = args['verbose']
-    else:   
-        verbose = False
+    _args = parser.parse_args()
+    verbose = _args.verbose
 
     if args['reformat_names']:
         reformat_names = True
@@ -575,6 +580,14 @@ def main():
         mastertree = Path(args['mastertree'])
     else:
         mastertree=None
+
+    # set DEBUG log level if --verbose
+    log_level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(level=logging.INFO)
+
+    # Pyham spams INFO-level messages like crazy. Suppress
+    logging.getLogger("pyham").setLevel(logging.WARNING)
+    logging.getLogger().setLevel(log_level)
 
     start = time.time()
     if omafile:
