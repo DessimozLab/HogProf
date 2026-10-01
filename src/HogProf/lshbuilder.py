@@ -201,7 +201,7 @@ class LSHBuilder:
                     hog_size = ortho_fam.count('<species name=')
                     if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
                         families[fam] = {'ortho': ortho_fam}
-                    if len(families) > size:
+                    if len(families) >= size:
                         pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                         pd_dataframe['Fam'] = pd_dataframe.index
                         yield pd_dataframe
@@ -221,7 +221,7 @@ class LSHBuilder:
                 hog_size = orthostr.count('<species name=')
                 if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
                     families[i] = {'ortho': file}
-                if len(families) > size:
+                if len(families) >= size:
                     pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                     pd_dataframe['Fam'] = pd_dataframe.index
                     yield pd_dataframe
