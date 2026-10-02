@@ -13,7 +13,7 @@ import time as t
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from HogProf import __version__
 
 import h5py
 import numpy as np
@@ -496,6 +496,9 @@ class LSHBuilder:
 
 def main():
     parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="hogprof")
+    parser.add_argument('--version', action='version',
+                        version=f'%(prog)s {__version__}')
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
     parser.add_argument('--taxmask', help='consider only one branch',type = str)
     parser.add_argument('--taxfilter', help='remove these taxa' , type = str)
