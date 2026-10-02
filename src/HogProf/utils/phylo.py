@@ -130,8 +130,7 @@ def get_tree(genomes, outdir=None):
     topo = ncbi.get_topology(genomes, collapse_subspecies=False)
     tree.add_child(topo)
     orphans = list(genomes - set([x.name for x in tree.get_leaves()]))
-    print('missing taxa:')
-    print(len(orphans))
+    logger.warning('Missing taxa: %d', len(orphans))
 
     orphans_info1 = {}
     orphans_info2 = {}

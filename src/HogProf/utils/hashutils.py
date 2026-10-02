@@ -1,11 +1,10 @@
-
-
 import datasketch
-import itertools
 import copy
-import math
+import logging
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def generate_treeweights( mastertree, taxaIndex ,  taxfilter= None, taxmask=None ):
@@ -23,7 +22,7 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter= None, taxmask=None
     #get max of taxa index
     taxmax = max(taxaIndex.values())+1
     weights = np.zeros((3*taxmax,1))
-    print('making tree weights w n taxa = :',len(taxaIndex))
+    logger.info('making tree weights with %d taxa', len(taxaIndex))
     newtree = copy.deepcopy(mastertree)
     if taxmask:
         for node in newtree.traverse():
