@@ -3,7 +3,6 @@ import functools
 import glob
 import logging
 import multiprocessing as mp
-import os
 import pickle
 import queue
 import random
@@ -14,18 +13,16 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
-from formulaic.utils.deprecations import deprecated
-
 from HogProf import __version__
 
 import h5py
 import numpy as np
 import pandas as pd
-import tqdm
 from datasketch import MinHashLSHForest, WeightedMinHashGenerator
 from pyoma.browser import db
 from tables import open_file
 
+from HogProf.cli import setup_cli, track_progress
 from HogProf.utils import hashutils, phylo, pyhamutils
 
 logger = logging.getLogger(__name__)
@@ -192,7 +189,11 @@ class LSHBuilder:
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
             self.rows = len(self.groups)
-            for i, row in enumerate(tqdm.tqdm(self.groups)):
+            for i, row in enumerate(track_progress(
+                self.groups,
+                description="Processing OMA groups",
+                total=self.rows,
+            )):
                 if i > start:
                     fam = row[0]
                     ortho_fam = self.READ_ORTHO(fam)
@@ -210,7 +211,11 @@ class LSHBuilder:
                 yield pd_dataframe
 
         elif self.fileglob:
-            for i,file in enumerate(tqdm.tqdm(self.fileglob)):
+            for i,file in enumerate(track_progress(
+                self.fileglob,
+                description="Processing OrthoXML files",
+                total=len(self.fileglob),
+            )):
                 with open(file) as ortho:
                     #oxml = ET.parse(ortho)
                     #ortho_fam = ET.tostring( next(oxml.iter()), encoding='utf8', method='xml' ).decode()
@@ -307,9 +312,6 @@ class LSHBuilder:
                 if this_dataframe is not None:
                     if not this_dataframe.empty:
                         hashes = this_dataframe['hash'].to_dict()
-                        #print(str(this_dataframe.Fam.max())+ 'fam num')
-                        #print(str(count) + ' done')
-
                         hashes = { fam:hashes[fam] for fam in hashes if hashes[fam]}
                         for fam in hashes:
                             forest.add(str(fam), hashes[fam])
@@ -323,8 +325,6 @@ class LSHBuilder:
                             count += 1
 
                         if count - last_reported_count >= 1000:
-                            # maybe we don't need this as this disrupts tqdm output
-                            #logger.info('Saver has written %d hashes', count)
                             last_reported_count = count
 
                         if self.fileglob:
@@ -340,7 +340,7 @@ class LSHBuilder:
                                 self._save_family_mapping(mapping_frames)
                             save_start = t.time()
                     else:
-                        print(this_dataframe)
+                        logger.debug('Saver received an empty result batch')
                 else:
                     logger.info('Wrapping up the run')
 
@@ -545,7 +545,15 @@ def main():
     taxmask = None
     omafile = None
 
-    args = vars(parser.parse_args(sys.argv[1:]))
+    parsed_args = parser.parse_args(sys.argv[1:])
+
+    # set up Rich console and logging
+    setup_cli(verbose=parsed_args.verbose)
+
+    # Pyham spams INFO-level messages like crazy. Suppress
+    logging.getLogger("pyham").setLevel(logging.WARNING)
+
+    args = vars(parsed_args)
 
     if 'OrthoGlob' in args:
         if args['OrthoGlob']:
@@ -577,7 +585,7 @@ def main():
     else:
         raise Exception(' please specify input data ')
 
-    _args = parser.parse_args()
+    _args = parsed_args
     output_dir = _args.outpath
     # flags
     loss_only = _args.lossonly
@@ -602,7 +610,7 @@ def main():
         model = model_from_json(loaded_model_json)
         # load weights into new model
         model.load_weights(  args['taxweights']+".h5")
-        print("Loaded model from disk")
+        logger.info("Loaded model from disk")
         weights = model.get_weights()[0]
         weights += 10 ** -10
     else:
@@ -611,14 +619,6 @@ def main():
         mastertree = Path(args['mastertree'])
     else:
         mastertree=None
-
-    # set DEBUG log level if --verbose
-    log_level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(level=logging.INFO)
-
-    # Pyham spams INFO-level messages like crazy. Suppress
-    logging.getLogger("pyham").setLevel(logging.WARNING)
-    logging.getLogger().setLevel(log_level)
 
     start = time.time()
     if omafile:

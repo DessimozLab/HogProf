@@ -72,14 +72,14 @@ def add_orphans(orphan_info, tree, genome_ids_list, verbose=False):
 
     keys = set()
     i = 0
-    print(i)
+    logger.debug("Starting orphan repair pass %d", i)
 
     while first or ( len(orphans) > 0  and keys != oldkeys ) :
         first = False
         oldkeys = keys
         leaves = set([leaf.name for leaf in tree.get_leaves()])
         orphans = set(genome_ids_list) - leaves
-        print(len(orphans))
+        logger.debug("Taxonomy still has %d orphan taxa", len(orphans))
         for orphan in orphans:
             if str(orphan_info[orphan][-1]) in newdict:
                 newdict[str(orphan_info[orphan][-1])].append(orphan)
@@ -98,7 +98,7 @@ def add_orphans(orphan_info, tree, genome_ids_list, verbose=False):
 
         newdict = {}
     nodes = {}
-    print(orphans)
+    logger.debug("Orphan taxa after repair: %s", sorted(orphans))
     #clean up duplicates
     for n in tree.traverse():
         if n.name not in nodes:
@@ -137,13 +137,13 @@ def get_tree(genomes, outdir=None):
     for x in orphans:
         search_handle = Entrez.efetch('taxonomy', id=str(x), retmode='xml')
         record = next(Entrez.parse(search_handle))
-        print(record)
+        logger.debug("NCBI taxonomy record for %s: %s", x, record)
         orphans_info1[record['ParentTaxId']] = x
         orphans_info2[x] = [x['TaxId'] for x in record['LineageEx']]
     for n in tree.traverse():
         if n.name in orphans_info1:
             n.add_sister(name=orphans_info1[n.name])
-            print(n)
+            logger.debug("Attached orphan taxon beside node %s", n.name)
     orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
     tree = add_orphans(orphans_info2, tree, genomes)
     orphans = set(genomes) - set([x.name for x in tree.get_leaves()])
@@ -303,4 +303,3 @@ class TreeValidator:
         if count > 0:
             logger.info("Repaired %d internal single-child nodes", count)
         return new_tree
-
