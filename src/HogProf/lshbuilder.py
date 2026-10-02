@@ -22,7 +22,7 @@ from datasketch import MinHashLSHForest, WeightedMinHashGenerator
 from pyoma.browser import db
 from tables import open_file
 
-from HogProf.cli import setup_cli, track_progress
+from HogProf.cli import setup_cli, print_startup, track_progress
 from HogProf.utils import hashutils, phylo, pyhamutils
 
 logger = logging.getLogger(__name__)
@@ -509,7 +509,10 @@ def main():
     parser.add_argument('--nthreads',
                         help='[deprecated] Number of threads for multiprocessing',
                         type=int)
-    parser.add_argument("--njobs", help="Number of jobs for multiprocessing", type=int)
+    parser.add_argument("--njobs",
+                        help="Number of jobs for multiprocessing",
+                        type=int,
+                        default=1)
     parser.add_argument("--specieslim",
                         help="minimum number of species in a subhog",
                         type=int,
@@ -561,7 +564,7 @@ def main():
         else:   
             orthoglob = None
 
-    
+
     
     if args['dbtype']:
         taxfilter = dbdict[args['dbtype']]['taxfilter']
@@ -593,6 +596,8 @@ def main():
     use_tax_codes = _args.taxcodes
     verbose = _args.verbose
     reformat_names = _args.reformat_names
+
+    print_startup(args)
 
     njobs = 4
     if args['nthreads']:
