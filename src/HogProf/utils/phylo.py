@@ -194,9 +194,18 @@ class TreeValidator:
     def run(self):
         self._validate_format()
         tree = from_file(self.filename)
+
         self._fix_internal_species(tree)
-        tree = self._promote_single_leafs(tree)
-        return tree
+
+        leaf_names_before = tree.get_leaf_names()
+        new_tree = self._promote_single_leaves(tree.copy())
+
+        # repaired tree check: kept every leaf
+        assert sorted(new_tree.get_leaf_names()) == sorted(leaf_names_before)
+        # check: new tree is connected
+        assert all(child.up is node for node in new_tree.traverse() for child in node.children)
+
+        return new_tree
 
     def _validate_format(self):
         # validate name
@@ -275,22 +284,24 @@ class TreeValidator:
                 + ", ".join(sorted(invalid))
             )
 
-    def _promote_single_leafs(self, tree: ete3.Tree) -> ete3.Tree:
+    @staticmethod
+    def _promote_single_leaves(tree: ete3.Tree) -> ete3.Tree:
         """
         If a node has a single descendant that's a leaf,
         makes it a sister node
         """
         new_tree = tree
 
-        for n in new_tree.traverse():
-            if n.is_leaf():
-                continue
+        count = 0
+        for node in new_tree.traverse("postorder"):
+            children = node.get_children()
+            to_delete = not node.is_root() and len(children) == 1 and children[0].is_leaf()
+            if to_delete:
+                logger.debug("Reparenting node %s", children[0].name)
+                count += 1
+                node.delete()
 
-            if len(n.get_children()) == 1 and n.get_children()[0].is_leaf():
-                logger.warning("detaching node %s", n.name)
-                child = n.get_children()[0]
-                n.detach()
-                n.up.add_child(child)
-                logger.warning("attaching node %s", child.name)
-
+        if count > 0:
+            logger.info("Repaired %d internal single-child nodes", count)
         return new_tree
+
