@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "HogProf"
-version = "0.0.12"
+version = "0.1.0"
 authors = [
   { name = "Dave Moi", email = "dmoi@unil.ch" },
   { name = "Athina Gavriilidou", email = "athina.gavriilidou@unil.ch" },
