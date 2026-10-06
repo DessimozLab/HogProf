@@ -1154,16 +1154,10 @@ def main():
     parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
     parser.add_argument('--verbose', help='print verbose output', action='store_true')
     parser.add_argument('--reformat_names', help='try to correct broken species trees by replacing all names with numbers.' , type = bool)
-<<<<<<< HEAD
     parser.add_argument('--slicesubhogs', help='slice subhogs' , type = bool, default=False)
     parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
     parser.add_argument('--eventslim', help='minimum number of events (loss/duplication) in a subhog' , type = int, default=0)
     
-||||||| 01f5de5
-=======
-    parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
-
->>>>>>> develop
     dbdict = {
         'all': { 'taxfilter': None , 'taxmask': None },
         'plants': { 'taxfilter': None , 'taxmask': 33090 },
@@ -1199,21 +1193,11 @@ def main():
         taxfilter = dbdict[args['dbtype']]['taxfilter']
         taxmask = dbdict[args['dbtype']]['taxmask']
     if args['taxmask']:
-<<<<<<< HEAD
-        taxmask = args['taxmask']   
-    if args['taxfilter']:
-        taxfilter = args['taxfilter']
-||||||| 01f5de5
-        taxfilter = args['taxfilter']
-    if args['taxfilter']:
-        taxmask = args['taxmask']
-=======
         taxmask = args['taxmask']
     
     if args['taxfilter']:
         taxfilter = args['taxfilter']
 
->>>>>>> develop
     if args['nperm']:
         nperm = int(args['nperm'])
     else:
@@ -1239,16 +1223,6 @@ def main():
         taxcodes = True
     else:
         taxcodes = False
-<<<<<<< HEAD
-    
-    #print('taxcodes', taxcodes)
-||||||| 01f5de5
-    
-    print('taxcodes', taxcodes)
-=======
-
-    print('taxcodes', taxcodes)
->>>>>>> develop
 
     _args = parser.parse_args()
     verbose = _args.verbose
@@ -1292,46 +1266,21 @@ def main():
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
             treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , 
-<<<<<<< HEAD
             lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, 
             verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], limit_events=args['eventslim'])
-||||||| 01f5de5
-            lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose )
-=======
-            lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose,
-             limit_species=args['specieslim'])
->>>>>>> develop
             lsh_builder.run_pipeline(threads)
             #lsh_builder.run_pipeline_single() # made for local tests. ignore
 
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
         treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
-<<<<<<< HEAD
           masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , 
           reformat_names=reformat_names, verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], 
           limit_events=args['eventslim'])
-||||||| 01f5de5
-          masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose)
-=======
-          masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose,
-          limit_species=args['specieslim'])
->>>>>>> develop
         lsh_builder.run_pipeline(threads)
-<<<<<<< HEAD
-        #lsh_builder.run_pipeline_single()
-    print("\nAnalysis took",time.time() - start, 'seconds')
-    print('DONE\n\n')
-    
-||||||| 01f5de5
-    print(time.time() - start)
-    print('DONE')
 
-=======
     logger.info("Done in %.2fs", time.time() - start)
 
->>>>>>> develop
 
 if __name__ == '__main__':
     main()
-;

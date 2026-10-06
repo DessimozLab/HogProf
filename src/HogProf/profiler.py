@@ -6,14 +6,9 @@ import random
 from tables import *
 import numpy as np
 import random
-<<<<<<< HEAD
 import ete3
 import argparse
 import sys
-||||||| 01f5de5
-import ete3
-=======
->>>>>>> develop
 #from validation import validation_semantic_similarity
 from HogProf.utils import hashutils , pyhamutils , phylo
 from time import time
@@ -33,13 +28,6 @@ class Profiler:
 	A profiler object allows the user to query the LSH with HOGs and get a list of result HOGs back
 
 	"""
-<<<<<<< HEAD
-	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False , nsamples = 256 , 
-			  mastertree = None , reformat_names = False , swap2taxcode = False , use_phyloxml = False , 
-			  taxfilter = None , taxmask = None, slicesubhogs = False ):
-||||||| 01f5de5
-	def __init__(self,lshforestpath = None, hashes_h5=None, mat_path= None, oma = False , nsamples = 256 , mastertree = None , reformat_names = False , swap2taxcode = False , use_phyloxml = False , taxfilter = None , taxmask = None ):
-=======
 	def __init__(self,
 				 lshforestpath=None,
 				 hashes_h5=None,
@@ -50,8 +38,8 @@ class Profiler:
 				 reformat_names=False,
 				 swap2taxcode=False,
 				 taxfilter=None,
-				 taxmask=None):
->>>>>>> develop
+				 taxmask=None,
+				 slicesubhogs=False):
 		"""
 		The Profiler class initializes a profiler object for querying the LSH with HOGs and returning a list of result HOGs.
 
@@ -136,51 +124,10 @@ class Profiler:
 			
 		print('h5' , self.hashes_h5 , self.hashes_h5.keys())
 		self.nsamples = nsamples
-<<<<<<< HEAD
-		if 'xml' in mastertree.lower():
-			project = Phyloxml()
-			project.build_from_file(mastertree)
-			trees = [t for t in  project.get_phylogeny()]
-			self.tree = [ n for n in trees[0] ][0]
-			self.use_phyloxml = True
-			print('using phyloxml')
-			#print( 'loaded tree:' , self.tree )
-			self.tree_string = mastertree
-		else:
-			try:
-				self.tree = ete3.Tree(mastertree, format=1 , quoted_node_names= True)
-				#print( 'loaded tree:', self.tree )
-			except:
-				self.tree = ete3.Tree(mastertree, format=0)
-		with open(mastertree) as treein:
-			self.tree_string = treein.read()
-		#self.tree_string = self.tree_ete3.write(format=0)
-
-||||||| 01f5de5
-		if 'xml' in mastertree.lower():
-			project = Phyloxml()
-			project.build_from_file(mastertree)
-			trees = [t for t in  project.get_phylogeny()]
-			self.tree = [ n for n in trees[0] ][0]
-			self.use_phyloxml = True
-			print('using phyloxml')
-			print( 'loaded tree:' , self.tree )
-			self.tree_string = mastertree
-		else:
-			try:
-				self.tree = ete3.Tree(mastertree, format=1 , quoted_node_names= True)
-				print( 'loaded tree:', self.tree )
-			except:
-				self.tree = ete3.Tree(mastertree, format=0)
-		with open(mastertree) as treein:
-			self.tree_string = treein.read()
-		#self.tree_string = self.tree_ete3.write(format=0)
-=======
 
 		self.tree = phylo.from_file(mastertree)
 		print('loaded tree:', self.tree)
 		self.tree_string = phylo.to_string(self.tree)
->>>>>>> develop
         
 		if oma:
 			self.reformat_names = reformat_names
@@ -231,22 +178,10 @@ class Profiler:
 
 			self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
 			
-<<<<<<< HEAD
-			self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-												  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper ) 
-			
-			self.HASH_PIPELINE = functools.partial(hashfunction , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )
-||||||| 01f5de5
-			self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-												  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper ) 
-
-			self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )
-=======
-			self.HAM_PIPELINE = functools.partial( pyhamutils.get_ham_treemap_from_row, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
+			self.HAM_PIPELINE = functools.partial(hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
 												  orthoXML_as_string = True, orthomapper = self.idmapper )
 
 			self.HASH_PIPELINE = functools.partial(hashutils.row2hash , taxaIndex=self.taxaIndex  , treeweights=self.treeweights , wmg=None )
->>>>>>> develop
 		
 		self.taxaIndex, self.ReverseTaxaIndex = phylo.generate_taxa_index(self.tree)
 
