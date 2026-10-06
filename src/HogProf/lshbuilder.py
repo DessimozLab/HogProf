@@ -354,10 +354,9 @@ class LSHBuilder:
                 yield pd_dataframe
 
 
-    def worker(self, i, work_queue, result_queue):
-        logger.debug('Starting worker #%d', i)
+    #def worker(self, i, work_queue, result_queue):
+    #    logger.debug('Starting worker #%d', i)
 
-<<<<<<< HEAD
     def worker(self, i, q, retq, matq, l):
         try:
             if self.verbose == True:
@@ -436,159 +435,26 @@ class LSHBuilder:
                         #print(newdf)
                         #print(f"Memory before retq: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                         retq.put(newdf)
-||||||| 01f5de5
-    def worker(self, i, q, retq, matq, l):
-        if self.verbose == True:
-            print('worker init ' + str(i))
-        while True:
-            df = q.get()
-            if df is not None :
-                df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-                #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
-                #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
-                #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
-
-                df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
-                if self.fileglob:
-                    retq.put(df[['Fam', 'hash', 'ortho']])
                 else:
-                    retq.put(df[['Fam', 'hash']])
-            
-            else:
-                if self.verbose == True:
-                    print('Worker done' + str(i))
-                break
-
-    def saver(self, i, q, retq, matq, l ):
-        print_start = t.time()
-        save_start = t.time()
-        global_time = t.time()
-        chunk_size = 100
-        count = 0
-        forest = MinHashLSHForest(num_perm=self.numperm)
-        taxstr = ''
-        savedf = None
-        if self.tax_filter is None:
-            taxstr = 'NoFilter'
-        if self.tax_mask is None:
-            taxstr+= 'NoMask'
-        else:
-            taxstr = str(self.tax_filter)
-        self.errorfile = self.saving_path + 'errors.txt'
-        with open(self.errorfile, 'w') as hashes_error_files:
-            with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
-                datasets = {}
-
-                if taxstr not in h5hashes.keys():
                     if self.verbose == True:
-                        print('creating dataset')
-                        print('filtered at taxonomic level: '+taxstr)
-                    h5hashes.create_dataset(taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
-                    if self.verbose == True:
-                        print(datasets)
-                    h5flush = h5hashes.flush
-                print('saver init ' + str(i))
-                while True:
-                    this_dataframe = retq.get()
-                    if this_dataframe is not None:
-                        if not this_dataframe.empty:
-                            hashes = this_dataframe['hash'].to_dict()
-                            #print(str(this_dataframe.Fam.max())+ 'fam num')
-                            #print(str(count) + ' done')
-                            hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
-                            [ forest.add(str(fam),hashes[fam]) for fam in hashes]
-                            for fam in hashes:
-                                if len(h5hashes[taxstr]) < fam + 10:
-                                    h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                                h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
-                                count += 1
-                            if self.fileglob:
-                                if savedf is None:
-                                    savedf = this_dataframe[['Fam', 'ortho']]
-                                else:
-                                    savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )  
-                            if t.time() - save_start > 200:
-                                print( 'saving at :' , t.time() - global_time )
-                                forest.index()
-                                print( 'testing forest' )
-                                print(forest.query( hashes[fam] , k = 10 ) )
-                                h5flush()
-                                with open(self.lshforestpath , 'wb') as forestout:
-                                    forestout.write(pickle.dumps(forest, -1))
-                                if self.verbose == True:
-                                    print('save done at' + str(t.time() - global_time))
-                                if self.fileglob:
-                                    #save the mapping of fam to orthoxml
-                                    print('saving orthoxml to fam mapping')
-                                    print(savedf)
+                        print('Worker done' + str(i))
+                    break
+        except Exception as e:
+            import traceback
+            print('Worker error', file=sys.stderr)
+            print(f"Error in worker process: {traceback.format_exc()}", file=sys.stderr)
+            logger.info('Wrapping up the run')
 
-                                    savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
-                                save_start = t.time()
-                        else:
-                            print(this_dataframe)
-                    else
-                        print('wrapping up the run')
-                        print('saving at :' , t.time() - global_time )
-                        forest.index()
-                        with open(self.lshforestpath , 'wb') as forestout:
-                            forestout.write(pickle.dumps(forest, -1))
-                        h5flush()
-                        if self.fileglob:
-                            print('saving orthoxml to fam mapping')
-                            savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
-                        
-                        print('DONE SAVER' + str(i))
-                        break
-                
+            self._index_and_save(forest)
 
-    def matrix_updater(self, iprocess , q, retq, matq, l):
-        print('hogmat saver init ' + str(iprocess))
-        h5mat = None
-        times1 = []
-        frames = []
-        with h5py.File(self.mat_path + str(iprocess) + 'h5', 'w', libver='latest') as h5hashes:
-            i = 0
-            while True:
-                rows = matq.get()
-                if rows is not None:
-                    rows = rows.dropna()
-                    maxfam = rows.Fam.max()
-                    if h5mat is None:
-                        h5hashes.create_dataset('matrows',(10,block.shape[1]), maxshape=(None, block.shape[1]),chunks=(1, block.shape[1]), dtype='i8')
-                        h5mat = h5hashes['matrows']
-                    if h5mat.shape[0] < maxfam:
-                        h5mat.resize((maxfam+1,block.shape[1]))
-                    i+=1
-                    frames.append(rows)
-                    assign = t.time()
-                    index = np.asarray(rows.Fam)
-                    block = np.vstack(rows.rows)
-                    h5mat[index,:]= block
-
-                    times1.append(t.time()-assign)
-                    if len(times1)>10:
-                        times1.pop(0)
-                        print(np.mean(times1))
-                    h5hashes.flush()
-=======
-        while True:
-            df = work_queue.get()
-            if df is None:
-                logger.debug('Worker #%d done', i)
-                break
-
-            df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-            #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
-            #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
-            #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
-
-            df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+            h5hashes.flush()
             if self.fileglob:
-                result_queue.put(df[['Fam', 'hash', 'ortho']])
-            else:
-                result_queue.put(df[['Fam', 'hash']])
+                self._save_family_mapping(mapping_frames)
 
+            logger.info('Saver wrote %d hashes', count)
+            done = True
 
+    
     def _make_tax_str(self):
         taxstr = ""
         if self.tax_filter is None:
@@ -616,94 +482,69 @@ class LSHBuilder:
         mapping.to_csv(self.saving_path + 'fam2orthoxml.csv')
 
 
-    def saver(self, result_queue):
-        save_start = t.time()
-        global_time = t.time()
-        self.start_time = global_time
+    # def saver(self, result_queue):
+    #     save_start = t.time()
+    #     global_time = t.time()
+    #     self.start_time = global_time
 
-        chunk_size = 100
-        count = 0
-        last_reported_count = 0
-        forest = MinHashLSHForest(num_perm=self.numperm)
-        mapping_frames = []
-        taxstr = self._make_tax_str()
+    #     chunk_size = 100
+    #     count = 0
+    #     last_reported_count = 0
+    #     forest = MinHashLSHForest(num_perm=self.numperm)
+    #     mapping_frames = []
+    #     taxstr = self._make_tax_str()
 
-        with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
-            hash_width = 2 * self.numperm
-            dataset = h5hashes.create_dataset(
-                taxstr,
-                (chunk_size, hash_width),
-                maxshape=(None, hash_width),
-                dtype="int32",
-            )
-            h5hashes.flush()
-            logger.debug('Creating dataset filtered at taxonomic level: %s', taxstr)
+    #     with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
+    #         hash_width = 2 * self.numperm
+    #         dataset = h5hashes.create_dataset(
+    #             taxstr,
+    #             (chunk_size, hash_width),
+    #             maxshape=(None, hash_width),
+    #             dtype="int32",
+    #         )
+    #         h5hashes.flush()
+    #         logger.debug('Creating dataset filtered at taxonomic level: %s', taxstr)
 
-            done = False
-            while not done:
-                this_dataframe = result_queue.get()
-                if this_dataframe is not None:
-                    if not this_dataframe.empty:
-                        hashes = this_dataframe['hash'].to_dict()
-                        #print(str(this_dataframe.Fam.max())+ 'fam num')
-                        #print(str(count) + ' done')
+    #         done = False
+    #         while not done:
+    #             this_dataframe = result_queue.get()
+    #             if this_dataframe is not None:
+    #                 if not this_dataframe.empty:
+    #                     hashes = this_dataframe['hash'].to_dict()
+    #                     #print(str(this_dataframe.Fam.max())+ 'fam num')
+    #                     #print(str(count) + ' done')
 
-                        hashes = { fam:hashes[fam] for fam in hashes if hashes[fam]}
-                        for fam in hashes:
-                            forest.add(str(fam), hashes[fam])
+    #                     hashes = { fam:hashes[fam] for fam in hashes if hashes[fam]}
+    #                     for fam in hashes:
+    #                         forest.add(str(fam), hashes[fam])
 
-                        for fam in hashes:
-                            # if all rows are filled, allocate the next chunk
-                            if dataset.shape[0] <= fam:
-                                dataset.resize(fam + chunk_size, axis=0)
+    #                     for fam in hashes:
+    #                         # if all rows are filled, allocate the next chunk
+    #                         if dataset.shape[0] <= fam:
+    #                             dataset.resize(fam + chunk_size, axis=0)
 
-                            dataset[fam, :] = hashes[fam].hashvalues.ravel()
-                            count += 1
+    #                         dataset[fam, :] = hashes[fam].hashvalues.ravel()
+    #                         count += 1
 
-                        if count - last_reported_count >= 1000:
-                            # maybe we don't need this as this disrupts tqdm output
-                            #logger.info('Saver has written %d hashes', count)
-                            last_reported_count = count
+    #                     if count - last_reported_count >= 1000:
+    #                         # maybe we don't need this as this disrupts tqdm output
+    #                         #logger.info('Saver has written %d hashes', count)
+    #                         last_reported_count = count
 
-                        if self.fileglob:
-                            mapping_frames.append(this_dataframe[['Fam', 'ortho']])
+    #                     if self.fileglob:
+    #                         mapping_frames.append(this_dataframe[['Fam', 'ortho']])
 
-                        if hashes and t.time() - save_start > 200:
-                            h5hashes.flush()
-                            self._index_and_save(forest)
-                            logger.debug('Testing forest')
-                            logger.debug(forest.query(hashes[fam], k=10))
+    #                     if hashes and t.time() - save_start > 200:
+    #                         h5hashes.flush()
+    #                         self._index_and_save(forest)
+    #                         logger.debug('Testing forest')
+    #                         logger.debug(forest.query(hashes[fam], k=10))
 
-                            if self.fileglob:
-                                self._save_family_mapping(mapping_frames)
-                            save_start = t.time()
-                    else:
-                        print(this_dataframe)
->>>>>>> develop
-                else:
-<<<<<<< HEAD
-                    if self.verbose == True:
-                        print('Worker done' + str(i))
-                    break
-        except Exception as e:
-            import traceback
-            print('Worker error', file=sys.stderr)
-            print(f"Error in worker process: {traceback.format_exc()}", file=sys.stderr)
-||||||| 01f5de5
-                    h5hashes.flush()
-                    break
-        print('DONE MAT UPDATER' + str(i))
-=======
-                    logger.info('Wrapping up the run')
-
-                    self._index_and_save(forest)
-
-                    h5hashes.flush()
-                    if self.fileglob:
-                        self._save_family_mapping(mapping_frames)
-
-                    logger.info('Saver wrote %d hashes', count)
-                    done = True
+    #                         if self.fileglob:
+    #                             self._save_family_mapping(mapping_frames)
+    #                         save_start = t.time()
+    #                 else:
+    #                     print(this_dataframe)
 
     @staticmethod
     def _raise_if_failed(processes, required_alive=()):
@@ -820,6 +661,18 @@ class LSHBuilder:
             self._wait_for_all((saver,))
             completed = True
 
+
+            raise NotImplementedError("Merge error: _run_parallel")
+            if self.slicesubhogs:
+                csv_path = os.path.join(self.saving_path, 'fam2orthoxml.csv')
+                if os.path.exists(csv_path):
+                    df = pd.read_csv(csv_path, index_col=[0, 1])  # Read first two columns as index
+                    #print(df.head())
+                    #print(df.size)
+                    df.index.set_names(['fam', 'subhog_id'], inplace=True)  # Set correct names
+                    df.to_csv(csv_path)  # Overwrite with corrected index names
+                    #print(df.size)
+
         finally:
             # if error
             if not completed:
@@ -836,7 +689,6 @@ class LSHBuilder:
                     process_queue.join_thread()
 
         logger.info('Pipeline complete')
->>>>>>> develop
 
     def safe_ham(self, row):
             try:
@@ -1027,135 +879,101 @@ class LSHBuilder:
             print('Worker error')
             print(f"Error in worker process: {traceback.format_exc()}")
 
-    ### creates a new small h5 file to store the MinHashes (hashes_1.h5)
-    def matrix_updater(self, iprocess , q, retq, matq, l):
-        try:
-            print('hogmat saver init ' + str(iprocess))
-            h5mat = None
-            times1 = []
-            frames = []
-            with h5py.File(self.mat_path + str(iprocess) + 'h5', 'w', libver='latest') as h5hashes:
-                i = 0
-                while True:
-                    rows = matq.get()
-                    if rows is not None:
-                        rows = rows.dropna()
-                        maxfam = rows.Fam.max()
-                        if h5mat is None:
-                            h5hashes.create_dataset('matrows',(10,block.shape[1]), maxshape=(None, block.shape[1]),chunks=(1, block.shape[1]), dtype='i8')
-                            h5mat = h5hashes['matrows']
-                        if h5mat.shape[0] < maxfam:
-                            h5mat.resize((maxfam+1,block.shape[1]))
-                        i+=1
-                        frames.append(rows)
-                        assign = t.time()
-                        index = np.asarray(rows.Fam)
-                        block = np.vstack(rows.rows)
-                        h5mat[index,:]= block
-
-                        times1.append(t.time()-assign)
-                        if len(times1)>10:
-                            times1.pop(0)
-                            print(np.mean(times1))
-                        h5hashes.flush()
-                    else:
-                        h5hashes.flush()
-                        break
-            print('DONE MAT UPDATER' + str(i))
-        except Exception as e:
-            import traceback
-            print('Worker error')
-            print(f"Error in worker process: {traceback.format_exc()}")
-    
 
     ### multithreaded pipeline to compile the LSH forest database of MinHashes
-    def run_pipeline(self , threads):
-<<<<<<< HEAD
-        print( 'run w n threads:', threads)
-        functype_dict = {'worker': (self.worker, threads , True), 'updater': (self.saver, 1, False),
-                         'matrix_updater': (self.matrix_updater, 0, False) }
-        ### function to manage parallel processing
-        def mp_with_timeout(functypes, data_generator):
-            # variables to store processes
-            work_processes = {} 
-            update_processes = {}
-            # lock to synchronize access to shared resources
-            lock = mp.Lock()
-            cores = mp.cpu_count()
-            # objects to send data between processes
-            q = mp.Queue(maxsize=cores * 10)
-            retq = mp.Queue(maxsize=cores * 10)
-            matq = mp.Queue(maxsize=cores * 10)
-            work_processes = {}
-            error_queue = mp.Queue() 
-            print('start workers')
-            for key in functypes:
-                worker_function, number_workers, joinval = functypes[key]
-                work_processes[key] = []
-                for i in range(int(number_workers)):
-                    t = mp.Process(target=worker_function, args=(i, q, retq, matq, lock ))
-                    t.daemon = True
-                    work_processes[key].append(t)
-            # starting the processes for each worker in parallel
-            for key in work_processes:
-                for process in work_processes[key]:
-                    process.start()
-            # feeding data to workers - data from generator are pushed into the queue q for the workers
-            for data in tqdm.tqdm(data_generator):
-                q.put(data)
+    #def run_pipeline(self , threads):
+        # print( 'run w n threads:', threads)
+        # functype_dict = {'worker': (self.worker, threads , True), 'updater': (self.saver, 1, False),
+        #                  'matrix_updater': (self.matrix_updater, 0, False) }
+        # ### function to manage parallel processing
+        # def mp_with_timeout(functypes, data_generator):
+        #     # variables to store processes
+        #     work_processes = {} 
+        #     update_processes = {}
+        #     # lock to synchronize access to shared resources
+        #     lock = mp.Lock()
+        #     cores = mp.cpu_count()
+        #     # objects to send data between processes
+        #     q = mp.Queue(maxsize=cores * 10)
+        #     retq = mp.Queue(maxsize=cores * 10)
+        #     matq = mp.Queue(maxsize=cores * 10)
+        #     work_processes = {}
+        #     error_queue = mp.Queue() 
+        #     print('start workers')
+        #     for key in functypes:
+        #         worker_function, number_workers, joinval = functypes[key]
+        #         work_processes[key] = []
+        #         for i in range(int(number_workers)):
+        #             t = mp.Process(target=worker_function, args=(i, q, retq, matq, lock ))
+        #             t.daemon = True
+        #             work_processes[key].append(t)
+        #     # starting the processes for each worker in parallel
+        #     for key in work_processes:
+        #         for process in work_processes[key]:
+        #             process.start()
+        #     # feeding data to workers - data from generator are pushed into the queue q for the workers
+        #     for data in tqdm.tqdm(data_generator):
+        #         q.put(data)
             
-            print('done spooling data')
-            # stopping workers - after all data are processed, None is pushed into the queue to 
-            # signal the workers to stop
-            for key in work_processes:
-                for i in range(2):
-                    for _ in work_processes[key]:
-                        q.put(None)
-            print('joining processes')
-            # if joinval is True, the main process waits for the workers to finish
-            for key in work_processes:
-                worker_function, number_workers , joinval = functypes[key]
-                if joinval == True:
-                    for process in work_processes[key]:
-                        process.join()
-            # processing data for non-joinable workers (updater and matrix updater) - pushing their
-            # results into retq and matq for processing
-            for key in work_processes:
-                worker_function, number_workers, joinval = functypes[key]
-                if joinval == False:
-                    for _ in work_processes[key]:
-                        retq.put(None)
-                        matq.put(None)
-            # final joining - waiting for all non-joinable processes to finish before proceeding
-            for key in work_processes:
-                worker_function, number_workers , joinval = functypes[key]
-                if joinval == False:
-                    for process in work_processes[key]:
-                        process.join()
-            # Check error queue
-            while not error_queue.empty():
-                print("ERROR in worker process:")
-                print(error_queue.get())
-            # garbage collection
-            gc.collect()
-            print('DONE!')
-        ### run the pipeline using the functions defined above
-        limit_species = self.limit_species
-        mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(size=100, minhog_size=limit_species)) #original was 100
-        ### fix labels for slicesubhogs
-        #'''
-        if self.slicesubhogs:
-            csv_path = os.path.join(self.saving_path, 'fam2orthoxml.csv')
-            if os.path.exists(csv_path):
-                df = pd.read_csv(csv_path, index_col=[0, 1])  # Read first two columns as index
-                #print(df.head())
-                #print(df.size)
-                df.index.set_names(['fam', 'subhog_id'], inplace=True)  # Set correct names
-                df.to_csv(csv_path)  # Overwrite with corrected index names
-                #print(df.size)
-        #'''
-        ### return the paths to the output files
-        return self.hashes_path, self.lshforestpath , self.mat_path
+        #     print('done spooling data')
+        #     # stopping workers - after all data are processed, None is pushed into the queue to 
+        #     # signal the workers to stop
+        #     for key in work_processes:
+        #         for i in range(2):
+        #             for _ in work_processes[key]:
+        #                 q.put(None)
+        #     print('joining processes')
+        #     # if joinval is True, the main process waits for the workers to finish
+        #     for key in work_processes:
+        #         worker_function, number_workers , joinval = functypes[key]
+        #         if joinval == True:
+        #             for process in work_processes[key]:
+        #                 process.join()
+        #     # processing data for non-joinable workers (updater and matrix updater) - pushing their
+        #     # results into retq and matq for processing
+        #     for key in work_processes:
+        #         worker_function, number_workers, joinval = functypes[key]
+        #         if joinval == False:
+        #             for _ in work_processes[key]:
+        #                 retq.put(None)
+        #                 matq.put(None)
+        #     # final joining - waiting for all non-joinable processes to finish before proceeding
+        #     for key in work_processes:
+        #         worker_function, number_workers , joinval = functypes[key]
+        #         if joinval == False:
+        #             for process in work_processes[key]:
+        #                 process.join()
+        #     # Check error queue
+        #     while not error_queue.empty():
+        #         print("ERROR in worker process:")
+        #         print(error_queue.get())
+        #     # garbage collection
+        #     gc.collect()
+        #     print('DONE!')
+        # ### run the pipeline using the functions defined above
+        # limit_species = self.limit_species
+        # mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(size=100, minhog_size=limit_species)) #original was 100
+        # ### fix labels for slicesubhogs
+        # #'''
+        # if self.slicesubhogs:
+        #     csv_path = os.path.join(self.saving_path, 'fam2orthoxml.csv')
+        #     if os.path.exists(csv_path):
+        #         df = pd.read_csv(csv_path, index_col=[0, 1])  # Read first two columns as index
+        #         #print(df.head())
+        #         #print(df.size)
+        #         df.index.set_names(['fam', 'subhog_id'], inplace=True)  # Set correct names
+        #         df.to_csv(csv_path)  # Overwrite with corrected index names
+        #         #print(df.size)
+        # #'''
+        # ### return the paths to the output files
+        # return self.hashes_path, self.lshforestpath , self.mat_path
+    
+    def run_pipeline(self , threads):
+        logger.info('Running with %d threads', threads)
+        data_generator = self.generates_dataframes(size=100, minhog_size=self.limit_species)
+        self._run_parallel(threads=threads, data_generator=data_generator)
+        return self.hashes_path, self.lshforestpath, self.mat_path
+    
 
     def run_pipeline_single(self):
         print('\nRun single-threaded pipeline')
@@ -1287,69 +1105,6 @@ class LSHBuilder:
                                 h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
                             forest.add(str(fam), hashes[fam])
                             h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
-||||||| 01f5de5
-        print( 'run w n threads:', threads)
-        functype_dict = {'worker': (self.worker, threads , True), 'updater': (self.saver, 1, False),
-                         'matrix_updater': (self.matrix_updater, 0, False) }
-        def mp_with_timeout(functypes, data_generator):
-            work_processes = {}
-            update_processes = {}
-            lock = mp.Lock()
-            cores = mp.cpu_count()
-            q = mp.Queue(maxsize=cores * 10)
-            retq = mp.Queue(maxsize=cores * 10)
-            matq = mp.Queue(maxsize=cores * 10)
-            work_processes = {}
-            print('start workers')
-            for key in functypes:
-                worker_function, number_workers, joinval = functypes[key]
-                work_processes[key] = []
-                for i in range(int(number_workers)):
-                    t = mp.Process(target=worker_function, args=(i, q, retq, matq, lock ))
-                    t.daemon = True
-                    work_processes[key].append(t)
-            for key in work_processes:
-                for process in work_processes[key]:
-                    process.start()
-            
-            for data in tqdm.tqdm(data_generator):
-                q.put(data)
-            
-            print('done spooling data')
-            for key in work_processes:
-                for i in range(2):
-                    for _ in work_processes[key]:
-                        q.put(None)
-            print('joining processes')
-            for key in work_processes:
-                worker_function, number_workers , joinval = functypes[key]
-                if joinval == True:
-                    for process in work_processes[key]:
-                        process.join()
-            for key in work_processes:
-                worker_function, number_workers, joinval = functypes[key]
-                if joinval == False:
-                    for _ in work_processes[key]:
-                        retq.put(None)
-                        matq.put(None)
-            for key in work_processes:
-                worker_function, number_workers , joinval = functypes[key]
-                if joinval == False:
-                    for process in work_processes[key]:
-                        process.join()
-            gc.collect()
-            print('DONE!')
-
-        mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(100))
-        return self.hashes_path, self.lshforestpath , self.mat_path
-
-
-=======
-        logger.info('Running with %d threads', threads)
-        data_generator = self.generates_dataframes(size=100, minhog_size=self.limit_species)
-        self._run_parallel(threads=threads, data_generator=data_generator)
-        return self.hashes_path, self.lshforestpath, self.mat_path
->>>>>>> develop
 
                 # Final processing
                 print('wrapping up the run')
@@ -1372,6 +1127,8 @@ class LSHBuilder:
                         savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))
 
         print('done single-threaded pipeline')
+
+                
 
     
 
