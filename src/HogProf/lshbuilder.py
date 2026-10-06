@@ -225,10 +225,11 @@ class LSHBuilder:
         print( 'duplonly', duplonly)
 
         self.dataset_nodes = None
+        self.idmapper = None
 
         # remap taxfilter and taxmask 
         if taxfilter:
-            self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
+            #self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
             unacceptable_nodes = []
             for filterobj in self.tax_filter:
                 filter_node = self.tree.search_nodes(name=filterobj)
@@ -243,7 +244,7 @@ class LSHBuilder:
 
         if taxmask:
             #print(self.idmapper)
-            self.tax_mask = self.idmapper[taxmask]
+            #self.tax_mask = self.idmapper[taxmask]
             ### get acceptable ids here:
             tax_mask_node = self.tree.search_nodes(name=self.tax_mask)
             if tax_mask_node:
@@ -1165,7 +1166,7 @@ def main():
                         version=f'%(prog)s {__version__}')
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
     parser.add_argument('--taxmask', help='consider only one branch (e.g. Sauria)',type = str)
-    parser.add_argument('--taxfilter', help='remove these taxa' , type = str)
+    parser.add_argument('--taxfilter', help='remove these taxa' , type = str, nargs='*')
     parser.add_argument('--outpath', help='name of the db (output folder where all files will be created)', type = str)
     parser.add_argument('--dbtype', help='preconfigured taxonomic ranges' , type = str)
     parser.add_argument('--OMA', help='use oma data ' , type = str)
@@ -1189,7 +1190,8 @@ def main():
         'plants': { 'taxfilter': None , 'taxmask': 33090 },
         'archaea':{ 'taxfilter': None , 'taxmask': 2157 },
         'bacteria':{ 'taxfilter': None , 'taxmask': 2 },
-        'eukarya':{ 'taxfilter': None , 'taxmask': 2759 },
+        #'eukarya':{ 'taxfilter': None , 'taxmask': 2759 },
+        'eukarya':{ 'taxfilter': None , 'taxmask': "Eukaryota" },
         'protists':{ 'taxfilter': [2 , 2157 , 33090 , 4751, 33208] , 'taxmask':None },
         'fungi':{ 'taxfilter': None , 'taxmask': 4751 },
         'metazoa':{ 'taxfilter': None , 'taxmask': 33208 },
