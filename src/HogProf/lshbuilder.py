@@ -1,8 +1,5 @@
-from tables import *
-import functools
 import argparse
-import sys
-import multiprocessing as mp
+import functools
 import glob
 import pandas as pd
 import time as t
@@ -22,10 +19,35 @@ import numpy as np
 import tqdm
 import random
 import tqdm
+import logging
+import multiprocessing as mp
 import os
 import ete3
 import collections
 import io
+import pickle
+import queue
+import random
+import sys
+import time
+import time as t
+import xml.etree.ElementTree as ET
+from datetime import datetime
+from pathlib import Path
+from HogProf import __version__
+
+import h5py
+import numpy as np
+import pandas as pd
+import tqdm
+from datasketch import MinHashLSHForest, WeightedMinHashGenerator
+from pyoma.browser import db
+from tables import open_file
+
+from HogProf.utils import hashutils, phylo, pyhamutils
+
+logger = logging.getLogger(__name__)
+
 random.seed(0)
 np.random.seed(0)
 #import psutil
@@ -84,8 +106,9 @@ class OrthoXMLBuilder:
         doc.write(tree_str, encoding='unicode')
         return tree_str.getvalue()
 
-class LSHBuilder:
 
+
+class LSHBuilder:
     """
     This class contains the stuff you need to make 
     a phylogenetic profiling 
@@ -97,9 +120,8 @@ class LSHBuilder:
     with a list of taxonomic codes for all the species in your db
     """
 
-    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , 
-                 lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False, slicesubhogs = False,
-                 limit_species = 10, limit_events = 0):
+    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False,
+                 limit_species = 10):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -107,7 +129,6 @@ class LSHBuilder:
             Args:
             - tarfile_ortho (str):  path to an ensembl tarfile containing orthoxml files
             - h5_oma (str): path to an OMA hdf5 file
-            - taxa (str): path to a file containing a list of taxonomic codes for all the species in the db
             - masterTree (str): path to a newick tree file
             - saving_name (str): path to the directory where the output files will be saved
             - numperm (int): the number of permutations to use in the MinHash generation (default: 256)
@@ -133,11 +154,11 @@ class LSHBuilder:
         
         self.reformat_names = reformat_names
         self.slicesubhogs = slicesubhogs
+        self.swap2taxcode = use_taxcodes
         self.tax_filter = taxfilter
         self.tax_mask = taxmask
         self.verbose = verbose
         self.datetime = datetime
-        self.use_phyloxml = False
         self.fileglob = fileglob
         self.idmapper = None
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
@@ -152,98 +173,31 @@ class LSHBuilder:
                 os.mkdir(path=self.saving_path)
         else:
             raise Exception( 'please specify an output location' )
-        self.errorfile = self.saving_path + 'errors.txt'
-        print("Getting tree")
-        ### If no tree is provided, generate a tree from the taxonomic codes
+
+        species = self._get_species_names()
         if masterTree is None:
-            if h5_oma:
-                genomes = pd.DataFrame(h5_oma.root.Genome.read())["NCBITaxonId"].tolist()
-                genomes = [ str(g) for g in genomes]
-                taxa = genomes + [ 131567, 2759, 2157, 45596 ]+[ taxrel[0] for taxrel in  list(h5_oma.root.Taxonomy[:]) ]  + [  taxrel[1] for taxrel in list(h5_oma.root.Taxonomy[:]) ]
-                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxa, genomes = genomes , outdir=self.saving_path )
-            elif taxa:
-                with open(taxa, 'r') as taxin:
-                    taxlist = [ int(line) for line in taxin ]
-                self.tree_string , self.tree_ete3 = files_utils.get_tree(taxa=taxlist  , outdir=self.saving_path)
-            else:
-                raise Exception( 'please specify either a list of taxa or a tree' )
-        ### if a tree is provided, load it (phyloxml or newick)
-        elif masterTree:
-            # if tree is phyloxml based on the extension, use the Phyloxml class to load it
-            if masterTree.endswith('.xml') or masterTree.endswith('.phyloxml') or masterTree.endswith('.phy'):
-            #if 'xml' in masterTree.lower():
-                project = Phyloxml()
-                project.build_from_file(masterTree)
-                trees = [t for t in  project.get_phylogeny()]
-                self.tree_ete3 = [ n for n in trees[0] ][0]
-                #print( self.tree_ete3 )
-                self.use_phyloxml = True
-                print('using phyloxml')
-                #print( self.tree_ete3 )
-                self.tree_string = masterTree
-            else:
-                try:
-                    self.tree_ete3 = ete3.Tree(masterTree, format=1 , quoted_node_names= True)
-                    #print( self.tree_ete3 )
-                except:
-                    self.tree_ete3 = ete3.Tree(masterTree, format=0)
-            with open(masterTree) as treein:
-                self.tree_string = treein.read()
-                #print(self.tree_string)
-            #self.tree_string = self.tree_ete3.write(format=0)
+            if not h5_oma:
+                raise TypeError('Please specify either a database or a tree')
+
+            self.tree_string, self.tree = phylo.get_tree(genomes=species, outdir=self.saving_path)
         else:
-            raise Exception( 'please specify a tree in either phylo xml or nwk format' )
+            # validate tree
+            self.tree = phylo.TreeValidator(masterTree, species).run()
+
+            # save the corrected tree
+            corrected_tree_path = os.path.join(self.saving_path, 'master_tree.corrected.nwk')
+            phylo.to_file(self.tree, corrected_tree_path)
+            self.tree_string = phylo.to_string(self.tree)
+
+        self.taxaIndex, self.reverse = phylo.generate_taxa_index(self.tree, self.tax_filter, self.tax_mask)
         
-        self.dataset_nodes = None
-        ### reformat names to avoid special characters
-        if self.reformat_names:
-            self.tree_ete3, self.idmapper = pyhamutils.tree2numerical(self.tree_ete3)
-            ### ete3 formats here were tricky
-            with open( self.saving_path + 'reformatted_tree.nwk', 'w') as treeout:
-                treeout.write(self.tree_ete3.write(format=3 , format_root_node=True )) 
-            with open( self.saving_path + 'idmapper.pkl', 'wb') as idout:
-                idout.write( pickle.dumps(self.idmapper))
-            print('reformatted tree')
-            #print( self.tree_ete3 )
-            self.tree_string = self.tree_ete3.write(format=3, format_root_node=True ) 
-            
-            #remap taxfilter and taxmask 
-            if taxfilter:
-                self.tax_filter = [ self.idmapper[tax] for tax in taxfilter ]
-                unacceptable_nodes = []
-                for filterobj in self.tax_filter:
-                    try:
-                        filter_node = self.tree_ete3.search_nodes(name=filterobj)
-                        print('Found filter node:', filter_node)
-                        unacceptable_nodes.extend([node.name for node in filter_node[0].traverse()])
-                    except:
-                        print(f"Error searching for node with name: {filterobj}")
-                        print("Clade could not be excluded")
-                        continue
-                # update dataset_nodes to exclude the filtered nodes
-                self.dataset_nodes = [node.name for node in self.tree_ete3.traverse() if node.name not in unacceptable_nodes]
-            if taxmask:
-                #print(self.idmapper)
-                self.tax_mask = self.idmapper[taxmask]
-                ### get acceptable ids here:
-                tax_mask_node = self.tree_ete3.search_nodes(name=self.tax_mask)
-                if tax_mask_node:
-                    tax_mask_node = tax_mask_node[0]
-                    print(f"Found tax_mask_node: {tax_mask_node.name}")
-                    self.dataset_nodes = [node.name for node in tax_mask_node.traverse()]
-                else:
-                    print(f"No node found with name: {tax_mask}")
-                    self.dataset_nodes = []
-        
-        self.swap2taxcode = use_taxcodes
-        self.taxaIndex, self.reverse = files_utils.generate_taxa_index(self.tree_ete3 , self.tax_filter, self.tax_mask)
         with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
         self.numperm = numperm
         ### if no weights are provided, generate them
         if treeweights is None:
             #generate aconfig_utilsll ones
-            self.treeweights = hashutils.generate_treeweights(self.tree_ete3  , self.taxaIndex , taxfilter, taxmask)
+            self.treeweights = hashutils.generate_treeweights(self.tree, self.taxaIndex, self.tax_filter, self.tax_mask)
         else:
             #load machine learning weights
             self.treeweights = treeweights
@@ -254,9 +208,12 @@ class LSHBuilder:
         self.wmg = wmg
 
         print( '\nConfiguring pyham functions')
+
+        print( 'taxfilter', self.tax_filter)
+        print( 'taxmask', self.tax_mask)
+        print( 'configuring pyham functions')
         print( 'swap ids', self.swap2taxcode)
         print( 'reformat names', self.reformat_names)
-        print( 'use phyloxml', self.use_phyloxml)
         print( 'use taxcodes', self.swap2taxcode)
         hamfunction = pyhamutils.get_ham_treemap_from_row
         hashfunction = hashutils.row2hash
@@ -264,14 +221,26 @@ class LSHBuilder:
             hamfunction = pyhamutils.get_subhog_ham_treemaps_from_row
             hashfunction = hashutils.hash_trees_subhogs
         ### set up the pyHAM pipeline with different parameters depending on whether the input is an OMA hdf5 file or a list of orthoxml files
+        print( 'lossonly', lossonly)
+        print( 'duplonly', duplonly)
+
+        self.dataset_nodes = None
+        if not self.dataset_nodes:
+            raise NotImplementedError("Merge error: dataset_nodes")
+
+        self.use_phyloxml = None
+        if not self.use_phyloxml:
+            raise NotImplementedError("use_phyloxml not defined")
+
+
         if self.h5OMA:
             self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode , reformat_names = self.reformat_names , 
-                                                  orthoXML_as_string = True , use_phyloxml = self.use_phyloxml , orthomapper = self.idmapper , levels = None,
+                                                  orthoXML_as_string = True, orthomapper = self.idmapper , levels = None,
                                                   limit_species = self.limit_species, limit_events = self.limit_events , dataset_nodes = self.dataset_nodes,
                                                   verbose = self.verbose) 
         else:
             self.HAM_PIPELINE = functools.partial( hamfunction, tree=self.tree_string ,  swap_ids=self.swap2taxcode  , 
-                                                  orthoXML_as_string = False , reformat_names = self.reformat_names , use_phyloxml = self.use_phyloxml , 
+                                                  orthoXML_as_string = False , reformat_names = self.reformat_names, 
                                                   orthomapper = self.idmapper , levels = None, limit_species = self.limit_species, limit_events = self.limit_events,
                                                   dataset_nodes = self.dataset_nodes, verbose = self.verbose)         
         ### set up the hash pipeline
@@ -297,6 +266,24 @@ class LSHBuilder:
         self.verbose = verbose
         print('done\n')
 
+    def _get_species_names(self):
+        """Read the DB or orthoxml to extract the list of species"""
+        if self.h5OMA:
+            field = "NCBITaxonId" if self.swap2taxcode else "SciName"
+            values = self.h5OMA.root.Genome.read(field=field)
+            return {
+                value.decode("utf-8") if isinstance(value, bytes) else str(value)
+                for value in values
+            }
+        else:
+            names = set()
+            for filename in self.fileglob:
+                root = ET.parse(filename).getroot()
+                for child in root:
+                    if child.tag.rsplit("}", 1)[-1] == "species":
+                        names.add(child.attrib["name"])
+            return names
+
     def load_one(self, fam):
         #test function to try out the pipeline on one orthoxml
         ortho_fam = self.READ_ORTHO(fam)
@@ -304,8 +291,7 @@ class LSHBuilder:
         hog_matrix,weighted_hash = hashutils.hash_tree(pyham_tree , self.taxaIndex , self.treeweights , self.wmg)
         return ortho_fam , pyham_tree, weighted_hash,hog_matrix
 
-    ### make pd dfs from orthoxml data (max families per df = size)
-    def generates_dataframes(self, size=100, minhog_size=10, maxhog_size=None ):
+    def generates_dataframes(self, size=100, minhog_size=10, maxhog_size=None):
         families = {}
         start = -1
         #hogsizetable = "/home/agavriil/Documents/venom_project/A_venom_analysis_tidy/2_profiling/1_oma_profiles/" \
@@ -315,11 +301,7 @@ class LSHBuilder:
             ### only Fam makes sense here, the rest are OMAmer related fields
             #print(self.h5OMA.root.OrthoXML.Index.colnames)
             self.rows = len(self.groups)
-            #with open(hogsizetable, 'w') as hogsizein:
-                #import csv
-                #hogsizewriter = csv.writer(hogsizein)
-            ### take subset of the groups for testing with: self.groups[:100000]
-            for i, row in enumerate(self.groups):
+            for i, row in enumerate(tqdm.tqdm(self.groups)):
                 if i > start:
                     #### family here is HOG ID minus the "HOG:E" prefix
                     fam = row[0]
@@ -336,17 +318,15 @@ class LSHBuilder:
                     ### filtering for size already here (max HOG size and minimum species in HOG)
                     if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
                         families[fam] = {'ortho': ortho_fam}
-                        #hogsizewriter.writerow([fam, hog_size])
-                    if len(families) > size:
+                    if len(families) >= size:
                         pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                         pd_dataframe['Fam'] = pd_dataframe.index
                         yield pd_dataframe
                         families = {}
-            pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-            pd_dataframe['Fam'] = pd_dataframe.index
-            yield pd_dataframe
-            print('last dataframe sent')
-            families = {}
+            if families:
+                pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
+                pd_dataframe['Fam'] = pd_dataframe.index
+                yield pd_dataframe
 
         elif self.fileglob:
             for i,file in enumerate(tqdm.tqdm(self.fileglob)):
@@ -361,34 +341,23 @@ class LSHBuilder:
                 if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
                     #print('fam',os.path.basename(file), 'saved')
                     families[i] = {'ortho': file}
-                if len(families) > size:
+                if len(families) >= size:
                     pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                     pd_dataframe['Fam'] = pd_dataframe.index
                     print(pd_dataframe)
                     yield pd_dataframe
                     families = {}
-            # Yield any remaining families
+
             if families:
                 pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                 pd_dataframe['Fam'] = pd_dataframe.index
-                #print(pd_dataframe)
-                yield pd_dataframe # this dataframe has othoxml paths and family IDs (0,1,2,...)
-                print('last dataframe sent')
-                
+                yield pd_dataframe
 
-    def universe_saver(self, i, q, retq, matq,univerq, l):
-        #only useful to save all prots within a taxonomic range as db is being compiled
-        allowed = set( [ n.name for n in self.tree_ete3.get_leaves() ] )
-        with open(self.saving_path+'universe.txt') as universeout:
-            while True:
-                prots = univerq.get()
-                for row in df.iterrows():
-                    for ID in row.prots.tolist():
-                        universeout.write(ID)
-                else:
-                    print('Universe saver done' + str(i))
-                    break
 
+    def worker(self, i, work_queue, result_queue):
+        logger.debug('Starting worker #%d', i)
+
+<<<<<<< HEAD
     def worker(self, i, q, retq, matq, l):
         try:
             if self.verbose == True:
@@ -467,7 +436,252 @@ class LSHBuilder:
                         #print(newdf)
                         #print(f"Memory before retq: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
                         retq.put(newdf)
+||||||| 01f5de5
+    def worker(self, i, q, retq, matq, l):
+        if self.verbose == True:
+            print('worker init ' + str(i))
+        while True:
+            df = q.get()
+            if df is not None :
+                df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+                #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
+                #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
+                #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
+
+                df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+                if self.fileglob:
+                    retq.put(df[['Fam', 'hash', 'ortho']])
                 else:
+                    retq.put(df[['Fam', 'hash']])
+            
+            else:
+                if self.verbose == True:
+                    print('Worker done' + str(i))
+                break
+
+    def saver(self, i, q, retq, matq, l ):
+        print_start = t.time()
+        save_start = t.time()
+        global_time = t.time()
+        chunk_size = 100
+        count = 0
+        forest = MinHashLSHForest(num_perm=self.numperm)
+        taxstr = ''
+        savedf = None
+        if self.tax_filter is None:
+            taxstr = 'NoFilter'
+        if self.tax_mask is None:
+            taxstr+= 'NoMask'
+        else:
+            taxstr = str(self.tax_filter)
+        self.errorfile = self.saving_path + 'errors.txt'
+        with open(self.errorfile, 'w') as hashes_error_files:
+            with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
+                datasets = {}
+
+                if taxstr not in h5hashes.keys():
+                    if self.verbose == True:
+                        print('creating dataset')
+                        print('filtered at taxonomic level: '+taxstr)
+                    h5hashes.create_dataset(taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
+                    if self.verbose == True:
+                        print(datasets)
+                    h5flush = h5hashes.flush
+                print('saver init ' + str(i))
+                while True:
+                    this_dataframe = retq.get()
+                    if this_dataframe is not None:
+                        if not this_dataframe.empty:
+                            hashes = this_dataframe['hash'].to_dict()
+                            #print(str(this_dataframe.Fam.max())+ 'fam num')
+                            #print(str(count) + ' done')
+                            hashes = {fam:hashes[fam]  for fam in hashes if hashes[fam] }
+                            [ forest.add(str(fam),hashes[fam]) for fam in hashes]
+                            for fam in hashes:
+                                if len(h5hashes[taxstr]) < fam + 10:
+                                    h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
+                                h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
+                                count += 1
+                            if self.fileglob:
+                                if savedf is None:
+                                    savedf = this_dataframe[['Fam', 'ortho']]
+                                else:
+                                    savedf = pd.concat( [ savedf , this_dataframe[['Fam', 'ortho']] ] )  
+                            if t.time() - save_start > 200:
+                                print( 'saving at :' , t.time() - global_time )
+                                forest.index()
+                                print( 'testing forest' )
+                                print(forest.query( hashes[fam] , k = 10 ) )
+                                h5flush()
+                                with open(self.lshforestpath , 'wb') as forestout:
+                                    forestout.write(pickle.dumps(forest, -1))
+                                if self.verbose == True:
+                                    print('save done at' + str(t.time() - global_time))
+                                if self.fileglob:
+                                    #save the mapping of fam to orthoxml
+                                    print('saving orthoxml to fam mapping')
+                                    print(savedf)
+
+                                    savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
+                                save_start = t.time()
+                        else:
+                            print(this_dataframe)
+                    else
+                        print('wrapping up the run')
+                        print('saving at :' , t.time() - global_time )
+                        forest.index()
+                        with open(self.lshforestpath , 'wb') as forestout:
+                            forestout.write(pickle.dumps(forest, -1))
+                        h5flush()
+                        if self.fileglob:
+                            print('saving orthoxml to fam mapping')
+                            savedf.to_csv(self.saving_path + 'fam2orthoxml.csv')
+                        
+                        print('DONE SAVER' + str(i))
+                        break
+                
+
+    def matrix_updater(self, iprocess , q, retq, matq, l):
+        print('hogmat saver init ' + str(iprocess))
+        h5mat = None
+        times1 = []
+        frames = []
+        with h5py.File(self.mat_path + str(iprocess) + 'h5', 'w', libver='latest') as h5hashes:
+            i = 0
+            while True:
+                rows = matq.get()
+                if rows is not None:
+                    rows = rows.dropna()
+                    maxfam = rows.Fam.max()
+                    if h5mat is None:
+                        h5hashes.create_dataset('matrows',(10,block.shape[1]), maxshape=(None, block.shape[1]),chunks=(1, block.shape[1]), dtype='i8')
+                        h5mat = h5hashes['matrows']
+                    if h5mat.shape[0] < maxfam:
+                        h5mat.resize((maxfam+1,block.shape[1]))
+                    i+=1
+                    frames.append(rows)
+                    assign = t.time()
+                    index = np.asarray(rows.Fam)
+                    block = np.vstack(rows.rows)
+                    h5mat[index,:]= block
+
+                    times1.append(t.time()-assign)
+                    if len(times1)>10:
+                        times1.pop(0)
+                        print(np.mean(times1))
+                    h5hashes.flush()
+=======
+        while True:
+            df = work_queue.get()
+            if df is None:
+                logger.debug('Worker #%d done', i)
+                break
+
+            df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
+            #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
+            #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
+            #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
+
+            df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
+            if self.fileglob:
+                result_queue.put(df[['Fam', 'hash', 'ortho']])
+            else:
+                result_queue.put(df[['Fam', 'hash']])
+
+
+    def _make_tax_str(self):
+        taxstr = ""
+        if self.tax_filter is None:
+            taxstr = "NoFilter"
+        if self.tax_mask is None:
+            taxstr += "NoMask"
+        else:
+            taxstr = str(self.tax_filter)
+        return taxstr
+
+    def _index_and_save(self, forest):
+        logger.debug("Saving forest at: %.2f", t.time() - self.start_time)
+
+        forest.index()
+        with open(self.lshforestpath, "wb") as forest_out:
+            forest_out.write(pickle.dumps(forest, -1))
+
+        logger.debug("Save done at: %.2f", t.time() - self.start_time)
+
+    def _save_family_mapping(self, frames):
+        if frames:
+            mapping = pd.concat(frames)
+        else:
+            mapping = pd.DataFrame(columns=['Fam', 'ortho'])
+        mapping.to_csv(self.saving_path + 'fam2orthoxml.csv')
+
+
+    def saver(self, result_queue):
+        save_start = t.time()
+        global_time = t.time()
+        self.start_time = global_time
+
+        chunk_size = 100
+        count = 0
+        last_reported_count = 0
+        forest = MinHashLSHForest(num_perm=self.numperm)
+        mapping_frames = []
+        taxstr = self._make_tax_str()
+
+        with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
+            hash_width = 2 * self.numperm
+            dataset = h5hashes.create_dataset(
+                taxstr,
+                (chunk_size, hash_width),
+                maxshape=(None, hash_width),
+                dtype="int32",
+            )
+            h5hashes.flush()
+            logger.debug('Creating dataset filtered at taxonomic level: %s', taxstr)
+
+            done = False
+            while not done:
+                this_dataframe = result_queue.get()
+                if this_dataframe is not None:
+                    if not this_dataframe.empty:
+                        hashes = this_dataframe['hash'].to_dict()
+                        #print(str(this_dataframe.Fam.max())+ 'fam num')
+                        #print(str(count) + ' done')
+
+                        hashes = { fam:hashes[fam] for fam in hashes if hashes[fam]}
+                        for fam in hashes:
+                            forest.add(str(fam), hashes[fam])
+
+                        for fam in hashes:
+                            # if all rows are filled, allocate the next chunk
+                            if dataset.shape[0] <= fam:
+                                dataset.resize(fam + chunk_size, axis=0)
+
+                            dataset[fam, :] = hashes[fam].hashvalues.ravel()
+                            count += 1
+
+                        if count - last_reported_count >= 1000:
+                            # maybe we don't need this as this disrupts tqdm output
+                            #logger.info('Saver has written %d hashes', count)
+                            last_reported_count = count
+
+                        if self.fileglob:
+                            mapping_frames.append(this_dataframe[['Fam', 'ortho']])
+
+                        if hashes and t.time() - save_start > 200:
+                            h5hashes.flush()
+                            self._index_and_save(forest)
+                            logger.debug('Testing forest')
+                            logger.debug(forest.query(hashes[fam], k=10))
+
+                            if self.fileglob:
+                                self._save_family_mapping(mapping_frames)
+                            save_start = t.time()
+                    else:
+                        print(this_dataframe)
+>>>>>>> develop
+                else:
+<<<<<<< HEAD
                     if self.verbose == True:
                         print('Worker done' + str(i))
                     break
@@ -475,6 +689,154 @@ class LSHBuilder:
             import traceback
             print('Worker error', file=sys.stderr)
             print(f"Error in worker process: {traceback.format_exc()}", file=sys.stderr)
+||||||| 01f5de5
+                    h5hashes.flush()
+                    break
+        print('DONE MAT UPDATER' + str(i))
+=======
+                    logger.info('Wrapping up the run')
+
+                    self._index_and_save(forest)
+
+                    h5hashes.flush()
+                    if self.fileglob:
+                        self._save_family_mapping(mapping_frames)
+
+                    logger.info('Saver wrote %d hashes', count)
+                    done = True
+
+    @staticmethod
+    def _raise_if_failed(processes, required_alive=()):
+        """Raise if a child process failed"""
+        failed = [
+            process for process in processes
+            if process.exitcode not in (None, 0)
+        ]
+        if failed:
+            details = ", ".join(
+                f"{process.name} (exit code {process.exitcode})"
+                for process in failed
+            )
+            raise RuntimeError(f"Child process failure: {details}")
+
+        stopped = [
+            process for process in required_alive
+            if process.exitcode is not None
+        ]
+        if stopped:
+            names = ", ".join(process.name for process in stopped)
+            raise RuntimeError(f"Child process exited unexpectedly: {names}")
+
+    @classmethod
+    def _safe_put(cls, destination, value, processes, required_alive=()):
+        """
+        Enqueue data value with process/queue checks:
+            - if any of the workers failed already, don't send
+            - if queue is full, try again
+        """
+        while True:
+            cls._raise_if_failed(processes, required_alive)
+
+            try:
+                destination.put(value, timeout=0.2)
+                return
+            except queue.Full:
+                pass
+
+    @classmethod
+    def _wait_for_all(cls, processes, monitored_processes=()):
+        """
+        Joins a list of processes; raises if any of them
+        failed or if the monitored processes failed
+        """
+        alive = list(processes)
+        all_processes = [*alive, *monitored_processes]
+
+        while alive:
+            for process in alive:
+                process.join(timeout=0)
+
+            cls._raise_if_failed(all_processes)
+
+            alive = [process for process in alive if process.is_alive()]
+            if alive:
+                time.sleep(0.1)
+
+    @staticmethod
+    def _terminate_all(processes):
+        for process in processes:
+            if process.is_alive():
+                process.terminate()
+
+        for process in processes:
+            process.join()
+
+
+    def _run_parallel(self, threads, data_generator):
+        if threads < 1:
+            raise ValueError("threads must be at least 1")
+
+        queue_size = max(2, threads * 2)
+        work_queue = mp.Queue(maxsize=queue_size)
+        result_queue = mp.Queue(maxsize=queue_size)
+        saver = mp.Process(name="saver", target=self.saver, args=(result_queue,))
+        workers = [
+            mp.Process(name=f"worker-{i}", target=self.worker, args=(i, work_queue, result_queue))
+            for i in range(threads)
+        ]
+        processes = [saver, *workers]
+        started_processes = []
+        completed = False
+
+        try:
+            # start saver
+            saver.start()
+            started_processes.append(saver)
+            logger.info('Started one saver process')
+
+            # start workers
+            for process in workers:
+                process.start()
+                started_processes.append(process)
+            logger.info('Started %d workers', threads)
+
+            # send data batches to workers
+            for data in data_generator:
+                self._safe_put(work_queue, data, processes, required_alive=processes)
+
+            # send sentinels (end of work signals) to all workers
+            for _ in workers:
+                self._safe_put(work_queue,None, processes, required_alive=(saver,))
+            logger.info('Input queued; waiting for workers to finish')
+
+            # the main join -- wait for workers to be done
+            self._wait_for_all(workers, monitored_processes=(saver,))
+
+            logger.info('Workers finished; finalizing saver')
+            # send the sentinel to the saver
+            self._safe_put(result_queue,None,(saver,), required_alive=(saver,))
+
+            # wait for the saver
+            self._wait_for_all((saver,))
+            completed = True
+
+        finally:
+            # if error
+            if not completed:
+                self._terminate_all(started_processes)
+
+            # finalize queues
+            for process_queue in (work_queue, result_queue):
+                if not completed:
+                    # if failed, the join below is ignored
+                    process_queue.cancel_join_thread()
+
+                process_queue.close()
+                if completed:
+                    process_queue.join_thread()
+
+        logger.info('Pipeline complete')
+>>>>>>> develop
 
     def safe_ham(self, row):
             try:
@@ -708,6 +1070,7 @@ class LSHBuilder:
 
     ### multithreaded pipeline to compile the LSH forest database of MinHashes
     def run_pipeline(self , threads):
+<<<<<<< HEAD
         print( 'run w n threads:', threads)
         functype_dict = {'worker': (self.worker, threads , True), 'updater': (self.saver, 1, False),
                          'matrix_updater': (self.matrix_updater, 0, False) }
@@ -924,6 +1287,69 @@ class LSHBuilder:
                                 h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
                             forest.add(str(fam), hashes[fam])
                             h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
+||||||| 01f5de5
+        print( 'run w n threads:', threads)
+        functype_dict = {'worker': (self.worker, threads , True), 'updater': (self.saver, 1, False),
+                         'matrix_updater': (self.matrix_updater, 0, False) }
+        def mp_with_timeout(functypes, data_generator):
+            work_processes = {}
+            update_processes = {}
+            lock = mp.Lock()
+            cores = mp.cpu_count()
+            q = mp.Queue(maxsize=cores * 10)
+            retq = mp.Queue(maxsize=cores * 10)
+            matq = mp.Queue(maxsize=cores * 10)
+            work_processes = {}
+            print('start workers')
+            for key in functypes:
+                worker_function, number_workers, joinval = functypes[key]
+                work_processes[key] = []
+                for i in range(int(number_workers)):
+                    t = mp.Process(target=worker_function, args=(i, q, retq, matq, lock ))
+                    t.daemon = True
+                    work_processes[key].append(t)
+            for key in work_processes:
+                for process in work_processes[key]:
+                    process.start()
+            
+            for data in tqdm.tqdm(data_generator):
+                q.put(data)
+            
+            print('done spooling data')
+            for key in work_processes:
+                for i in range(2):
+                    for _ in work_processes[key]:
+                        q.put(None)
+            print('joining processes')
+            for key in work_processes:
+                worker_function, number_workers , joinval = functypes[key]
+                if joinval == True:
+                    for process in work_processes[key]:
+                        process.join()
+            for key in work_processes:
+                worker_function, number_workers, joinval = functypes[key]
+                if joinval == False:
+                    for _ in work_processes[key]:
+                        retq.put(None)
+                        matq.put(None)
+            for key in work_processes:
+                worker_function, number_workers , joinval = functypes[key]
+                if joinval == False:
+                    for process in work_processes[key]:
+                        process.join()
+            gc.collect()
+            print('DONE!')
+
+        mp_with_timeout(functypes=functype_dict, data_generator=self.generates_dataframes(100))
+        return self.hashes_path, self.lshforestpath , self.mat_path
+
+
+=======
+        logger.info('Running with %d threads', threads)
+        data_generator = self.generates_dataframes(size=100, minhog_size=self.limit_species)
+        self._run_parallel(threads=threads, data_generator=data_generator)
+        return self.hashes_path, self.lshforestpath, self.mat_path
+>>>>>>> develop
 
                 # Final processing
                 print('wrapping up the run')
@@ -951,6 +1377,9 @@ class LSHBuilder:
 
 def main():
     parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="hogprof")
+    parser.add_argument('--version', action='version',
+                        version=f'%(prog)s {__version__}')
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
     parser.add_argument('--taxmask', help='consider only one branch (e.g. Sauria)',type = str)
     parser.add_argument('--taxfilter', help='remove these taxa' , type = str)
@@ -965,13 +1394,19 @@ def main():
     parser.add_argument('--nthreads', help='nthreads for multiprocessing' , type = int)
     parser.add_argument('--lossonly', help='only compile loss events' , type = bool)
     parser.add_argument('--duplonly', help='only compile duplication events' , type = bool)
-    parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = str)
-    parser.add_argument('--verbose', help='print verbose output' , type = bool)
+    parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
+    parser.add_argument('--verbose', help='print verbose output', action='store_true')
     parser.add_argument('--reformat_names', help='try to correct broken species trees by replacing all names with numbers.' , type = bool)
+<<<<<<< HEAD
     parser.add_argument('--slicesubhogs', help='slice subhogs' , type = bool, default=False)
     parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
     parser.add_argument('--eventslim', help='minimum number of events (loss/duplication) in a subhog' , type = int, default=0)
     
+||||||| 01f5de5
+=======
+    parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
+
+>>>>>>> develop
     dbdict = {
         'all': { 'taxfilter': None , 'taxmask': None },
         'plants': { 'taxfilter': None , 'taxmask': 33090 },
@@ -983,6 +1418,7 @@ def main():
         'metazoa':{ 'taxfilter': None , 'taxmask': 33208 },
         'vertebrates':{ 'taxfilter': None , 'taxmask': 7742 },
     }
+
     taxfilter = None
     taxmask = None
     omafile = None
@@ -1006,9 +1442,21 @@ def main():
         taxfilter = dbdict[args['dbtype']]['taxfilter']
         taxmask = dbdict[args['dbtype']]['taxmask']
     if args['taxmask']:
+<<<<<<< HEAD
         taxmask = args['taxmask']   
     if args['taxfilter']:
         taxfilter = args['taxfilter']
+||||||| 01f5de5
+        taxfilter = args['taxfilter']
+    if args['taxfilter']:
+        taxmask = args['taxmask']
+=======
+        taxmask = args['taxmask']
+    
+    if args['taxfilter']:
+        taxfilter = args['taxfilter']
+
+>>>>>>> develop
     if args['nperm']:
         nperm = int(args['nperm'])
     else:
@@ -1021,10 +1469,6 @@ def main():
         fileglob = orthoglob
     else:
         raise Exception(' please specify input data ')
-    
-    
-
-
     if args['lossonly']:
         lossonly = args['lossonly']
     else:
@@ -1033,18 +1477,24 @@ def main():
         duplonly = args['duplonly']
     else:
         duplonly = False
-    
-    if args['taxcodes']=='True':
+
+    if args['taxcodes']==True:
         taxcodes = True
     else:
         taxcodes = False
+<<<<<<< HEAD
     
     #print('taxcodes', taxcodes)
+||||||| 01f5de5
+    
+    print('taxcodes', taxcodes)
+=======
 
-    if args['verbose'] == 'True':
-        verbose = args['verbose']
-    else:   
-        verbose = False
+    print('taxcodes', taxcodes)
+>>>>>>> develop
+
+    _args = parser.parse_args()
+    verbose = _args.verbose
 
     if args['reformat_names']:
         reformat_names = True
@@ -1068,30 +1518,63 @@ def main():
     else:
         weights = None
     if args['mastertree']:
-        mastertree = args['mastertree']
+        mastertree = Path(args['mastertree'])
     else:
         mastertree=None
+
+    # set DEBUG log level if --verbose
+    log_level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(level=logging.INFO)
+
+    # Pyham spams INFO-level messages like crazy. Suppress
+    logging.getLogger("pyham").setLevel(logging.WARNING)
+    logging.getLogger().setLevel(log_level)
+
     start = time.time()
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
             treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , 
+<<<<<<< HEAD
             lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, 
             verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], limit_events=args['eventslim'])
+||||||| 01f5de5
+            lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose )
+=======
+            lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose,
+             limit_species=args['specieslim'])
+>>>>>>> develop
             lsh_builder.run_pipeline(threads)
             #lsh_builder.run_pipeline_single() # made for local tests. ignore
 
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
         treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
+<<<<<<< HEAD
           masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , 
           reformat_names=reformat_names, verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], 
           limit_events=args['eventslim'])
+||||||| 01f5de5
+          masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose)
+=======
+          masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, verbose=verbose,
+          limit_species=args['specieslim'])
+>>>>>>> develop
         lsh_builder.run_pipeline(threads)
+<<<<<<< HEAD
         #lsh_builder.run_pipeline_single()
     print("\nAnalysis took",time.time() - start, 'seconds')
     print('DONE\n\n')
     
+||||||| 01f5de5
+    print(time.time() - start)
+    print('DONE')
+
+=======
+    logger.info("Done in %.2fs", time.time() - start)
+
+>>>>>>> develop
 
 if __name__ == '__main__':
     main()
+;

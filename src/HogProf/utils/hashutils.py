@@ -2,14 +2,13 @@
 
 import datasketch
 import itertools
-import ete3
 import copy
 import math
 import numpy as np
 import pandas as pd
 
 
-def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
+def generate_treeweights( mastertree, taxaIndex ,  taxfilter= None, taxmask=None ):
     #weighing function for tax level, masking levels etc. sets all weights to 1 if they are in taxmask or filter
     #custom weights can also be used here
     """
@@ -25,16 +24,21 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter, taxmask ):
     taxmax = max(taxaIndex.values())+1
     weights = np.zeros((3*taxmax,1))
     print('making tree weights w n taxa = :',len(taxaIndex))
-    newtree = mastertree
-    for event in weights:
-        for n in newtree.traverse():
+    newtree = copy.deepcopy(mastertree)
+    if taxmask:
+        for node in newtree.traverse():
             if taxmask:
-                if str(n.name) == str(taxmask):
-                    newtree = n
+                if str(node.name) == str(taxmask):
+                    print( 'masking tree to ', taxmask)
+                    newtree = node
                     break
-            if taxfilter:
-                if n.name in taxfilter:
-                    n.delete()
+        print( 'new tree with n taxa = ', len([n.name for n in newtree.traverse()])) 
+    
+    if taxfilter:
+        for n in newtree.traverse():
+            if n.name in taxfilter:            
+                n.delete()
+                
     for i in range(3):
         for n in newtree.traverse():
             weights[taxmax*i + taxaIndex[n.name] ] = 1
@@ -72,12 +76,33 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
                 
                 hog_matrix_weighted[:,hogindex] = treeweights[hogindex , : ].ravel()
                 
+<<<<<<< HEAD
                 if lossonly == True and event != 'loss':
                     hog_matrix_weighted[:,hogindex] = 0
                 if duplonly == True and event != 'dup':
                     hog_matrix_weighted[:,hogindex] = 0
+||||||| 01f5de5
+                if lossonly == True and event == 'loss':
+                    hog_matrix_weighted[:,hogindex] = 1
+                if duplonly == True and event == 'dup':
+                    hog_matrix_weighted[:,hogindex] = 1
+=======
+                #if lossonly == True and event == 'loss':
+                #    hog_matrix_weighted[:,hogindex] = 1
+                
+                if lossonly == True and event != 'loss':
+                    hog_matrix_weighted[:,hogindex] = 0
+                
+                #if duplonly == True and event == 'dup':
+                #    hog_matrix_weighted[:,hogindex] = 1
+                
+                if duplonly == True and event != 'dup':
+                    hog_matrix_weighted[:,hogindex] = 0
+                
+>>>>>>> develop
                 if lossonly == False and duplonly == False:
                     hog_matrix_binary[:,hogindex] = 1
+
             except:
                 print( 'error in hash_tree')
                 print( 'event', event)
@@ -86,15 +111,11 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
 
     input_vec = list(hog_matrix_weighted.flatten())
 
-    if wmg.dim == len(input_vec):
+    if wmg.dim == len(input_vec) and sum(input_vec) > 0:
         weighted_hash = wmg.minhash(input_vec)
         return  hog_matrix_binary , weighted_hash
 
     else:
-        print('error in hash_tree')
-        print('wmg.dim', wmg.dim)
-        print('len(input_vec)', len(input_vec))
-        print( input_vec)
         return None, None
 
 

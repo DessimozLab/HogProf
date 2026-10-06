@@ -1,56 +1,56 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-
-
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
+
 [project]
 name = "HogProf"
-dynamic = ["entry-points"]
-version = "0.0.11"
+version = "0.1.0"
 authors = [
-  { name="Dave Moi", email="dmoi@unil.ch" },
+  { name = "Dave Moi", email = "dmoi@unil.ch" },
+  { name = "Athina Gavriilidou", email = "athina.gavriilidou@unil.ch" },
+  { name = "Nikolai Romashchenko", email = "nikolai.romashchenko@unil.ch" },
 ]
-dependencies = ["biopython",
-"certifi",
-"chardet",
-"datasketch",
-"ete3",
-"future",
-"goatools",
-"h5py",
-"idna",
-"lxml",
-"numexpr",
-"numpy",
-"pandas",
-"pyham>=1.1.10",
-"pyoma",
-"pyopa",
-"python-dateutil",
-"pytz",
-"requests",
-"scipy",
-"six",
-"tables",
-"urllib3",
-"tqdm"
+maintainers = [
+  { name = "Nikolai Romashchenko", email = "nikolai.romashchenko@unil.ch" },
+]
+dependencies = [
+  "biopython",
+  "datasketch",
+  "ete3",
+  "goatools",
+  "h5py",
+  "legacy-cgi; python_version >= '3.13'", # ete3 imports the removed cgi package
+  "lxml",
+  "numpy",
+  "pandas",
+  "pyham>=1.1.10",
+  "pyoma>=0.14.2",
+  "tables",
+  "tqdm",
 ]
 description = "Phylogenetic Profiling with OMA and minhashing"
 readme = "README.md"
-
-license = { file="LICENSE" }
-
-requires-python = ">=3.7"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11,<3.13"
 
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
 ]
+
+[project.optional-dependencies]
+ml = ["keras"]
+
 [project.urls]
 "Homepage" = "https://github.com/DessimozLab/HogProf"
 "Bug Tracker" = "https://github.com/DessimozLab/HogProf/issues"
 "Docs" = "https://dessimozlab.github.io/HogProf/"
+
+[project.scripts]
+lshbuilder = "HogProf.lshbuilder:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
