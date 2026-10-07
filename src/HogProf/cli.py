@@ -18,7 +18,6 @@ from HogProf import __version__
 
 
 
-
 DB_PRESETS = {
     'all': {'taxfilter': None, 'taxmask': None},
     'plants': {'taxfilter': None, 'taxmask': 33090},
@@ -65,19 +64,12 @@ def setup_cli(verbose: bool = False,
                                show_locals=verbose,
                                word_wrap=True)
 
-def print_startup(args, *, output_console: Console = console) -> None:
-    """Print the initial CLI configuration."""
+def print_startup(args=None, *, output_console: Console = console) -> None:
+    """Print the banner and, when supplied, the initial CLI configuration."""
 
     table = Table.grid(padding=(0, 3))
     table.add_column(style="dim")
     table.add_column()
-
-    source = (
-        f"OMA: {args['OMA']}" if args["OMA"]
-        else f"OrthoXML: {args['OrthoGlob']}"
-        if args["OrthoGlob"]
-        else f"Tar: {args['tarfile']}"
-    )
 
     header = Table.grid(padding=(0, 1))
     header.add_column(justify="center")
@@ -98,12 +90,18 @@ def print_startup(args, *, output_console: Console = console) -> None:
         "[link=https://doi.org/10.1371/journal.pcbi.1007553]"
         "Moi et al. (2020), PLOS Comp Biol[/link]",
     )
-    table.add_section()
-
-    table.add_row()
-    table.add_row("Input", source)
-    table.add_row("Output", str(args["outpath"]))
-    table.add_row("Workers", str(args["njobs"]))
+    if args is not None:
+        source = (
+            f"OMA: {args['OMA']}" if args["OMA"]
+            else f"OrthoXML: {args['OrthoGlob']}"
+            if args["OrthoGlob"]
+            else f"Tar: {args['tarfile']}"
+        )
+        table.add_section()
+        table.add_row()
+        table.add_row("Input", source)
+        table.add_row("Output", str(args["outpath"]))
+        table.add_row("Workers", str(args["njobs"]))
 
     output_console.print(
         Panel(table,
@@ -115,8 +113,9 @@ def print_startup(args, *, output_console: Console = console) -> None:
         )
     )
     output_console.print("\n")
-    output_console.print("[dim]Initializing...[/]")
-    output_console.print("\n")
+    if args is not None:
+        output_console.print("[dim]Initializing...[/]")
+        output_console.print("\n")
 
 
 def track_progress(
@@ -135,8 +134,34 @@ def track_progress(
 
 
 
+class RichArgumentParser(argparse.ArgumentParser):
+    """Render argparse output with Rich while preserving streams and exit codes."""
+
+    def print_help(self, file=None):
+        file = sys.stdout if file is None else file
+        print_startup(output_console=Console(file=file))
+        super().print_help(file)
+
+    def _print_message(self, message, file=None):
+        if message:
+            text = Text(message)
+            text.highlight_regex(r"(?<!\w)--?[\w-]+", style="cyan")
+            text.highlight_regex(
+                r"(?m)^(?:usage|options|positional arguments):", style="bold"
+            )
+            if message.startswith(f"{self.prog}: error:"):
+                text.stylize("bold red")
+            Console(file=sys.stderr if file is None else file).print(
+                text, end="", soft_wrap=True
+            )
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog="lshbuilder")
+    # setup Rich CLI before the parser. This is to provide
+    # rich-formatted output for argparse argument validation, --help, etc.
+    setup_cli()
+    parser = RichArgumentParser(prog="lshbuilder")
+
     parser.add_argument('--version', action='version',
                         version=f'%(prog)s {__version__}')
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
@@ -174,13 +199,14 @@ def main(argv=None):
     # print help if no args provided
     parsed_args = parser.parse_args(argv if argv else ['-h'])
 
+    if parsed_args.verbose:
+        setup_cli(verbose=True)
+
     if not (parsed_args.OMA or parsed_args.OrthoGlob or parsed_args.tarfile):
         parser.error('Please specify input data with --OMA, --OrthoGlob or --tarfile')
 
     if parsed_args.reformat_names:
         parser.error('--reformat_names is not supported in this version')
-
-    setup_cli(verbose=parsed_args.verbose)
 
     # Suppress pyham's noisy INFO messages, including during initialization.
     logging.getLogger('pyham').setLevel(logging.WARNING)
