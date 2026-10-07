@@ -1,11 +1,10 @@
-
-
 import datasketch
-import itertools
 import copy
-import math
+import logging
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def generate_treeweights( mastertree, taxaIndex ,  taxfilter= None, taxmask=None ):
@@ -23,16 +22,19 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter= None, taxmask=None
     #get max of taxa index
     taxmax = max(taxaIndex.values())+1
     weights = np.zeros((3*taxmax,1))
-    print('making tree weights w n taxa = :',len(taxaIndex))
+    logger.info('making tree weights with %d taxa', len(taxaIndex))
     newtree = copy.deepcopy(mastertree)
     if taxmask:
         for node in newtree.traverse():
             if taxmask:
                 if str(node.name) == str(taxmask):
-                    print( 'masking tree to ', taxmask)
+                    logger.info('Masking tree to %s', taxmask)
                     newtree = node
                     break
-        print( 'new tree with n taxa = ', len([n.name for n in newtree.traverse()])) 
+        logger.info(
+            'Masked tree contains %d taxa',
+            len([n.name for n in newtree.traverse()]),
+        )
     
     if taxfilter:
         for n in newtree.traverse():
@@ -83,11 +85,13 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
                 if lossonly == False and duplonly == False:
                     hog_matrix_binary[:,hogindex] = 1
 
-            except:
-                print( 'error in hash_tree')
-                print( 'event', event)
-                print( 'indices', indices[event])
-                print( 'hogindex', hogindex)
+            except Exception:
+                logger.exception(
+                    'Error hashing event %s (indices=%s, hogindex=%s)',
+                    event,
+                    indices[event],
+                    hogindex,
+                )
 
     input_vec = list(hog_matrix_weighted.flatten())
 
@@ -210,4 +214,3 @@ def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128, fam2orthoxmlpath =
     hashvalues = hashvalues.astype('int64')
     minhash1 = datasketch.WeightedMinHash( seed = 1, hashvalues=hashvalues)
     return minhash1
-

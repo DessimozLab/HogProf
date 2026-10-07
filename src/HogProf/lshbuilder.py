@@ -34,16 +34,17 @@ import time as t
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
+
 from HogProf import __version__
 
 import h5py
 import numpy as np
 import pandas as pd
-import tqdm
 from datasketch import MinHashLSHForest, WeightedMinHashGenerator
 from pyoma.browser import db
 from tables import open_file
 
+from HogProf.cli import setup_cli, print_startup, track_progress
 from HogProf.utils import hashutils, phylo, pyhamutils
 
 logger = logging.getLogger(__name__)
@@ -120,8 +121,18 @@ class LSHBuilder:
     with a list of taxonomic codes for all the species in your db
     """
 
-    def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False,
-                 slicesubhogs=False, limit_species=10, limit_events=0):
+    def __init__(self, 
+                 h5_oma=None, fileglob=None, taxa=None,
+                 masterTree=None,
+                 output_dir=None,
+                 numperm=256,
+                 treeweights=None, taxfilter=None, taxmask=None,
+                 lossonly=False, duplonly=False, verbose=False,
+                 use_taxcodes=False,
+                 datetime=datetime.now(),
+                 reformat_names=False,
+                 slicesubhogs=False,
+                 limit_species=10, limit_events=0):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -130,7 +141,7 @@ class LSHBuilder:
             - tarfile_ortho (str):  path to an ensembl tarfile containing orthoxml files
             - h5_oma (str): path to an OMA hdf5 file
             - masterTree (str): path to a newick tree file
-            - saving_name (str): path to the directory where the output files will be saved
+            - output_dir (str): path to the directory where the output files will be saved
             - numperm (int): the number of permutations to use in the MinHash generation (default: 256)
             - treeweights (str): path to a pickled file containing the weights for the tree
             - taxfilter (str): path to a file containing a list of taxonomic codes to filter from the tree
@@ -164,35 +175,29 @@ class LSHBuilder:
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
         self.limit_species = limit_species
         self.limit_events = limit_events
-        if saving_name:
-            self.saving_name= saving_name 
-            if self.saving_name[-1]!= '/':
-                self.saving_name = self.saving_name+'/'
-            self.saving_path = saving_name
-            if not os.path.isdir(self.saving_path):
-                os.mkdir(path=self.saving_path)
-        else:
-            raise Exception( 'please specify an output location' )
+
+        self.output_dir = output_dir
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
         species = self._get_species_names()
         if masterTree is None:
             if not h5_oma:
                 raise TypeError('Please specify either a database or a tree')
 
-            self.tree_string, self.tree = phylo.get_tree(genomes=species, outdir=self.saving_path)
+            self.tree_string, self.tree = phylo.get_tree(genomes=species, outdir=self.output_dir)
         else:
             # validate tree
             self.tree = phylo.TreeValidator(masterTree, species).run()
 
             # save the corrected tree
-            corrected_tree_path = os.path.join(self.saving_path, 'master_tree.corrected.nwk')
-            phylo.to_file(self.tree, corrected_tree_path)
+            phylo.to_file(self.tree, self.output_dir / 'master_tree.corrected.nwk')
             self.tree_string = phylo.to_string(self.tree)
 
         self.taxaIndex, self.reverse = phylo.generate_taxa_index(self.tree, self.tax_filter, self.tax_mask)
         
-        with open( self.saving_path + 'taxaIndex.pkl', 'wb') as taxout:
+        with open(self.output_dir / 'taxaIndex.pkl', 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
+
         self.numperm = numperm
         ### if no weights are provided, generate them
         if treeweights is None:
@@ -203,25 +208,27 @@ class LSHBuilder:
             self.treeweights = treeweights
         tax_max = max(self.taxaIndex.values())+1
         wmg = WeightedMinHashGenerator(3*tax_max , sample_size = numperm , seed=1)
-        with open( self.saving_path  + 'wmg.pkl', 'wb') as wmgout:
+
+        with open(self.output_dir / 'wmg.pkl', 'wb') as wmgout:
             wmgout.write( pickle.dumps(wmg))
+
         self.wmg = wmg
 
-        print( '\nConfiguring pyham functions')
+        logger.debug('\nConfiguring pyham functions')
+        logger.debug('taxfilter', self.tax_filter)
+        logger.debug('taxmask', self.tax_mask)
+        logger.debug('swap ids', self.swap2taxcode)
+        logger.debug('reformat names', self.reformat_names)
+        logger.debug('use taxcodes', self.swap2taxcode)
 
-        print( 'taxfilter', self.tax_filter)
-        print( 'taxmask', self.tax_mask)
-        print( 'configuring pyham functions')
-        print( 'swap ids', self.swap2taxcode)
-        print( 'reformat names', self.reformat_names)
-        print( 'use taxcodes', self.swap2taxcode)
         hamfunction = pyhamutils.get_ham_treemap_from_row
         hashfunction = hashutils.row2hash
         if slicesubhogs:
             hashfunction = hashutils.hash_trees_subhogs
+        
         ### set up the pyHAM pipeline with different parameters depending on whether the input is an OMA hdf5 file or a list of orthoxml files
-        print( 'lossonly', lossonly)
-        print( 'duplonly', duplonly)
+        logger.debug('lossonly', lossonly)
+        logger.debug('duplonly', duplonly)
 
         self.dataset_nodes = None
         self.idmapper = None
@@ -267,21 +274,20 @@ class LSHBuilder:
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
             self.n_groups  = len(self.h5OMA.root.OrthoXML.Index)
-            print( 'reading oma hdf5 with n groups:', self.n_groups)
-        ### if the input is a list of orthoxml files, set up another function to read the orthoxml data
+            logger.info( 'reading oma hdf5 with n groups: %d', self.n_groups)
         elif self.fileglob:
-            print('reading orthoxml files:' , len(self.fileglob))
+            logger.info('reading orthoxml files: %d' , len(self.fileglob))
             self.n_groups = len(self.fileglob)
         else:
-            raise Exception( 'please specify an input file' )
+            raise RuntimeError('please specify an input file' )
         
-        self.hashes_path = self.saving_path + 'hashes.h5'
-        self.lshpath = self.saving_path + 'newlsh.pkl'
-        self.lshforestpath = self.saving_path + 'newlshforest.pkl'
-        self.mat_path = self.saving_path+ 'hogmat.h5'
+        self.hashes_path = self.output_dir / 'hashes.h5'
+        self.lshpath = self.output_dir / 'newlsh.pkl'
+        self.lshforestpath = self.output_dir / 'newlshforest.pkl'
+        self.mat_path = self.output_dir / 'hogmat.h5'
         self.columns = len(self.taxaIndex)
         self.verbose = verbose
-        print('done\n')
+        logger.debug('done')
 
     def _get_species_names(self):
         """Read the DB or orthoxml to extract the list of species"""
@@ -319,7 +325,11 @@ class LSHBuilder:
             ### only Fam makes sense here, the rest are OMAmer related fields
             #print(self.h5OMA.root.OrthoXML.Index.colnames)
             self.rows = len(self.groups)
-            for i, row in enumerate(tqdm.tqdm(self.groups)):
+            for i, row in enumerate(track_progress(
+                self.groups,
+                description="Processing OMA groups",
+                total=self.rows,
+            )):
                 if i > start:
                     #### family here is HOG ID minus the "HOG:E" prefix
                     fam = row[0]
@@ -347,7 +357,11 @@ class LSHBuilder:
                 yield pd_dataframe
 
         elif self.fileglob:
-            for i,file in enumerate(tqdm.tqdm(self.fileglob)):
+            for i,file in enumerate(track_progress(
+                self.fileglob,
+                description="Processing OrthoXML files",
+                total=len(self.fileglob),
+            )):
                 with open(file) as ortho:
                     #print("reading orthoxml file", file)
                     #oxml = ET.parse(ortho)
@@ -447,7 +461,7 @@ class LSHBuilder:
             mapping = pd.concat(frames)
         else:
             mapping = pd.DataFrame(columns=['Fam', 'ortho'])
-        mapping.to_csv(self.saving_path + 'fam2orthoxml.csv')
+        mapping.to_csv(self.output_dir / 'fam2orthoxml.csv')
 
 
     def saver(self, result_queue):
@@ -531,7 +545,7 @@ class LSHBuilder:
                                 self._save_family_mapping(mapping_frames)
                             save_start = t.time()
                     else:
-                        print(this_dataframe)
+                        logger.debug('Saver received an empty result batch')
                 else:
 
                     logger.info('Wrapping up the run')
@@ -908,14 +922,13 @@ class LSHBuilder:
     
 
 def main():
-    parser = argparse.ArgumentParser()
     parser = argparse.ArgumentParser(prog="hogprof")
     parser.add_argument('--version', action='version',
                         version=f'%(prog)s {__version__}')
     parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
     parser.add_argument('--taxmask', help='consider only one branch (e.g. Sauria)',type = str)
     parser.add_argument('--taxfilter', help='remove these taxa' , type = str, nargs='*')
-    parser.add_argument('--outpath', help='name of the db (output folder where all files will be created)', type = str)
+    parser.add_argument('--outpath', '-o', help='Output directory path', type=Path, required=True)
     parser.add_argument('--dbtype', help='preconfigured taxonomic ranges' , type = str)
     parser.add_argument('--OMA', help='use oma data ' , type = str)
     parser.add_argument('--OrthoGlob', help='a glob expression for orthoxml files ' , type = str)
@@ -923,15 +936,24 @@ def main():
     parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = int)
     parser.add_argument('--mastertree', help='master taxonomic tree. nodes should correspond to orthoxml' , type = str)
     
-    parser.add_argument('--nthreads', help='nthreads for multiprocessing' , type = int)
-    parser.add_argument('--lossonly', help='only compile loss events' , type = bool)
-    parser.add_argument('--duplonly', help='only compile duplication events' , type = bool)
-    parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
-    parser.add_argument('--verbose', help='print verbose output', action='store_true')
-    parser.add_argument('--reformat_names', help='try to correct broken species trees by replacing all names with numbers.', action='store_true')
-    parser.add_argument('--slicesubhogs', help='slice subhogs', action='store_true')
+    # limits
     parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
     parser.add_argument('--eventslim', help='minimum number of events (loss/duplication) in a subhog' , type = int, default=0)
+    
+    # multiprocessing
+    parser.add_argument('--nthreads', help='[deprecated] Number of threads for multiprocessing', type=int)
+    parser.add_argument("--njobs", help="Number of jobs for multiprocessing", type=int, default=1)
+    
+    # Flags
+    parser.add_argument('--lossonly', help='only compile loss events', action='store_true')
+    parser.add_argument('--duplonly', help='only compile duplication events', action='store_true')
+    parser.add_argument('--taxcodes', help='use taxid info in HOGs', action='store_true')
+    parser.add_argument('--reformat_names', 
+                        help='Correct broken species trees by replacing all names with numbers.', 
+                        action='store_true')
+    parser.add_argument('--slicesubhogs', help='Make profiles for subhogs', action='store_true')
+    parser.add_argument('--verbose', '-v', help='print verbose output', action='store_true')
+
     
     dbdict = {
         'all': { 'taxfilter': None , 'taxmask': None },
@@ -950,21 +972,22 @@ def main():
     taxmask = None
     omafile = None
 
-    args = vars(parser.parse_args(sys.argv[1:]))
-    print("\nReading arguments")
+    parsed_args = parser.parse_args(sys.argv[1:])
 
     orthoglob = None
+    # set up Rich console and logging
+    setup_cli(verbose=parsed_args.verbose)
+
+    # Pyham spams INFO-level messages like crazy. Suppress
+    logging.getLogger("pyham").setLevel(logging.WARNING)
+
+    args = vars(parsed_args)
+
     if 'OrthoGlob' in args:
         if args['OrthoGlob']:
             print("Using orthoxml files from:", args['OrthoGlob'])
             orthoglob = glob.glob(args['OrthoGlob'])
-
-    if 'outpath' in args:
-        dbname = args['outpath']
-        if not dbname.endswith('/'):
-            dbname += '/'
-    else:
-        raise Exception(' please give your profile an output path with the --outpath argument ')
+    
     if args['dbtype']:
         taxfilter = dbdict[args['dbtype']]['taxfilter']
         taxmask = dbdict[args['dbtype']]['taxmask']
@@ -986,29 +1009,29 @@ def main():
         fileglob = orthoglob
     else:
         raise Exception(' please specify input data ')
-    if args['lossonly']:
-        lossonly = args['lossonly']
-    else:
-        lossonly = False
-    if args['duplonly']:
-        duplonly = args['duplonly']
-    else:
-        duplonly = False
 
-    if args['taxcodes']==True:
-        taxcodes = True
-    else:
-        taxcodes = False
-
-    _args = parser.parse_args()
+    _args = parsed_args
+    output_dir = _args.outpath
+    # flags
+    loss_only = _args.lossonly
+    dupl_only = _args.duplonly
+    use_tax_codes = _args.taxcodes
     verbose = _args.verbose
+    reformat_names = _args.reformat_names
 
     if _args.reformat_names:
         raise NotImplementedError("--reformat_names is not supported in this version")
+    
+    print_startup(args)
 
-    threads = 4
+    njobs = 4
     if args['nthreads']:
-        threads = args['nthreads']
+        logger.warning("--nthreads is deprecated. Please use --njobs")
+        njobs = args['nthreads']
+
+    if args['njobs']:
+        njobs = args['njobs']
+
     if args['taxweights']:
         from keras.models import model_from_json
         json_file = open(  args['taxweights']+ '.json', 'r')
@@ -1017,7 +1040,7 @@ def main():
         model = model_from_json(loaded_model_json)
         # load weights into new model
         model.load_weights(  args['taxweights']+".h5")
-        print("Loaded model from disk")
+        logger.info("Loaded model from disk")
         weights = model.get_weights()[0]
         weights += 10 ** -10
     else:
@@ -1027,32 +1050,28 @@ def main():
     else:
         mastertree=None
 
-    # set DEBUG log level if --verbose
-    log_level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(level=logging.INFO)
-
-    # Pyham spams INFO-level messages like crazy. Suppress
-    logging.getLogger("pyham").setLevel(logging.WARNING)
-    logging.getLogger().setLevel(log_level)
-
     start = time.time()
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
-            lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
+            lsh_builder = LSHBuilder(h5_oma=h5_oma, fileglob=orthoglob, output_dir=output_dir,
+                                     numperm=nperm,
                                      treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree ,
-                                     lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=_args.reformat_names,
-                                     verbose=verbose, slicesubhogs=_args.slicesubhogs, limit_species=args['specieslim'], limit_events=args['eventslim'])
-            lsh_builder.run_pipeline(threads)
+                                     lossonly=_args.lossonly , duplonly = _args.duplonly , use_taxcodes = _args.taxcodes , reformat_names=_args.reformat_names,
+                                     slicesubhogs=_args.slicesubhogs, limit_species=args['specieslim'], limit_events=args['eventslim'],
+                                     verbose=_args.verbose,)
+            lsh_builder.run_pipeline(njobs)
             #lsh_builder.run_pipeline_single() # made for local tests. ignore
 
     else:
-        lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
+        lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob, output_dir=output_dir,
+                                 numperm = nperm,
                                  treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
-                                 masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes ,
-                                 reformat_names=_args.reformat_names, verbose=verbose,
+                                 masterTree =mastertree , lossonly = _args.lossonly , duplonly = _args.duplonly , use_taxcodes = _args.taxcodes ,
+                                 reformat_names=_args.reformat_names,
                                  slicesubhogs=_args.slicesubhogs, limit_species=args['specieslim'],
-                                 limit_events=args['eventslim'])
-        lsh_builder.run_pipeline(threads)
+                                 limit_events=args['eventslim'],
+                                 verbose=_args.verbose)
+        lsh_builder.run_pipeline(njobs)
 
     logger.info("Done in %.2fs", time.time() - start)
 
