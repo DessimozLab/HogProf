@@ -61,17 +61,34 @@ def print_startup(args, *, output_console: Console = console) -> None:
         else f"Tar: {args['tarfile']}"
     )
 
+    header = Table.grid(padding=(0, 1))
+    header.add_column(justify="center")
+    header.add_column()
+
+    logo = Text("┌─┼─┐\n■ □ ■", style="bold cyan")
+    name = Text.assemble(
+        ("HogProf", "bold cyan"),
+        (f" v{__version__}", "dim"),
+    )
+
+    header.add_row(logo, name)
+
+    table.add_row(header)
+    table.add_row()
+    table.add_row(
+        "Cite",
+        "[link=https://doi.org/10.1371/journal.pcbi.1007553]"
+        "Moi et al. (2020), PLOS Comp Biol[/link]",
+    )
+    table.add_section()
+
+    table.add_row()
     table.add_row("Input", source)
     table.add_row("Output", str(args["outpath"]))
     table.add_row("Workers", str(args["njobs"]))
 
-    title = Text.assemble((":: HogProf", "bold cyan"),
-                          (f" v{__version__}", "dim"))
-
     output_console.print(
         Panel(table,
-              title=title,
-              subtitle="LSH index builder",
               title_align="left",
               subtitle_align="right",
               border_style="cyan",
