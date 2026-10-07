@@ -377,96 +377,56 @@ class LSHBuilder:
                 yield pd_dataframe
 
 
-    #def worker(self, i, work_queue, result_queue):
-    #    logger.debug('Starting worker #%d', i)
+    def worker(self, i, work_queue, result_queue):
+        logger.debug('Starting worker #%d', i)
+        while True:
+            df = work_queue.get()
+            if df is None:
+                logger.debug("Worker #%d done", i)
+                break
+                
+            if self.slicesubhogs:
+                tree_dicts = []
+                for index, row in df[["Fam", "ortho"]].iterrows():
+                    result = self.HAM_PIPELINE(row)
+                    tree_dicts.append(result)
 
-    def worker(self, i, q, retq):
-        try:
-            if self.verbose == True:
-                print('worker init ' + str(i))
-            while True:
-                ### get dataframe from queue (generates_dataframes)
-                df = q.get()
-                #print(df.head()) # gives error if df is None
-                if df is not None :
-                    if self.slicesubhogs is False:
-                        df['tree'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-                        #add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
-                        #returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
-                        #merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
-                        #print(df.head())
-                        df[['hash','rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
-                        ### check for empty dfs before putting them in the queue
-                        if df[['Fam', 'hash']].empty:
-                            return
-                        ### put data in queue to be saved
-                        if self.fileglob:
-                            retq.put(df[['Fam', 'hash', 'ortho']])
-                        else:
-                            retq.put(df[['Fam', 'hash']])
-                    ### slice subhogs case
-                    else:
-                        #print(df)
-                        #print(df.size)
-                        ### original one liner
-                        #df['tree_dicts'] = df[['Fam', 'ortho']].apply(self.HAM_PIPELINE, axis=1)
-                        ### for debugging
-                        # Iterate over each row in the DataFrame
-                        tree_dicts = []
-                        #print(f"Memory before HAM: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
-                        for index, row in df[['Fam', 'ortho']].iterrows():
-                            try:
-                                # Apply the HAM_PIPELINE function to the current row
-                                result = self.HAM_PIPELINE(row)
-                                tree_dicts.append(result)
-                                #print(f"Debug: Successfully processed row {index} with Fam={row['Fam']}")
-                            except Exception as e:
-                                # Handle and log any errors
-                                print(f"Error processing row {index} with Fam={row['Fam']}: {e}")
-                                # Append None for rows that failed - necessary or raises alueError: Length of values (65) does not match length of index (101)
-                                tree_dicts.append(None)  
-                        #print(f"Memory after HAM: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
-                        #df['tree_dicts'] = tree_dicts
-                        #print(tree_dicts)
-                        # Assign the results back to the DataFrame
-                        df['tree_dicts'] = tree_dicts
-                        df['hash_dicts'] = df[['Fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
-                        #print(f"Memory after HASH: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
-                        #print(df)
-                        #print(df.tree_dicts.iloc[0])
-                        # Filter out rows with empty hash_dicts to save time
-                        df = df[df['hash_dicts'].apply(bool)]
-                        ### check again if df is empty:
-                        if df.empty:
-                            return
-                        #print(df.tree_dicts.iloc[0])
-                        newdf ={}
-                        #print("worker df columns",df.columns)
-                        #for col in df.columns:
-                        #    print(df[[col]].head())
-                        for i,row in df.iterrows():
-                            for subhog in row['hash_dicts']:
-                                if self.fileglob:
-                                    newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] 
-                                                                    , 'ortho': row['ortho'] }
-                                ### don't save orthoxml strings if OMA
-                                else:
-                                    newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1],
-                                    'ortho':''}
-                        newdf = pd.DataFrame.from_dict(newdf, orient='index')
-                        ### this here is what prints empty for OMA run (seemingly cause of the Toxicofera mask)!!!!!!!!!!!!
-                        #print(newdf)
-                        #print(f"Memory before retq: {process.memory_info().rss / 1024 / 1024 / 1024:.2f} GB")
-                        retq.put(newdf)
-                else:
-                    if self.verbose == True:
-                        print('Worker done' + str(i))
+                # Assign the results back to the DataFrame
+                df["tree_dicts"] = tree_dicts
+                df["hash_dicts"] = df[["Fam", "tree_dicts"]].apply(
+                    self.HASH_PIPELINE, axis=1
+                )
+
+                # Filter out rows with empty hash_dicts to save time
+                df = df[df["hash_dicts"].apply(bool)]
+                if df.empty:
                     break
-        except Exception as e:
-            import traceback
-            print('Worker error', file=sys.stderr)
-            print(f"Error in worker process: {traceback.format_exc()}", file=sys.stderr)
-            
+
+                result_dict = {}
+                for _, row in df.iterrows():
+                    for subhog in row["hash_dicts"]:
+                        # don't save orthoxml strings if OMA
+                        ortho = row["ortho"] if self.fileglob else ""
+
+                        result_dict[(row["Fam"], subhog)] = {
+                            "tree": row["tree_dicts"][subhog],
+                            "hash": row["hash_dicts"][subhog][1],
+                            "ortho": ortho
+                        }
+                result_dict = pd.DataFrame.from_dict(result_dict, orient="index")
+                result_queue.put(result_dict)
+            else:
+                df["tree"] = df[["Fam", "ortho"]].apply(self.HAM_PIPELINE, axis=1)
+                # add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
+                # returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
+                # merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
+
+                df[["hash", "rows"]] = df[["Fam", "tree"]].apply(self.HASH_PIPELINE, axis=1)
+                if self.fileglob:
+                    result_queue.put(df[["Fam", "hash", "ortho"]])
+                else:
+                    result_queue.put(df[["Fam", "hash"]])
+
     
     def _make_tax_str(self):
         taxstr = ""
