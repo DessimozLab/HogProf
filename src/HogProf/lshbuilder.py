@@ -121,7 +121,7 @@ class LSHBuilder:
     """
 
     def __init__(self,h5_oma=None,fileglob = None, taxa=None,masterTree=None, saving_name=None ,   numperm = 256,  treeweights= None , taxfilter = None, taxmask= None , lossonly = False, duplonly = False, verbose = False , use_taxcodes = False , datetime = datetime.now() , reformat_names = False,
-                  slicesubhogs=False, limit_species=10, limit_events=0):
+                 slicesubhogs=False, limit_species=10, limit_events=0):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -507,6 +507,9 @@ class LSHBuilder:
         mapping_frames = []
         taxstr = self._make_tax_str()
 
+        total_subfam_ids = []
+        totals_subfams = 0
+
         with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
             hash_width = 2 * self.numperm
             dataset = h5hashes.create_dataset(
@@ -527,25 +530,40 @@ class LSHBuilder:
                         #print(str(this_dataframe.Fam.max())+ 'fam num')
                         #print(str(count) + ' done')
 
-                        hashes = { fam:hashes[fam] for fam in hashes if hashes[fam]}
-                        for fam in hashes:
-                            forest.add(str(fam), hashes[fam])
+                        # handle slicesubhogs
+                        if self.slicesubhogs:
+                            subfam_ids_list = this_dataframe.index.to_list()
+                            total_subfam_ids.extend(subfam_ids_list)
 
-                        for fam in hashes:
-                            # if all rows are filled, allocate the next chunk
-                            if dataset.shape[0] <= fam:
-                                dataset.resize(fam + chunk_size, axis=0)
+                            nsubfams = len(hashes)
+                            # Resize if necessary
+                            if h5hashes[taxstr].shape[0] < totals_subfams + nsubfams + chunk_size:
+                                example = next(iter(hashes.keys()))
+                                h5hashes[taxstr].resize((totals_subfams + nsubfams + chunk_size,
+                                                         len(hashes[example].hashvalues.ravel())))
 
-                            dataset[fam, :] = hashes[fam].hashvalues.ravel()
-                            count += 1
+                            # Store hashes
+                            h5hashes[taxstr][totals_subfams:totals_subfams + nsubfams, :] = [hashes[fam].hashvalues.ravel() for fam in hashes]
 
-                        if count - last_reported_count >= 1000:
-                            # maybe we don't need this as this disrupts tqdm output
-                            #logger.info('Saver has written %d hashes', count)
-                            last_reported_count = count
+                            # Update forest
+                            for fam in hashes:
+                                forest.add(str(fam[0]) + '_' + str(fam[1]), hashes[fam])
+
+                            totals_subfams += nsubfams
+                        else:
+                            hashes = { fam:hashes[fam] for fam in hashes if hashes[fam]}
+                            for fam in hashes:
+                                forest.add(str(fam), hashes[fam])
+
+                            for fam in hashes:
+                                # if all rows are filled, allocate the next chunk
+                                if dataset.shape[0] <= fam:
+                                    dataset.resize(fam + chunk_size, axis=0)
+
+                                dataset[fam, :] = hashes[fam].hashvalues.ravel()
 
                         if self.fileglob:
-                            mapping_frames.append(this_dataframe[['Fam', 'ortho']])
+                            mapping_frames.append(this_dataframe[['ortho']])
 
                         if hashes and t.time() - save_start > 200:
                             h5hashes.flush()
@@ -1181,7 +1199,7 @@ def main():
     parser.add_argument('--taxcodes', help='use taxid info in HOGs' , type = bool)
     parser.add_argument('--verbose', help='print verbose output', action='store_true')
     parser.add_argument('--reformat_names', help='try to correct broken species trees by replacing all names with numbers.', action='store_true')
-    parser.add_argument('--slicesubhogs', help='slice subhogs' , type = bool, default=False)
+    parser.add_argument('--slicesubhogs', help='slice subhogs', action='store_true')
     parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
     parser.add_argument('--eventslim', help='minimum number of events (loss/duplication) in a subhog' , type = int, default=0)
     
@@ -1255,11 +1273,6 @@ def main():
     _args = parser.parse_args()
     verbose = _args.verbose
 
-    if args['reformat_names']:
-        reformat_names = True
-    else:
-        reformat_names = False
-
     threads = 4
     if args['nthreads']:
         threads = args['nthreads']
@@ -1293,18 +1306,19 @@ def main():
     if omafile:
         with open_file( omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma = h5_oma,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
-            treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree , 
-            lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=reformat_names, 
-            verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], limit_events=args['eventslim'])
+                                     treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree ,
+                                     lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , reformat_names=_args.reformat_names,
+                                     verbose=verbose, slicesubhogs=_args.slicesubhogs, limit_species=args['specieslim'], limit_events=args['eventslim'])
             lsh_builder.run_pipeline(threads)
             #lsh_builder.run_pipeline_single() # made for local tests. ignore
 
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob ,saving_name=dbname , numperm = nperm ,
-        treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
-          masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes , 
-          reformat_names=reformat_names, verbose=verbose, slicesubhogs=args['slicesubhogs'], limit_species=args['specieslim'], 
-          limit_events=args['eventslim'])
+                                 treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
+                                 masterTree =mastertree , lossonly = lossonly , duplonly = duplonly , use_taxcodes = taxcodes ,
+                                 reformat_names=_args.reformat_names, verbose=verbose,
+                                 slicesubhogs=_args.slicesubhogs, limit_species=args['specieslim'],
+                                 limit_events=args['eventslim'])
         lsh_builder.run_pipeline(threads)
 
     logger.info("Done in %.2fs", time.time() - start)
