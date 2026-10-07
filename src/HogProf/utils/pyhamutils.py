@@ -1,14 +1,8 @@
 import xml.etree.ElementTree as ET
 import logging
-import pyham
-import xml.etree.cElementTree as ET
-import ete3
-import pickle
-import traceback
-import sys
-from Bio import Phylo
-from io import StringIO
 import os
+import sys
+import pyham
 
 logger = logging.getLogger(__name__)
 
@@ -99,32 +93,134 @@ def orthoxml2numerical(orthoxml , mapper):
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml 
 
-def get_ham_treemap_from_row(row, tree_string, levels = None , swap_ids = True , orthoXML_as_string = True , use_phyloxml = False , use_internal_name = True ,reformat_names= True, orthomapper = None,
-                             limit_species = 10, limit_events = 0, dataset_nodes = None, verbose=False):  
-    _, orthoxml = row
-
-    if orthoxml:
-        if swap_ids == True and orthoXML_as_string == True:
-            orthoxml = switch_name_ncbi_id(orthoxml)
-        elif reformat_names == True and orthoXML_as_string == True:
-            orthoxml = orthoxml2numerical(orthoxml , orthomapper)
-
-        # return multiple treemaps corresponding to slices at different levels
-        ham_obj = pyham.Ham(tree_string, orthoxml,
-                            type_hog_file="orthoxml",
-                            tree_format="newick_string",
-                            use_internal_name=use_internal_name,
-                            orthoXML_as_string=orthoXML_as_string)
-        tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0])
-
-        if dataset_nodes is not None and tp.treemap.name not in dataset_nodes:
-            return None
-            
-        #check for losses / events and n leaves
-        return tp.treemap
-    else:
-        logger.warning("Empty orthoxml provided")
+def _root_treemap(ham, root_hog, *, dataset_nodes, **kwargs):
+    """Make a treemap for the rootHOG"""
+    if dataset_nodes is not None and root_hog.genome.name not in dataset_nodes:
         return None
+
+    return ham.create_tree_profile(hog=root_hog).treemap
+
+
+def _check_limits(treemap, limit_events):
+    """
+    Check if |losses| AND |duplications| are less than limit_events
+    """
+    duplications = sum(node.dupl or 0 for node in treemap.traverse())
+    losses = sum(node.lost or 0 for node in treemap.traverse())
+    return duplications > limit_events or losses > limit_events
+
+
+def _subhog_keys(hogs, family):
+    """Generate keys for subhogs in family"""
+    bases = [
+        f"{hog.genome.name}_{hog.hog_id if hog.hog_id is not None else family}"
+        for hog in hogs
+    ]
+    reserved = set(bases)
+    seen = set()
+    suffixes = {}
+    for base in bases:
+        key = base
+        suffix = suffixes.get(base, 2)
+        while key in seen or (key != base and key in reserved):
+            key = f"{base}__{suffix}"
+            suffix += 1
+        suffixes[base] = suffix
+        seen.add(key)
+        yield key
+
+
+def _subhog_treemaps(ham, root_hog, *, family, limit_species,
+                     limit_events, dataset_nodes, verbose):
+    """Make treemaps for the levels mode"""
+    hogs = root_hog.get_all_descendant_hogs()
+
+    fallback_id = root_hog.hog_id if root_hog.hog_id is not None else family
+    treemaps = {}
+
+    # for every subhog
+    for key, hog in zip(_subhog_keys(hogs, fallback_id), hogs):
+
+        # check that the subHOG taxa was not filtered out
+        if dataset_nodes is not None and hog.genome.name not in dataset_nodes:
+            continue
+
+        # check the minimal number of represented species
+        if len(hog.get_all_descendant_genes_clustered_by_species()) < limit_species:
+            continue
+
+        treemap = ham.create_tree_profile(hog=hog).treemap
+
+        # check the minimal number of events
+        if _check_limits(treemap, limit_events):
+            treemaps[key] = treemap
+
+    if verbose:
+        logger.debug("Family %s: retained %d of %d HOG profiles",
+                     family, len(treemaps), len(hogs))
+    return treemaps
+
+
+# Profiling strategies supported in HogProf
+_PROFILE_STRATEGIES = {
+    # the default strategy -- 1 profile per rootHOG
+    "root": _root_treemap,
+
+    # Levels -- 1 profile per rootHOG + every subHOG
+    "levels": _subhog_treemaps
+}
+
+
+def get_ham_treemap_from_row(row, tree_string,
+                             *,
+                             swap_ids=True,
+                             orthoXML_as_string=True,
+                             use_internal_name=True,
+                             limit_species=10, limit_events=0,
+                             dataset_nodes=None, verbose=False,
+                             slicesubhogs=False):
+    """Parse one root-HOG input and produce treemaps depending on the mode:
+
+    - Root mode (default) returns a treemap or None
+    - Levels mode (slicesubhogs=True) returns a dictionary,
+    including the root when it passes the species and event thresholds.
+    """
+    family, orthoxml = row
+
+    if not orthoxml:
+        logger.warning("Family %s: empty OrthoXML provided", family)
+        return {} if slicesubhogs else None
+
+    if swap_ids:
+        if not orthoXML_as_string:
+            with open(orthoxml) as source:
+                orthoxml = source.read()
+        orthoxml = switch_name_ncbi_id(orthoxml)
+        orthoXML_as_string = True
+
+    ham = pyham.Ham(tree_string, orthoxml,
+                    type_hog_file="orthoxml",
+                    tree_format="newick_string",
+                    use_internal_name=use_internal_name,
+                    orthoXML_as_string=orthoXML_as_string)
+
+    roots = ham.get_list_top_level_hogs()
+    if len(roots) != 1:
+        raise ValueError(f"Family {family}: expected one top-level HOG, found {len(roots)}")
+
+    # pick the profiling strategy
+    strategy = _PROFILE_STRATEGIES["levels" if slicesubhogs else "root"]
+
+    return strategy(ham, roots[0],
+                    family=family,
+                    limit_species=limit_species, limit_events=limit_events,
+                    dataset_nodes=None if dataset_nodes is None else set(dataset_nodes),
+                    verbose=verbose)
+
+
+def get_subhog_ham_treemaps_from_row(row, tree_string, **kwargs):
+    """Compatibility entry point for levels-mode callers."""
+    return get_ham_treemap_from_row(row, tree_string, slicesubhogs=True, **kwargs)
 
 
 def add_library_path(library_path):
@@ -134,280 +230,6 @@ def add_library_path(library_path):
     profiler_dir = os.path.dirname(os.path.abspath(library_path))
     if profiler_dir not in sys.path:
         sys.path.append(profiler_dir)
-
-
-def _check_limits(treenode, limit_events):
-    ###removed because already covered earlier when generating treemaps
-    ### leaves counting failed e.g. in HOG:E0712183.1e, counts more than there is
-    #print(dir(treenode))
-    #leaves_num = sum(1 for node in treenode.traverse() if node.is_leaf())
-    #if leaves_num < limit_species:
-    #    #print(treenode.name,subhogname)
-    #    return False
-
-    total_dupl = 0
-    total_loss = 0
-    for node in treenode.traverse():
-        try:
-            total_dupl += node.dupl
-        except:
-            total_dupl += 0
-        try:
-            total_loss += node.lost
-        except:
-            total_loss += 0
-    if total_dupl > limit_events or total_loss > limit_events:
-        return True
-    #print(treenode.name,subhogname, total_dupl, total_loss)
-    return False
-
-
-def get_subhog_ham_treemaps_from_row(row, tree_string, levels = None, swap_ids = True, orthoXML_as_string = True, use_phyloxml = False, use_internal_name = True, reformat_names= True, orthomapper = None,
-                                     limit_species =10, limit_events = 0, dataset_nodes = None, hogid_for_all = None, verbose=False):  
-    #verbose = True
-    if verbose:
-        ### reverse orthomapper
-        orthomapper_rev = {v: k for k, v in orthomapper.items()}
-    fam, orthoxml = row
-    format = 'newick_string'
-    
-
-    if use_phyloxml:
-        format = 'phyloxml'
-    if orthoxml:
-        if swap_ids == True and orthoXML_as_string == True and reformat_names == False:
-            orthoxml = switch_name_ncbi_id(orthoxml)
-            quoted = False
-        elif reformat_names == True:
-            orthoxml = orthoxml2numerical(orthoxml , orthomapper)
-            orthoXML_as_string = True
-            quoted = False
-        else:
-            quoted = True
-        try:
-            ### testing hamblaster
-            # Add profiler directory to path and import
-            #add_library_path("")
-            #import profiler
-
-
-            ham_obj = pyham.Ham(tree_string, orthoxml, type_hog_file="orthoxml", tree_format = format, use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string)
-            #print(dir(ham_obj)) 
-            ### Create tree profile for the top-level HOG
-            tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
-            ### save root name
-            #rootname = tp.treemap.name + '_0'
-            ### first checks on top-level HOG to save time
-            roothog_genes = len(tp.hog.get_all_descendant_genes())
-            roothog_species = len(tp.hog.get_all_descendant_genes_clustered_by_species().keys())
-            if roothog_genes < limit_species or roothog_species < limit_species:
-                return {}
-            if  dataset_nodes is not None:
-                roothog_levels = tp.hog.get_all_descendant_hog_levels()
-                roothog_levels = [level.name for level in roothog_levels] 
-                #print(len(roothog_levels))
-                #roothog_levels = [level for level in roothog_levels if level in dataset_nodes]
-                relevant_roothog = False
-                for level in roothog_levels:
-                    if level in dataset_nodes:
-                        relevant_roothog = True
-                        break
-                if not relevant_roothog:
-                    return {}
-                del roothog_levels
-
-            ### get all subhogs
-            subhogs  = tp.hog.get_all_descendant_hogs()
-            hogid_for_all = subhogs[0].hog_id
-            rootname = subhogs[0].genome.name + '_' + str(hogid_for_all) #+ '_0'
-            ### try to get the HOG id to use as part of the subhog name
-            #print(dir(subhogs[0]))
-            #try:  
-            if hogid_for_all is None:
-                hogid_for_all = fam
-            #hogs = { subhog.genome.name +'_' + str(subhog.hog_id) + '_' + str(i + 1):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
-            #hogs = { subhog.genome.name +'_' + str(subhog.hog_id) + '_' + str(i + 1):  ham_obj.create_tree_profile(hog=subhog) for i,subhog in enumerate(subhogs) }
-            hogs = {
-                f"{subhog.genome.name}_{str(subhog.hog_id) if subhog.hog_id is not None else str(hogid_for_all)}": ham_obj.create_tree_profile(hog=subhog)
-                for i, subhog in enumerate(subhogs)
-            }
-            ### manually add roothog cause apparently we are not including it
-            #print(f'Subhogs: {len(hogs)}')
-            #hogs[rootname] = tp
-            if verbose:
-                print(f'\nRootHOG: {rootname}')
-                print(f'Subhogs total: {len(hogs)}')
-            ### filter out the small HOGs (protein num) 
-            hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) >= limit_species}
-            #subhogs_size_dict = {subhogname:[len(hogs[subhogname].hog.get_all_descendant_genes()),len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys())] for subhogname in hogs}
-            if verbose:
-                print(f'Subhogs with enough proteins: {len(hogs)}')
-                
-                #{print(subhogname, orthomapper_rev[subhogname.split('_')[0]], len(hogs[subhogname].hog.get_all_descendant_genes()), 
-                #    len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()),
-                #    [orthomapper_rev[genome.name] for genome in hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()]) for subhogname in hogs}
-            ### filter out the HOGs that are present only in a few species (num of species with proteins in HOG)
-            ### and turn into treemaps
-            ### Athina note: This is the part that works well with orthoxmls but not with OMA (fails to calculate species num for non rootHOG)!!!!!!!!!!!!!!!!!!
-            hogs = {subhogname: hogs[subhogname].treemap for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys()) >= limit_species}
-            
-            ### get info to save to csv
-            #import csv
-            #subhogs_size_table = "/home/agavriil/Documents/venom_project/A_venom_analysis_tidy/2_profiling/1_oma_profiles/levels_oma_full_subhogs_250523/subhogize_table.csv"
-            #subhogswriter = csv.writer(open(subhogs_size_table, 'a'))
-            #for subhogname, size_list in subhogs_size_dict.items():
-            #    if subhogname in hogs.keys():
-            #        ### save row with subhog name, species num and proteins num
-            #        subhogswriter.writerow([subhogname, size_list[0], size_list[1]])
-
-            if verbose:
-                print(f'Subhogs large enough: {len(hogs)}')
-                #{print(subhogname.split('_')[0]) for subhogname in hogs}
-            ### it wont be possible in some cases, so just use the genome name (taxnode )
-            #except Exception as e:     
-            #    hogs = { subhog.genome.name + '_' + str(i):  ham_obj.create_tree_profile(hog=subhog).treemap for i,subhog in enumerate(subhogs) }
-            #print(hogs)
-
-            ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
-            if dataset_nodes is not None:
-                if verbose:
-                    print('dataset_nodes',dataset_nodes)
-                ### print dataset nodes as taxids using the orthomapper values instead of keys
-                #[print(dataset_node, orthomapper_rev[dataset_node]) for dataset_node in dataset_nodes]
-                #print([list(hogs.keys())[0].split('_')[0]])
-                ### print all of them
-                #{print(subhogname.split('_')[0]) for subhogname in hogs}
-                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if subhogname.split('_')[0] in dataset_nodes}
-                if len(hogs) == 0:
-                    if verbose:
-                        print('no suitable subhogs')
-                    return {}
-            #'''
-            ### first check rootHOG to see if there will be at least one hog returned
-            ### if dataset_nodes is specified, this step cannot be done
-            if dataset_nodes is None and not _check_limits(hogs[rootname], limit_events):
-                if verbose:
-                    print('no suitable rootHOG')
-                return {}
-
-            ### then check subhogs and remove the ones that do not meet the limits
-            hogs = {subhogname: hogs[subhogname] for subhogname in hogs if _check_limits(hogs[subhogname], limit_events)}
-            if len(hogs) == 0 and verbose:
-                print('no suitable subhogs')
-            #print(hogs)
-            if verbose:
-                print(f'Subhogs after filtering: {len(hogs)}')
-            #'''
-            return hogs
-        
-        #'''
-        except Exception as e:
-            # Capture the exception and format the traceback
-            full_error_message = str(e)
-            ### Here if we remove the 'TypeError : ' part then it all breaks apart
-            if  ('maps to an ancestral name, not a leaf' in full_error_message): #\
-                #and ('TypeError: species name ' in full_error_message):
-                if verbose:
-                    print('exception error: ' , full_error_message, file=sys.stderr)
-                #species name from bullshit error
-                #TypeError: species name '3515' maps to an ancestral name, not a leaf of the taxono
-                species = full_error_message.split('species name ')[1].split(' ')[0].replace('\'','')
-                if verbose:
-                    print( 'trim tree of '+species, orthomapper_rev[species])
-                ### here is original solution - works best compared to other approaches, but not great
-                ### until now tree was simple newick string but we need ete3 tree to delete nodes
-                tree_string = ete3.Tree(tree_string, format = 1)
-                #select all nodes with name = species
-                nodes = tree_string.search_nodes(name = species)
-                #get the first node
-                node = nodes[0]
-                # get parent of it
-                parent = node.up
-                if verbose:
-                    print('parent:', parent)
-                    print('nodes',nodes)
-                    print("Children before deletion:", [c.name for c in node.children])
-                #create polytomy with children and internal node
-                for child in node.get_children():
-                    print(child)
-                    child.detach()
-                    parent.add_child(child)
-                    print(parent)
-                #remove node
-                tree_string.write(outfile ='fallback.nwk', format = 1)
-                if verbose:
-                    nodes = tree_string.search_nodes(name = species)
-                    node = nodes[0]
-                    parent = node.up
-                    print('new parent:', parent)
-                ### turn tree back into newick string
-                tree_string = tree_string.write(format=1)
-                
-
-                #rerun with trimmed tree    
-                ham_obj = pyham.Ham(tree_string, orthoxml, type_hog_file="orthoxml", tree_format = format, use_internal_name=use_internal_name, orthoXML_as_string=orthoXML_as_string)
-                #print(dir(ham_obj)) 
-                ### Create tree profile for the top-level HOG
-                tp = ham_obj.create_tree_profile(hog=ham_obj.get_list_top_level_hogs()[0]) 
-                ### get all subhogs
-                subhogs  = tp.hog.get_all_descendant_hogs() 
-                hogid_for_all = subhogs[0].hog_id
-                if hogid_for_all is None:
-                    hogid_for_all = fam   
-                ### save root name
-                #rootname = tp.treemap.name + '_0'
-                rootname = subhogs[0].genome.name + '_' + str(hogid_for_all)   
-                hogs = {
-                    f"{subhog.genome.name}_{str(subhog.hog_id) if subhog.hog_id is not None else str(hogid_for_all)}": ham_obj.create_tree_profile(hog=subhog).treemap
-                    for i, subhog in enumerate(subhogs)
-                }
-                ### filter out the small HOGs (protein num) 
-                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if len(hogs[subhogname].hog.get_all_descendant_genes()) >= limit_species}
-                #subhogs_size_dict = {subhogname:[len(hogs[subhogname].hog.get_all_descendant_genes()),len(hogs[subhogname].hog.get_all_descendant_genes_clustered_by_species().keys())] for subhogname in hogs}
-            
-                ### If dataset_nodes are specified, avoid calculating unnecessary subhogs
-                if dataset_nodes is not None:
-                    #print('fam', fam)
-                    #print('before',len(hogs.keys()))
-                    hogs = {subhogname: hogs[subhogname] for subhogname in hogs if subhogname.split('_')[0] in dataset_nodes}
-                    #print('after',len(hogs.keys()))
-                    if len(hogs) == 0:
-                        return {}
-
-                ### first check rootHOG to see if there will be at least one hog returned
-                ### if dataset_nodes is specified, this step cannot be done
-                if dataset_nodes is None and not _check_limits(hogs[rootname], limit_events):
-                    return {}
-
-                ### then check subhogs and remove the ones that do not meet the limits
-                hogs = {subhogname: hogs[subhogname] for subhogname in hogs if check_limits(hogs[subhogname], limit_events )}
-                ### get info to save to csv
-                #import csv
-                #subhogs_size_table = "/home/agavriil/Documents/venom_project/A_venom_analysis_tidy/2_profiling/1_oma_profiles/levels_oma_full_subhogs_250523/subhogize_table.csv"
-                #subhogswriter = csv.writer(open(subhogs_size_table, 'a'))
-                #for subhogname, size_list in subhogs_size_dict.items():
-                #    if subhogname in hogs.keys():
-                        ### save row with subhog name, species num and proteins num
-                #        subhogswriter.writerow([subhogname, size_list[0], size_list[1]])
-                
-                if verbose:
-                    print(hogs)
-                return hogs            
-            else:
-                if verbose:
-                    # avoid NameError if subhogs/hogid_for_all weren't created
-                    try:
-                        rootname = subhogs[0].genome.name + '_' + str(hogid_for_all)
-                    except Exception:
-                        rootname = "<unknown>"
-                    print('Rootname:', rootname)
-                    # print full error message and full traceback to stderr for easier debugging
-                    import traceback as _tb
-                    print('error:', full_error_message, file=sys.stderr)
-                    _tb.print_exc(file=sys.stderr)
-                    
-        return {}#None
-        #'''
 
 
 def yield_families(h5file, start_fam):

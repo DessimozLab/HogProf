@@ -116,10 +116,14 @@ def hash_trees_subhogs(hog_tps , taxaIndex , treeweights , wmg , lossonly = Fals
     #print(hog_tps.keys())
     #print(hog_tps[['tree_dicts']].to_dict())
     if hog_tps is None or 'tree_dicts' not in hog_tps or hog_tps['tree_dicts'] is None:
-        return None
+        return {}
 
-    hashes_subhogs = {key:hash_tree(tp , taxaIndex , treeweights , wmg) for key,tp  in hog_tps['tree_dicts'].items()}
-    
+    hashes_subhogs = {}
+    for key, tp in hog_tps['tree_dicts'].items():
+        matrix, hashed = hash_tree(tp, taxaIndex, treeweights, wmg,
+                                   lossonly=lossonly, duplonly=duplonly)
+        if hashed is not None:
+            hashes_subhogs[key] = (matrix, hashed)
     return hashes_subhogs
 
 
