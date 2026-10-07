@@ -1,4 +1,3 @@
-import argparse
 import functools
 import glob
 import pandas as pd
@@ -35,8 +34,6 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
-from HogProf import __version__
-
 import h5py
 import numpy as np
 import pandas as pd
@@ -44,7 +41,7 @@ from datasketch import MinHashLSHForest, WeightedMinHashGenerator
 from pyoma.browser import db
 from tables import open_file
 
-from HogProf.cli import setup_cli, print_startup, track_progress
+from HogProf.cli import track_progress, DB_PRESETS
 from HogProf.utils import hashutils, phylo, pyhamutils
 
 logger = logging.getLogger(__name__)
@@ -917,70 +914,15 @@ class LSHBuilder:
 
         print('done single-threaded pipeline')
 
-                
 
-    
-
-def main():
-    parser = argparse.ArgumentParser(prog="hogprof")
-    parser.add_argument('--version', action='version',
-                        version=f'%(prog)s {__version__}')
-    parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
-    parser.add_argument('--taxmask', help='consider only one branch (e.g. Sauria)',type = str)
-    parser.add_argument('--taxfilter', help='remove these taxa' , type = str, nargs='*')
-    parser.add_argument('--outpath', '-o', help='Output directory path', type=Path, required=True)
-    parser.add_argument('--dbtype', help='preconfigured taxonomic ranges' , type = str)
-    parser.add_argument('--OMA', help='use oma data ' , type = str)
-    parser.add_argument('--OrthoGlob', help='a glob expression for orthoxml files ' , type = str)
-    parser.add_argument('--tarfile', help='use tarfile with orthoxml data ' , type = str)
-    parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles' , type = int)
-    parser.add_argument('--mastertree', help='master taxonomic tree. nodes should correspond to orthoxml' , type = str)
-    
-    # limits
-    parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
-    parser.add_argument('--eventslim', help='minimum number of events (loss/duplication) in a subhog' , type = int, default=0)
-    
-    # multiprocessing
-    parser.add_argument('--nthreads', help='[deprecated] Number of threads for multiprocessing', type=int)
-    parser.add_argument("--njobs", help="Number of jobs for multiprocessing", type=int, default=1)
-    
-    # Flags
-    parser.add_argument('--lossonly', help='only compile loss events', action='store_true')
-    parser.add_argument('--duplonly', help='only compile duplication events', action='store_true')
-    parser.add_argument('--taxcodes', help='use taxid info in HOGs', action='store_true')
-    parser.add_argument('--reformat_names', 
-                        help='Correct broken species trees by replacing all names with numbers.', 
-                        action='store_true')
-    parser.add_argument('--slicesubhogs', help='Make profiles for subhogs', action='store_true')
-    parser.add_argument('--verbose', '-v', help='print verbose output', action='store_true')
-
-    
-    dbdict = {
-        'all': { 'taxfilter': None , 'taxmask': None },
-        'plants': { 'taxfilter': None , 'taxmask': 33090 },
-        'archaea':{ 'taxfilter': None , 'taxmask': 2157 },
-        'bacteria':{ 'taxfilter': None , 'taxmask': 2 },
-        #'eukarya':{ 'taxfilter': None , 'taxmask': 2759 },
-        'eukarya':{ 'taxfilter': None , 'taxmask': "Eukaryota" },
-        'protists':{ 'taxfilter': [2 , 2157 , 33090 , 4751, 33208] , 'taxmask':None },
-        'fungi':{ 'taxfilter': None , 'taxmask': 4751 },
-        'metazoa':{ 'taxfilter': None , 'taxmask': 33208 },
-        'vertebrates':{ 'taxfilter': None , 'taxmask': 7742 },
-    }
+def run(parsed_args):
+    """Build profiles from arguments validated by the lightweight CLI."""
 
     taxfilter = None
     taxmask = None
     omafile = None
 
-    parsed_args = parser.parse_args(sys.argv[1:])
-
     orthoglob = None
-    # set up Rich console and logging
-    setup_cli(verbose=parsed_args.verbose)
-
-    # Pyham spams INFO-level messages like crazy. Suppress
-    logging.getLogger("pyham").setLevel(logging.WARNING)
-
     args = vars(parsed_args)
 
     if 'OrthoGlob' in args:
@@ -989,8 +931,8 @@ def main():
             orthoglob = glob.glob(args['OrthoGlob'])
     
     if args['dbtype']:
-        taxfilter = dbdict[args['dbtype']]['taxfilter']
-        taxmask = dbdict[args['dbtype']]['taxmask']
+        taxfilter = DB_PRESETS[args['dbtype']]['taxfilter']
+        taxmask = DB_PRESETS[args['dbtype']]['taxmask']
     if args['taxmask']:
         taxmask = args['taxmask']
     
@@ -1012,17 +954,6 @@ def main():
 
     _args = parsed_args
     output_dir = _args.outpath
-    # flags
-    loss_only = _args.lossonly
-    dupl_only = _args.duplonly
-    use_tax_codes = _args.taxcodes
-    verbose = _args.verbose
-    reformat_names = _args.reformat_names
-
-    if _args.reformat_names:
-        raise NotImplementedError("--reformat_names is not supported in this version")
-    
-    print_startup(args)
 
     njobs = 4
     if args['nthreads']:
@@ -1074,7 +1005,3 @@ def main():
         lsh_builder.run_pipeline(njobs)
 
     logger.info("Done in %.2fs", time.time() - start)
-
-
-if __name__ == '__main__':
-    main()

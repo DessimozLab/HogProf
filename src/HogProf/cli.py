@@ -3,7 +3,9 @@
 import logging
 from collections.abc import Iterable, Iterator
 from typing import TypeVar
-from HogProf import __version__
+import argparse
+import sys
+from pathlib import Path
 
 from rich.panel import Panel
 from rich.table import Table
@@ -12,6 +14,22 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.progress import track
 from rich.traceback import install as install_rich_traceback
+from HogProf import __version__
+
+
+
+
+DB_PRESETS = {
+    'all': {'taxfilter': None, 'taxmask': None},
+    'plants': {'taxfilter': None, 'taxmask': 33090},
+    'archaea': {'taxfilter': None, 'taxmask': 2157},
+    'bacteria': {'taxfilter': None, 'taxmask': 2},
+    'eukarya': {'taxfilter': None, 'taxmask': 'Eukaryota'},
+    'protists': {'taxfilter': [2, 2157, 33090, 4751, 33208], 'taxmask': None},
+    'fungi': {'taxfilter': None, 'taxmask': 4751},
+    'metazoa': {'taxfilter': None, 'taxmask': 33208},
+    'vertebrates': {'taxfilter': None, 'taxmask': 7742},
+}
 
 _Item = TypeVar("_Item")
 
@@ -114,3 +132,65 @@ def track_progress(
                  total=total,
                  console=output_console,
                  disable=not output_console.is_terminal)
+
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="lshbuilder")
+    parser.add_argument('--version', action='version',
+                        version=f'%(prog)s {__version__}')
+    parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
+    parser.add_argument('--taxmask', help='consider only one branch (e.g. Sauria)',type = str)
+    parser.add_argument('--taxfilter', help='remove these taxa', type = str, nargs='*')
+    parser.add_argument('--outpath', '-o', help='Output directory path', type=Path, required=True)
+    parser.add_argument('--dbtype', help='preconfigured taxonomic ranges', choices=DB_PRESETS)
+    parser.add_argument('--OMA', help='use oma data ', type = str)
+    parser.add_argument('--OrthoGlob', help='a glob expression for orthoxml files ' , type = str)
+    parser.add_argument('--tarfile', help='use tarfile with orthoxml data', type = str)
+    parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles',
+                        type=int, default=256)
+    parser.add_argument('--mastertree', help='master taxonomic tree. nodes should correspond to orthoxml' , type = str)
+
+    # limits
+    parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
+    parser.add_argument('--eventslim', help='minimum number of events (loss/duplication) in a subhog' , type = int, default=0)
+
+    # multiprocessing
+    parser.add_argument('--nthreads', help='[deprecated] Number of threads for multiprocessing', type=int)
+    parser.add_argument("--njobs", help="Number of jobs for multiprocessing", type=int, default=1)
+
+    # Flags
+    parser.add_argument('--lossonly', help='only compile loss events', action='store_true')
+    parser.add_argument('--duplonly', help='only compile duplication events', action='store_true')
+    parser.add_argument('--taxcodes', help='use taxid info in HOGs', action='store_true')
+    parser.add_argument('--reformat_names',
+                        help='Correct broken species trees by replacing all names with numbers.',
+                        action='store_true')
+    parser.add_argument('--slicesubhogs', help='Make profiles for subhogs', action='store_true')
+    parser.add_argument('--verbose', '-v', help='print verbose output', action='store_true')
+
+    argv = sys.argv[1:] if argv is None else argv
+
+    # print help if no args provided
+    parsed_args = parser.parse_args(argv if argv else ['-h'])
+
+    if not (parsed_args.OMA or parsed_args.OrthoGlob or parsed_args.tarfile):
+        parser.error('Please specify input data with --OMA, --OrthoGlob or --tarfile')
+
+    if parsed_args.reformat_names:
+        parser.error('--reformat_names is not supported in this version')
+
+    setup_cli(verbose=parsed_args.verbose)
+
+    # Suppress pyham's noisy INFO messages, including during initialization.
+    logging.getLogger('pyham').setLevel(logging.WARNING)
+
+    print_startup(vars(parsed_args))
+
+    # import and run as late as possible to not stagger CLI
+    from HogProf.lshbuilder import run
+    return run(parsed_args)
+
+
+if __name__ == '__main__':
+    main()
