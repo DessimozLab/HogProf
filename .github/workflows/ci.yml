@@ -30,5 +30,9 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install HogProf
         run: python -m pip install .
+      
+      - name: Unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
       - name: Test OrthoXML builds
-        run: python -m unittest discover -s tests -p 'test_lshbuilder_ci.py' -v
+        run: python -m unittest discover -s tests -p 'lshbuilder_ci.py' -v
