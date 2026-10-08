@@ -1,109 +1,33 @@
 import functools
 import glob
-import pandas as pd
-import time as t
-import pickle
-import xml.etree.cElementTree as ET
-from ete3 import Phyloxml
-import sys
-import traceback
-from datasketch import MinHashLSHForest , WeightedMinHashGenerator
-from datetime import datetime
-import h5py
-import time
-import gc
-from pyoma.browser import db
-from HogProf.utils import pyhamutils, hashutils , files_utils
-import numpy as np
-import tqdm
-import random
-import tqdm
+import io
 import logging
 import multiprocessing as mp
 import os
-import ete3
-import collections
-import io
 import pickle
 import queue
 import random
-import sys
 import time
 import time as t
-import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
 import h5py
 import numpy as np
 import pandas as pd
+import tqdm
 from datasketch import MinHashLSHForest, WeightedMinHashGenerator
 from pyoma.browser import db
 from tables import open_file
 
-from HogProf.cli import track_progress, DB_PRESETS
+from HogProf.cli import DB_PRESETS, track_progress
 from HogProf.utils import hashutils, phylo, pyhamutils
+from HogProf.utils import orthoxml as oxml
 
 logger = logging.getLogger(__name__)
 
 random.seed(0)
 np.random.seed(0)
-#import psutil
-#process = psutil.Process()
-
-'''This is a function for adding subhog ids to the OMA orthoxml files (from Adrian). Will become redundant
- with the next version of OMA'''
-class OrthoXMLBuilder:
-
-    def __init__(self):
-        self.NS = "http://orthoXML.org/2011/"
-        ET.register_namespace('', self.NS)  # Register default namespace
-
-    def add_loft_ids(self, orthoxml):
-
-        def encodeParalogClusterId(prefix, nr):
-            letters = []
-            while nr // 26 > 0:
-                letters.append(chr(97 + (nr % 26)))
-                nr = nr // 26 - 1
-            letters.append(chr(97 + (nr % 26)))
-            return prefix + ''.join(letters[::-1])
-
-        def nextSubHogId(idx):
-            dups[idx] += 1
-            return dups[idx]
-
-        def rec_annotate(node, og, idx=0):
-            if node.tag == f"{{{self.NS}}}orthologGroup":
-                taxon_id = node.get('taxonId')
-                if taxon_id is not None:
-                    node.set('id', og + "_" + taxon_id)
-                else:
-                    # If no taxonId, just set the id to the og
-                    node.set('id', og )
-                for child in list(node):
-                    rec_annotate(child, og, idx)
-            elif node.tag == f"{{{self.NS}}}paralogGroup":
-                idx += 1
-                next_og = "{}.{}".format(og, nextSubHogId(idx))
-                for i, child in enumerate(list(node)):
-                    rec_annotate(child, encodeParalogClusterId(next_og, i), idx)
-            elif node.tag == f"{{{self.NS}}}geneRef":
-                # Set the id to the geneRef id
-                node.set('LOFT', og)
-
-        doc = ET.parse(io.StringIO(orthoxml))
-        xml = doc.getroot()
-        for i, el in enumerate(xml.findall(".//groups/orthologGroup", {"": self.NS})):
-            og = el.get('id', "HOG:{:08d}".format(i+1))
-            dups = collections.defaultdict(int)
-            rec_annotate(el, og)
-        tree_str = io.StringIO()
-        ### addition by Athina:
-        tree_str.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-        doc.write(tree_str, encoding='unicode')
-        return tree_str.getvalue()
-
 
 
 class LSHBuilder:
@@ -298,11 +222,10 @@ class LSHBuilder:
         else:
             names = set()
             for filename in self.fileglob:
-                root = ET.parse(filename).getroot()
-                for child in root:
-                    if child.tag.rsplit("}", 1)[-1] == "species":
-                        field = "NCBITaxId" if self.swap2taxcode else "name"
-                        names.add(child.attrib[field])
+                for child in oxml.iter_species(filename):
+                    field = "NCBITaxId" if self.swap2taxcode else "name"
+                    names.add(child.attrib[field])
+                        
             return names
 
     def load_one(self, fam):
@@ -315,8 +238,6 @@ class LSHBuilder:
     def generates_dataframes(self, size=100, minhog_size=10, maxhog_size=None):
         families = {}
         start = -1
-        #hogsizetable = "/home/agavriil/Documents/venom_project/A_venom_analysis_tidy/2_profiling/1_oma_profiles/" \
-        #"levels_oma_full_subhogs_250523/hogsize_table.csv"
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
             ### only Fam makes sense here, the rest are OMAmer related fields
@@ -335,9 +256,10 @@ class LSHBuilder:
                     #    continue
                     ortho_fam = self.READ_ORTHO(fam)
                     ### for older versions of OMA that do not have subhogIDs
-                    orthoxmlbuilder = OrthoXMLBuilder()
-                    ortho_fam = orthoxmlbuilder.add_loft_ids(ortho_fam)
-                    hog_size = ortho_fam.count('<species name=')
+                    oxml_builder = oxml.OrthoXMLBuilder()
+                    ortho_fam = oxml_builder.add_loft_ids(ortho_fam)
+
+                    hog_size = oxml.count_species(ortho_fam)
                     #print(fam, hog_size)
                     #print(self.idmapper)
                     ### filtering for size already here (max HOG size and minimum species in HOG)

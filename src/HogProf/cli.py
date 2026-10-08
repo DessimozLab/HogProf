@@ -1,22 +1,21 @@
 """User-facing console I/O for command-line tools"""
 
-import logging
-from collections.abc import Iterable, Iterator
-from typing import TypeVar
 import argparse
+import logging
 import sys
+from collections.abc import Iterable, Iterator
 from pathlib import Path
+from typing import TypeVar, Iterable
 
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
 from rich.console import Console
 from rich.logging import RichHandler
+from rich.panel import Panel
 from rich.progress import track
+from rich.table import Table
+from rich.text import Text
 from rich.traceback import install as install_rich_traceback
+
 from HogProf import __version__
-
-
 
 DB_PRESETS = {
     'all': {'taxfilter': None, 'taxmask': None},
@@ -124,7 +123,7 @@ def track_progress(
     description: str,
     total: int | None = None,
     output_console: Console = console,
-) -> Iterator[_Item]:
+) -> Iterable[_Item]:
     """Iterate with a Rich progress bar when output is an interactive terminal."""
     return track(sequence,
                  description=description,
