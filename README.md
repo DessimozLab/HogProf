@@ -1,4 +1,9 @@
 # HogProf
+
+[![tests](https://github.com/DessimozLab/HogProf/actions/workflows/ci.yml/badge.svg)](https://github.com/DessimozLab/HogProf/actions/workflows/ci.yml)
+[![release](https://img.shields.io/pypi/v/HogProf.svg)](https://pypi.org/project/HogProf/)
+[![cite](https://img.shields.io/badge/DOI-10.1371%2Fjournal.pcbi.1007553-blue)](https://doi.org/10.1371/journal.pcbi.1007553)
+
 HogProf is an extensible and tunable approach to phylogenetic profiling using orthology data. It is powered by minhash-based data structures and computationally efficient.
 
 # Features
