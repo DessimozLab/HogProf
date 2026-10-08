@@ -1,12 +1,6 @@
 # HogProf
 HogProf is an extensible and tunable approach to phylogenetic profiling using orthology data. It is powered by minhash-based data structures and computationally efficient.
 
-⚠️ Development branch
-
-The implementation supporting taxonomic-level-aware phylogenetic profiling is currently available on the levels_addition branch and has not yet been merged into master.
-
-If you would like to use the latest functionality described here, make sure you clone or install the levels_addition branch rather than the default master branch.
-
 # Features
   - Using orthoxoml files and a taxonomy calculated enhanced phylogenies of each family
   - These are transformed into minhash signatures and a locally sensitive hashing forest object for search and comparison of profiles
