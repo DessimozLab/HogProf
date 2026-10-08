@@ -672,14 +672,10 @@ def run(parsed_args):
 
     _args = parsed_args
     output_dir = _args.outpath
-
-    njobs = 4
-    if args['nthreads']:
+    njobs = _args.njobs
+    if _args.nthreads:
         logger.warning("--nthreads is deprecated. Please use --njobs")
-        njobs = args['nthreads']
-
-    if args['njobs']:
-        njobs = args['njobs']
+        njobs = _args.nthreads
 
     if args['taxweights']:
         from keras.models import model_from_json

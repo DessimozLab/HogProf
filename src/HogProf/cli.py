@@ -102,7 +102,9 @@ def print_startup(args=None, *, output_console: Console = console) -> None:
         table.add_row()
         table.add_row("Input", source)
         table.add_row("Output", str(args["outpath"]))
-        table.add_row("Workers", str(args["njobs"]))
+
+        njobs = args["nthreads"] or args["njobs"]
+        table.add_row("Workers", str(njobs))
 
     output_console.print(
         Panel(table,
