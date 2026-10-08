@@ -595,7 +595,7 @@ class LSHBuilder:
             completed = True
 
             if self.slicesubhogs:
-                csv_path = os.path.join(self.saving_path, 'fam2orthoxml.csv')
+                csv_path = os.path.join(self.output_dir, 'fam2orthoxml.csv')
                 if os.path.exists(csv_path):
                     df = pd.read_csv(csv_path, index_col=[0, 1])  # Read first two columns as index
                     #print(df.head())
@@ -628,51 +628,6 @@ class LSHBuilder:
                 if self.verbose:
                     print(f"Error in HAM_PIPELINE for Fam={row['Fam']}: {e}")
                 return None
-
-    def worker_single(self, i, data, retq, matq, l):
-        if self.verbose:
-            print('worker init ' + str(i))
-
-        if data is not None:
-            df = data
-            #print(df.head())
-            if self.slicesubhogs is False:
-                df['tree'] = df[['Fam', 'ortho']].apply(self.safe_ham, axis=1)
-                # Drop rows where tree is None (error in HAM_PIPELINE)
-                df = df[df['tree'].notnull()]
-                #print(f'Generated tree in worker_single: {df["tree"]}')
-                #print("df fam tree\n", df[['Fam', 'tree']])  # Debugging
-                df[['hash', 'rows']] = df[['Fam', 'tree']].apply(self.HASH_PIPELINE, axis=1)
-                #print(f'Generated hash and rows in worker_single: {df[["hash", "rows"]]}')
-                if self.fileglob:
-                    return df[['Fam', 'hash', 'ortho']]
-                else:
-                    return df[['Fam', 'hash']]
-            else:
-
-                df['tree_dicts'] = df[['Fam', 'ortho']].apply(self.safe_ham, axis=1)
-                # Drop rows where tree is None (error in HAM_PIPELINE)
-                df = df[df['tree_dicts'].notnull()]
-                #print(df)
-                df['hash_dicts'] = df[['Fam', 'tree_dicts']].apply(self.HASH_PIPELINE, axis=1)
-                
-                newdf ={}
-                for i,row in df.iterrows():
-                    for subhog in row['hash_dicts']:
-                        if self.fileglob:
-                            newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] 
-                                                             , 'ortho': row['ortho'] }
-                        else:
-                            newdf[ ( row['Fam'] ,  subhog ) ] = { 'tree': row['tree_dicts'][subhog] , 'hash': row['hash_dicts'][subhog][1] }
-                newdf = pd.DataFrame.from_dict(newdf, orient='index')
-                #print(newdf)
-                empty_rows = df[df['tree_dicts'].apply(lambda x: len(x) == 0)]
-                if self.verbose:
-                    print(f'{empty_rows.shape[0]} famililes failed the filter check')
-                    print(empty_rows)
-
-                return newdf
-
     
     def run_pipeline(self , threads):
         logger.info('Running with %d threads', threads)
@@ -681,160 +636,6 @@ class LSHBuilder:
         data_generator = self.generates_dataframes(size=100, minhog_size=minhog_size)
         self._run_parallel(threads=threads, data_generator=data_generator)
         return self.hashes_path, self.lshforestpath, self.mat_path
-    
-
-    def run_pipeline_single(self):
-        print('\nRun single-threaded pipeline')
-        limit_species = self.limit_species
-        # Use the correct data generator
-        data_generator = self.generates_dataframes(size=100, minhog_size=limit_species)
-        
-        # Initialize minimal required variables
-        chunk_size = 100
-        forest = MinHashLSHForest(num_perm=self.numperm)
-        savedf = None
-        total_subfam_ids = []
-        totals_subfams = 0
-        global_time = t.time()
-        
-        # Set taxstr consistently with saver function
-        if self.tax_filter is None:
-            taxstr = 'NoFilter'
-        if self.tax_mask is None:
-            taxstr += 'NoMask'
-        else:
-            taxstr = str(self.tax_filter)
-            
-        # Open files for writing, matching saver's file handling
-        with open(self.errorfile, 'w') as hashes_error_files:
-            with h5py.File(self.hashes_path, 'w', libver='latest') as h5hashes:
-                # Initialize h5 dataset
-                if taxstr not in h5hashes.keys():
-                    if self.verbose:
-                        print('creating dataset')
-                        print('filtered at taxonomic level: '+taxstr)
-                    h5hashes.create_dataset(taxstr, (chunk_size, 0), maxshape=(None, None), dtype='int32')
-                
-                this_dataframe = None
-                for i, data in enumerate(tqdm.tqdm(data_generator)):
-                    if data is not None:
-                        retdf = self.worker_single(i, data, [], [], None)  # Empty lists for retq/matq since not using queues
-                        
-                        if self.slicesubhogs is False:
-                            # Handle non-sliced case
-                            if self.fileglob:
-                                if savedf is None:
-                                    savedf = retdf[['Fam', 'ortho']]
-                                else:
-                                    savedf = pd.concat([savedf, retdf[['Fam', 'ortho']]])
-                            
-                            if this_dataframe is None:
-                                this_dataframe = retdf
-                            elif this_dataframe is not None:
-                                this_dataframe = pd.concat([this_dataframe, retdf])
-                            
-                            if len(this_dataframe) > 10:
-                                hashes = this_dataframe['hash'].to_dict()
-                                hashes = {fam:hashes[fam] for fam in hashes if hashes[fam]}
-                                
-                                # Add to forest and resize h5 if needed
-                                for fam in hashes:
-                                    if len(h5hashes[taxstr]) < fam + chunk_size:
-                                        h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                                    forest.add(str(fam), hashes[fam])
-                                    h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
-                                
-                                this_dataframe = None
-                                
-                        else:
-                            # Handle sliced case 
-                            if self.fileglob:
-                                if savedf is None:
-                                    savedf = retdf[['ortho']]
-                                else:
-                                    savedf = pd.concat([savedf, retdf[['ortho']]])
-                            
-                            if this_dataframe is None:
-                                this_dataframe = retdf
-                            elif this_dataframe is not None:
-                                this_dataframe = pd.concat([this_dataframe, retdf])
-                            
-                            if len(this_dataframe) > 10:
-                                hashes = this_dataframe['hash'].to_dict()
-                                nsubfams = len(hashes)
-                                
-                                # Resize if needed
-                                if h5hashes[taxstr].shape[0] < totals_subfams + nsubfams + chunk_size:
-                                    example = list(hashes.keys())[0]
-                                    h5hashes[taxstr].resize((totals_subfams + nsubfams + chunk_size, 
-                                                           len(hashes[example].hashvalues.ravel())))
-                                
-                                subfam_ids_list = retdf.index.to_list()
-                                total_subfam_ids.extend(subfam_ids_list)
-                                
-                                # Store hashes
-                                h5hashes[taxstr][totals_subfams:totals_subfams + nsubfams, :] = \
-                                    [hashes[fam].hashvalues.ravel() for fam in subfam_ids_list]
-                                
-                                totals_subfams += nsubfams
-                                
-                                # Add to forest
-                                hashes = {fam:hashes[fam] for fam in hashes if hashes[fam]}
-                                for fam in hashes:
-                                    forest.add(str(fam[0]) + '_' + str(fam[1]), hashes[fam])
-                                
-                                this_dataframe = None
-
-                # Handle final dataframe if exists
-                if this_dataframe is not None:
-                    if self.slicesubhogs:
-                        # Handle remaining sliced data
-                        hashes = this_dataframe['hash'].to_dict() 
-                        nsubfams = len(hashes)
-                        if h5hashes[taxstr].shape[0] < totals_subfams + nsubfams + chunk_size:
-                            example = list(hashes.keys())[0]
-                            h5hashes[taxstr].resize((totals_subfams + nsubfams + chunk_size,
-                                                   len(hashes[example].hashvalues.ravel())))
-                        
-                        h5hashes[taxstr][totals_subfams:totals_subfams + nsubfams, :] = \
-                            [hashes[fam].hashvalues.ravel() for fam in hashes]
-                        totals_subfams += nsubfams
-                        
-                        hashes = {fam:hashes[fam] for fam in hashes if hashes[fam]}
-                        for fam in hashes:
-                            forest.add(str(fam[0]) + '_' + str(fam[1]), hashes[fam])
-                    
-                    else:
-                        # Handle remaining non-sliced data
-                        hashes = this_dataframe['hash'].to_dict()
-                        hashes = {fam:hashes[fam] for fam in hashes if hashes[fam]}
-                        for fam in hashes:
-                            if len(h5hashes[taxstr]) < fam + chunk_size:
-                                h5hashes[taxstr].resize((fam + chunk_size, len(hashes[fam].hashvalues.ravel())))
-                            forest.add(str(fam), hashes[fam])
-                            h5hashes[taxstr][fam, :] = hashes[fam].hashvalues.ravel()
-
-                # Final processing
-                print('wrapping up the run')
-                print('saving at:', t.time() - global_time)
-                
-                # Index and save forest
-                forest.index()
-                with open(self.lshforestpath, 'wb') as forestout:
-                    forestout.write(pickle.dumps(forest, -1))
-                
-                # Save mappings if needed
-                if savedf is not None:
-                    if self.slicesubhogs:
-                        savedf.index.set_names(['fam','subhog_id'], inplace=True)
-                        savedf.reset_index(inplace=True)
-                        savedf.index = range(len(savedf))
-                    
-                    if self.fileglob:
-                        print('saving orthoxml to fam mapping')
-                        savedf.to_csv(os.path.join(self.saving_path, 'fam2orthoxml.csv'))
-
-        print('done single-threaded pipeline')
 
 
 def run(parsed_args):
@@ -913,7 +714,6 @@ def run(parsed_args):
                                      slicesubhogs=_args.slicesubhogs, limit_species=args['specieslim'], limit_events=args['eventslim'],
                                      verbose=_args.verbose,)
             lsh_builder.run_pipeline(njobs)
-            #lsh_builder.run_pipeline_single() # made for local tests. ignore
 
     else:
         lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob, output_dir=output_dir,
