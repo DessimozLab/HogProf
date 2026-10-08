@@ -51,7 +51,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
 
         # check that command is present
         executable = shutil.which("lshbuilder")
-        self.assertIsNotNone(executable, "Install HogProf to provide lshbuilder")
+        self.assertIsNotNone(executable, "Install hogprof to provide lshbuilder")
 
         # check the input data are there
         inputs = sorted((DATA / "splits").glob("*.orthoxml"))

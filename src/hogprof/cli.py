@@ -16,7 +16,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.traceback import install as install_rich_traceback
 
-from HogProf import __version__
+from hogprof import __version__
 
 DB_PRESETS = {
     'all': {'taxfilter': None, 'taxmask': None},
@@ -279,7 +279,7 @@ def main(argv=None):
     print_startup(vars(parsed_args))
 
     # import and run as late as possible to not stagger CLI
-    from HogProf.lshbuilder import run
+    from hogprof.lshbuilder import run
     return run(parsed_args)
 
 

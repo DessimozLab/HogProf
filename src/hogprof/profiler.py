@@ -10,7 +10,7 @@ import ete3
 import argparse
 import sys
 #from validation import validation_semantic_similarity
-from HogProf.utils import hashutils , pyhamutils , phylo
+from hogprof.utils import hashutils , pyhamutils , phylo
 from time import time
 import multiprocessing as mp
 import functools

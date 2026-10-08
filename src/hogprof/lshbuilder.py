@@ -18,9 +18,9 @@ from datasketch import MinHashLSHForest, WeightedMinHashGenerator
 from pyoma.browser import db
 from tables import open_file
 
-from HogProf.cli import DB_PRESETS, track_progress
-from HogProf.utils import hashutils, phylo, pyhamutils
-from HogProf.utils import orthoxml as oxml
+from hogprof.cli import DB_PRESETS, track_progress
+from hogprof.utils import hashutils, phylo, pyhamutils
+from hogprof.utils import orthoxml as oxml
 
 logger = logging.getLogger(__name__)
 

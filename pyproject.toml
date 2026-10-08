@@ -3,7 +3,7 @@ requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "HogProf"
+name = "hogprof"
 version = "0.2.0"
 authors = [
   { name = "Dave Moi", email = "dmoi@unil.ch" },
@@ -50,7 +50,7 @@ ml = ["keras"]
 "Docs" = "https://dessimozlab.github.io/HogProf/"
 
 [project.scripts]
-lshbuilder = "HogProf.cli:main"
+lshbuilder = "hogprof.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from HogProf.utils.phylo import TreeValidator
+from hogprof.utils.phylo import TreeValidator
 
 
 class TreeValidatorTest(unittest.TestCase):
