@@ -1,0 +1,86 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<orthoXML xmlns="http://orthoXML.org/2011/" origin="FastOMA 0.5.1" originVersion="2026-05-12 21:22:19" version="0.5">
+  <species name="Phoenicopterus_ruber" taxonId="16" NCBITaxId="9217">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1007008691" protId="PHORUB_R04723"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Aptenodytes_forsteri" taxonId="11" NCBITaxId="9233">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1000008984" protId="APTFOR_R01079"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Grus_americana" taxonId="13" NCBITaxId="9117">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1004006622" protId="GRUAME_R12633"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Homo_sapiens" taxonId="19" NCBITaxId="9606">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1005041224" protId="ENSP00000305065.5" main_isoform="1005041224"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Crocodylus_porosus" taxonId="3" NCBITaxId="8502">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1002012003" protId="ENSCPRP00005011811.1" main_isoform="1002012003"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Oreotrochilus_melanogaster" taxonId="12" NCBITaxId="689266">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1006010303" protId="OREMEL_R09852"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Taeniopygia_guttata" taxonId="14" NCBITaxId="59729">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1009008777" protId="TAEGUT_R05641"/>
+      </genes>
+    </database>
+  </species>
+  <groups>
+    <orthologGroup id="HOG:0014531_1" taxonId="1">
+      <score id="CompletenessScore" value="0.7"/>
+      <property name="OMAmerRootHOG" value="HOG:E0739000"/>
+      <property name="TaxRange" value="internal_0"/>
+      <orthologGroup id="HOG:0014531_2" taxonId="2">
+        <score id="CompletenessScore" value="0.6667"/>
+        <property name="TaxRange" value="Archosauria"/>
+        <geneRef id="1002012003"/>
+        <orthologGroup id="HOG:0014531_6" taxonId="6">
+          <score id="CompletenessScore" value="0.8333"/>
+          <property name="TaxRange" value="Neoaves"/>
+          <orthologGroup id="HOG:0014531_8" taxonId="8">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Neoaves_2a"/>
+            <orthologGroup id="HOG:0014531_9" taxonId="9">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neoaves_3c"/>
+              <geneRef id="1004006622"/>
+              <orthologGroup id="HOG:0014531_10" taxonId="10">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves_4c"/>
+                <geneRef id="1000008984"/>
+                <geneRef id="1006010303"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1009008777"/>
+          </orthologGroup>
+          <geneRef id="1007008691"/>
+        </orthologGroup>
+      </orthologGroup>
+      <geneRef id="1005041224"/>
+    </orthologGroup>
+  </groups>
+</orthoXML>

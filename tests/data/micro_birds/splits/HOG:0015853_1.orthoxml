@@ -1,0 +1,1078 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<orthoXML xmlns="http://orthoXML.org/2011/" origin="FastOMA 0.5.1" originVersion="2026-05-12 21:22:19" version="0.5">
+  <species name="Struthio_camelus" taxonId="18" NCBITaxId="8801">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1008003995" protId="STRCAM_R06562"/>
+        <gene id="1008006929" protId="STRCAM_R08890"/>
+        <gene id="1008009740" protId="STRCAM_R10996"/>
+        <gene id="1008014451" protId="STRCAM_R01602"/>
+        <gene id="1008014327" protId="STRCAM_R12646"/>
+        <gene id="1008013209" protId="STRCAM_R13576"/>
+        <gene id="1008013207" protId="STRCAM_R04153"/>
+        <gene id="1008007962" protId="STRCAM_R09179"/>
+        <gene id="1008014300" protId="STRCAM_R06521"/>
+        <gene id="1008001914" protId="STRCAM_R03977"/>
+        <gene id="1008014527" protId="STRCAM_R00676"/>
+        <gene id="1008006320" protId="STRCAM_R02097"/>
+        <gene id="1008005358" protId="STRCAM_R08615"/>
+        <gene id="1008003543" protId="STRCAM_R07757"/>
+        <gene id="1008006029" protId="STRCAM_R07352"/>
+        <gene id="1008001920" protId="STRCAM_R05608"/>
+        <gene id="1008000241" protId="STRCAM_R06602"/>
+        <gene id="1008003400" protId="STRCAM_R11605"/>
+        <gene id="1008006319" protId="STRCAM_R02096"/>
+        <gene id="1008006513" protId="STRCAM_R05399"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Oreotrochilus_melanogaster" taxonId="12" NCBITaxId="689266">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1006002756" protId="OREMEL_R05915"/>
+        <gene id="1006007946" protId="OREMEL_R09470"/>
+        <gene id="1006001113" protId="OREMEL_R11078"/>
+        <gene id="1006011705" protId="OREMEL_R07412"/>
+        <gene id="1006005663" protId="OREMEL_R03423"/>
+        <gene id="1006011487" protId="OREMEL_R11650"/>
+        <gene id="1006012438" protId="OREMEL_R00404"/>
+        <gene id="1006009698" protId="OREMEL_R05393"/>
+        <gene id="1006006186" protId="OREMEL_R00544"/>
+        <gene id="1006001917" protId="OREMEL_R08299"/>
+        <gene id="1006005085" protId="OREMEL_R07035"/>
+        <gene id="1006000538" protId="OREMEL_R00222"/>
+        <gene id="1006010863" protId="OREMEL_R05925"/>
+        <gene id="1006012175" protId="OREMEL_R00532"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Columba_livia" taxonId="15" NCBITaxId="8932">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1001000489" protId="COLLIV_R14101"/>
+        <gene id="1001014150" protId="COLLIV_R03610"/>
+        <gene id="1001015165" protId="COLLIV_R07626"/>
+        <gene id="1001011879" protId="COLLIV_R07467"/>
+        <gene id="1001012708" protId="COLLIV_R04247"/>
+        <gene id="1001006598" protId="COLLIV_R12059"/>
+        <gene id="1001000488" protId="COLLIV_R14100"/>
+        <gene id="1001012749" protId="COLLIV_R12012"/>
+        <gene id="1001011870" protId="COLLIV_R06180"/>
+        <gene id="1001011281" protId="COLLIV_R04774"/>
+        <gene id="1001012750" protId="COLLIV_R12013"/>
+        <gene id="1001012695" protId="COLLIV_R04234"/>
+        <gene id="1001001246" protId="COLLIV_R06715"/>
+        <gene id="1001011585" protId="COLLIV_R04983"/>
+        <gene id="1001007285" protId="COLLIV_R00794"/>
+        <gene id="1001014228" protId="COLLIV_R10729"/>
+        <gene id="1001004486" protId="COLLIV_R14012"/>
+        <gene id="1001000506" protId="COLLIV_R00371"/>
+        <gene id="1001010583" protId="COLLIV_R11749"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Crocodylus_porosus" taxonId="3" NCBITaxId="8502">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1002008073" protId="ENSCPRP00005007972.1" main_isoform="1002008073"/>
+        <gene id="1002007513" protId="ENSCPRP00005007391.1" main_isoform="1002007513"/>
+        <gene id="1002008182" protId="ENSCPRP00005008063.1" main_isoform="1002008182"/>
+        <gene id="1002007501" protId="ENSCPRP00005007380.1" main_isoform="1002007501"/>
+        <gene id="1002002212" protId="ENSCPRP00005002092.1" main_isoform="1002002212"/>
+        <gene id="1002022072" protId="ENSCPRP00005021946.1" main_isoform="1002022072"/>
+        <gene id="1002019632" protId="ENSCPRP00005019466.1" main_isoform="1002019632"/>
+        <gene id="1002024298" protId="ENSCPRP00005024225.1" main_isoform="1002024298"/>
+        <gene id="1002023660" protId="ENSCPRP00005023563.1" main_isoform="1002023660"/>
+        <gene id="1002015068" protId="ENSCPRP00005014919.1" main_isoform="1002015068"/>
+        <gene id="1002000348" protId="ENSCPRP00005000317.1" main_isoform="1002000348"/>
+        <gene id="1002000958" protId="ENSCPRP00005000875.1" main_isoform="1002000958"/>
+        <gene id="1002017242" protId="ENSCPRP00005017151.1" main_isoform="1002017242"/>
+        <gene id="1002019273" protId="ENSCPRP00005019086.1" main_isoform="1002019273"/>
+        <gene id="1002019634" protId="ENSCPRP00005019472.1" main_isoform="1002019634"/>
+        <gene id="1002022781" protId="ENSCPRP00005022667.1" main_isoform="1002022781"/>
+        <gene id="1002000054" protId="ENSCPRP00005000045.1" main_isoform="1002000054"/>
+        <gene id="1002013073" protId="ENSCPRP00005012865.1" main_isoform="1002013073"/>
+        <gene id="1002000207" protId="ENSCPRP00005000189.1" main_isoform="1002000207"/>
+        <gene id="1002003234" protId="ENSCPRP00005003081.1" main_isoform="1002003234"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Taeniopygia_guttata" taxonId="14" NCBITaxId="59729">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1009008809" protId="TAEGUT_R05673"/>
+        <gene id="1009015958" protId="TAEGUT_R14246"/>
+        <gene id="1009005519" protId="TAEGUT_R10355"/>
+        <gene id="1009010769" protId="TAEGUT_R17557"/>
+        <gene id="1009009558" protId="TAEGUT_R04720"/>
+        <gene id="1009008953" protId="TAEGUT_R07717"/>
+        <gene id="1009012148" protId="TAEGUT_R11272"/>
+        <gene id="1009007762" protId="TAEGUT_R01036"/>
+        <gene id="1009012818" protId="TAEGUT_R12037"/>
+        <gene id="1009016848" protId="TAEGUT_R10304"/>
+        <gene id="1009003314" protId="TAEGUT_R03448"/>
+        <gene id="1009000705" protId="TAEGUT_R12643"/>
+        <gene id="1009004900" protId="TAEGUT_R14959"/>
+        <gene id="1009009560" protId="TAEGUT_R04722"/>
+        <gene id="1009009725" protId="TAEGUT_R08180"/>
+        <gene id="1009012745" protId="TAEGUT_R04863"/>
+        <gene id="1009017246" protId="TAEGUT_R15666"/>
+        <gene id="1009015781" protId="TAEGUT_R14268"/>
+        <gene id="1009002658" protId="TAEGUT_R00493"/>
+        <gene id="1009002946" protId="TAEGUT_R03080"/>
+        <gene id="1009005311" protId="TAEGUT_R17099"/>
+        <gene id="1009017532" protId="TAEGUT_R01498"/>
+        <gene id="1009009559" protId="TAEGUT_R04721"/>
+        <gene id="1009009687" protId="TAEGUT_R08142"/>
+        <gene id="1009002659" protId="TAEGUT_R00494"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Gallus_gallus" taxonId="17" NCBITaxId="9031">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1003014806" protId="GALGAL_R06383"/>
+        <gene id="1003003832" protId="GALGAL_R04623"/>
+        <gene id="1003002685" protId="GALGAL_R02401"/>
+        <gene id="1003015046" protId="GALGAL_R11665"/>
+        <gene id="1003006008" protId="GALGAL_R03782"/>
+        <gene id="1003002877" protId="GALGAL_R16704"/>
+        <gene id="1003011288" protId="GALGAL_R00649"/>
+        <gene id="1003005215" protId="GALGAL_R13263"/>
+        <gene id="1003002802" protId="GALGAL_R02518"/>
+        <gene id="1003007062" protId="GALGAL_R12447"/>
+        <gene id="1003002950" protId="GALGAL_R16777"/>
+        <gene id="1003017343" protId="GALGAL_R15607"/>
+        <gene id="1003011666" protId="GALGAL_R12945"/>
+        <gene id="1003000592" protId="GALGAL_R08655"/>
+        <gene id="1003002880" protId="GALGAL_R16707"/>
+        <gene id="1003007731" protId="GALGAL_R02867"/>
+        <gene id="1003011289" protId="GALGAL_R00650"/>
+        <gene id="1003016571" protId="GALGAL_R06940"/>
+        <gene id="1003013732" protId="GALGAL_R07431"/>
+        <gene id="1003002879" protId="GALGAL_R16706"/>
+        <gene id="1003002803" protId="GALGAL_R02519"/>
+        <gene id="1003002881" protId="GALGAL_R16708"/>
+        <gene id="1003005762" protId="GALGAL_R15204"/>
+        <gene id="1003017746" protId="GALGAL_R17144"/>
+        <gene id="1003017344" protId="GALGAL_R04924"/>
+        <gene id="1003006117" protId="GALGAL_R03891"/>
+        <gene id="1003014960" protId="GALGAL_R14753"/>
+        <gene id="1003007061" protId="GALGAL_R12446"/>
+        <gene id="1003007704" protId="GALGAL_R02840"/>
+        <gene id="1003013784" protId="GALGAL_R16266"/>
+        <gene id="1003002878" protId="GALGAL_R16705"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Grus_americana" taxonId="13" NCBITaxId="9117">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1004012797" protId="GRUAME_R03525"/>
+        <gene id="1004007630" protId="GRUAME_R09093"/>
+        <gene id="1004012741" protId="GRUAME_R03364"/>
+        <gene id="1004010713" protId="GRUAME_R04553"/>
+        <gene id="1004001945" protId="GRUAME_R01116"/>
+        <gene id="1004004595" protId="GRUAME_R08263"/>
+        <gene id="1004003435" protId="GRUAME_R07037"/>
+        <gene id="1004000145" protId="GRUAME_R00601"/>
+        <gene id="1004006581" protId="GRUAME_R13829"/>
+        <gene id="1004007965" protId="GRUAME_R07836"/>
+        <gene id="1004002183" protId="GRUAME_R10883"/>
+        <gene id="1004004841" protId="GRUAME_R00933"/>
+        <gene id="1004007705" protId="GRUAME_R13773"/>
+        <gene id="1004010473" protId="GRUAME_R10452"/>
+        <gene id="1004013686" protId="GRUAME_R13952"/>
+        <gene id="1004007063" protId="GRUAME_R06258"/>
+        <gene id="1004007062" protId="GRUAME_R06257"/>
+        <gene id="1004004058" protId="GRUAME_R01258"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Homo_sapiens" taxonId="19" NCBITaxId="9606">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1005108321" protId="ENSP00000389241.2" main_isoform="1005108321"/>
+        <gene id="1005052344" protId="ENSP00000387753.2" main_isoform="1005052344"/>
+        <gene id="1005010990" protId="ENSP00000296424.4" main_isoform="1005010990"/>
+        <gene id="1005067731" protId="ENSP00000230236.4" main_isoform="1005067731"/>
+        <gene id="1005122157" protId="ENSP00000480439.1" main_isoform="1005122157"/>
+        <gene id="1005098196" protId="ENSP00000482704.1" main_isoform="1005098196"/>
+        <gene id="1005002856" protId="ENSP00000518355.1" main_isoform="1005002856"/>
+        <gene id="1005065760" protId="ENSP00000220764.2" main_isoform="1005065760"/>
+        <gene id="1005089092" protId="ENSP00000381206.3" main_isoform="1005089092"/>
+        <gene id="1005121044" protId="ENSP00000265322.7" main_isoform="1005121044"/>
+        <gene id="1005058080" protId="ENSP00000363794.3" main_isoform="1005058080"/>
+        <gene id="1005069824" protId="ENSP00000447128.1" main_isoform="1005069824"/>
+        <gene id="1005015238" protId="ENSP00000326219.5" main_isoform="1005015238"/>
+        <gene id="1005111660" protId="ENSP00000303356.2" main_isoform="1005111660"/>
+        <gene id="1005071079" protId="ENSP00000318631.1" main_isoform="1005071079"/>
+        <gene id="1005018162" protId="ENSP00000250383.7" main_isoform="1005018162"/>
+        <gene id="1005044049" protId="ENSP00000333300.4" main_isoform="1005044049"/>
+        <gene id="1005068361" protId="ENSP00000406488.2" main_isoform="1005068361"/>
+        <gene id="1005025121" protId="ENSP00000483747.1" main_isoform="1005025121"/>
+        <gene id="1005044375" protId="ENSP00000307607.3" main_isoform="1005044375"/>
+        <gene id="1005017946" protId="ENSP00000481547.1" main_isoform="1005017946"/>
+        <gene id="1005044110" protId="ENSP00000351035.4" main_isoform="1005044110"/>
+        <gene id="1005034718" protId="ENSP00000350914.2" main_isoform="1005034718"/>
+        <gene id="1005001444" protId="ENSP00000290354.5" main_isoform="1005001444"/>
+        <gene id="1005037701" protId="ENSP00000168216.6" main_isoform="1005037701"/>
+        <gene id="1005060672" protId="ENSP00000403538.2" main_isoform="1005060672"/>
+        <gene id="1005063291" protId="ENSP00000413950.2" main_isoform="1005063291"/>
+        <gene id="1005032214" protId="ENSP00000263278.3" main_isoform="1005032214"/>
+        <gene id="1005002876" protId="ENSP00000518360.1" main_isoform="1005002876"/>
+        <gene id="1005059398" protId="ENSP00000293502.1" main_isoform="1005059398"/>
+        <gene id="1005036415" protId="ENSP00000482744.1" main_isoform="1005036415"/>
+        <gene id="1005061279" protId="ENSP00000453889.1" main_isoform="1005061279"/>
+        <gene id="1005064385" protId="ENSP00000219481.5" main_isoform="1005064385"/>
+        <gene id="1005001442" protId="ENSP00000290349.6" main_isoform="1005001442"/>
+        <gene id="1005017197" protId="ENSP00000240285.5" main_isoform="1005017197"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Phoenicopterus_ruber" taxonId="16" NCBITaxId="9217">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1007001022" protId="PHORUB_R11341"/>
+        <gene id="1007009214" protId="PHORUB_R07256"/>
+        <gene id="1007005525" protId="PHORUB_R05766"/>
+        <gene id="1007008422" protId="PHORUB_R06913"/>
+        <gene id="1007007926" protId="PHORUB_R07070"/>
+        <gene id="1007009405" protId="PHORUB_R05093"/>
+        <gene id="1007007566" protId="PHORUB_R08128"/>
+        <gene id="1007000540" protId="PHORUB_R05162"/>
+        <gene id="1007000179" protId="PHORUB_R10891"/>
+        <gene id="1007012996" protId="PHORUB_R11242"/>
+        <gene id="1007009990" protId="PHORUB_R12424"/>
+        <gene id="1007002218" protId="PHORUB_R09419"/>
+        <gene id="1007008504" protId="PHORUB_R06441"/>
+        <gene id="1007004823" protId="PHORUB_R11314"/>
+        <gene id="1007009169" protId="PHORUB_R02824"/>
+        <gene id="1007007865" protId="PHORUB_R08319"/>
+        <gene id="1007011984" protId="PHORUB_R11227"/>
+        <gene id="1007003667" protId="PHORUB_R06567"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Aptenodytes_forsteri" taxonId="11" NCBITaxId="9233">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1000002696" protId="APTFOR_R12150"/>
+        <gene id="1000007467" protId="APTFOR_R01864"/>
+        <gene id="1000008763" protId="APTFOR_R12310"/>
+        <gene id="1000000690" protId="APTFOR_R11792"/>
+        <gene id="1000003076" protId="APTFOR_R06975"/>
+        <gene id="1000005150" protId="APTFOR_R05264"/>
+        <gene id="1000001580" protId="APTFOR_R10970"/>
+        <gene id="1000007223" protId="APTFOR_R03213"/>
+        <gene id="1000002653" protId="APTFOR_R10222"/>
+        <gene id="1000002681" protId="APTFOR_R12135"/>
+        <gene id="1000003754" protId="APTFOR_R03491"/>
+        <gene id="1000001579" protId="APTFOR_R10969"/>
+        <gene id="1000001890" protId="APTFOR_R10365"/>
+        <gene id="1000010366" protId="APTFOR_R07661"/>
+        <gene id="1000004183" protId="APTFOR_R06441"/>
+        <gene id="1000002654" protId="APTFOR_R10223"/>
+        <gene id="1000010297" protId="APTFOR_R04892"/>
+        <gene id="1000008762" protId="APTFOR_R12309"/>
+        <gene id="1000004873" protId="APTFOR_R11680"/>
+        <gene id="1000008123" protId="APTFOR_R03582"/>
+        <gene id="1000010729" protId="APTFOR_R07415"/>
+        <gene id="1000010251" protId="APTFOR_R14212"/>
+      </genes>
+    </database>
+  </species>
+  <groups>
+    <orthologGroup id="HOG:0015853_1" taxonId="1">
+      <score id="CompletenessScore" value="1.0"/>
+      <property name="OMAmerRootHOG" value="HOG:E0761461"/>
+      <property name="TaxRange" value="internal_0"/>
+      <paralogGroup>
+        <geneRef id="1003017343"/>
+        <orthologGroup id="HOG:0015853.1b_2" taxonId="2">
+          <score id="CompletenessScore" value="1.0"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1b_4" taxonId="4">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1b_5" taxonId="5">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003000592"/>
+              <orthologGroup id="HOG:0015853.1b_6" taxonId="6">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1b_7" taxonId="7">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_1a"/>
+                  <geneRef id="1001011585"/>
+                  <orthologGroup id="HOG:0015853.1b_8" taxonId="8">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_2a"/>
+                    <orthologGroup id="HOG:0015853.1b_9" taxonId="9">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_3c"/>
+                      <geneRef id="1004003435"/>
+                      <orthologGroup id="HOG:0015853.1b_10" taxonId="10">
+                        <score id="CompletenessScore" value="1.0"/>
+                        <property name="TaxRange" value="Neoaves_4c"/>
+                        <geneRef id="1000010729"/>
+                        <geneRef id="1006001917"/>
+                      </orthologGroup>
+                    </orthologGroup>
+                    <geneRef id="1009000705"/>
+                  </orthologGroup>
+                </orthologGroup>
+                <geneRef id="1007007926"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008003400"/>
+          </orthologGroup>
+          <geneRef id="1002022072"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1c_4" taxonId="4">
+          <score id="CompletenessScore" value="0.75"/>
+          <property name="TaxRange" value="Aves"/>
+          <orthologGroup id="HOG:0015853.1c_5" taxonId="5">
+            <score id="CompletenessScore" value="0.7143"/>
+            <property name="TaxRange" value="Neognathae"/>
+            <geneRef id="1003002950"/>
+            <orthologGroup id="HOG:0015853.1c_6" taxonId="6">
+              <score id="CompletenessScore" value="0.6667"/>
+              <property name="TaxRange" value="Neoaves"/>
+              <orthologGroup id="HOG:0015853.1c_7" taxonId="7">
+                <score id="CompletenessScore" value="0.6"/>
+                <property name="TaxRange" value="Neoaves_1a"/>
+                <geneRef id="1001012708"/>
+                <orthologGroup id="HOG:0015853.1c_8" taxonId="8">
+                  <score id="CompletenessScore" value="0.5"/>
+                  <property name="TaxRange" value="Neoaves_2a"/>
+                  <geneRef id="1000002681"/>
+                  <geneRef id="1009009687"/>
+                </orthologGroup>
+              </orthologGroup>
+              <geneRef id="1007007865"/>
+            </orthologGroup>
+          </orthologGroup>
+          <geneRef id="1008001920"/>
+        </orthologGroup>
+        <geneRef id="1002024298"/>
+        <orthologGroup id="HOG:0015853.1e_2" taxonId="2">
+          <score id="CompletenessScore" value="0.6667"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1e_5" taxonId="5">
+            <score id="CompletenessScore" value="0.7143"/>
+            <property name="TaxRange" value="Neognathae"/>
+            <geneRef id="1003015046"/>
+            <orthologGroup id="HOG:0015853.1e_8" taxonId="8">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neoaves_2a"/>
+              <orthologGroup id="HOG:0015853.1e_9" taxonId="9">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves_3c"/>
+                <paralogGroup>
+                  <geneRef id="1004004058"/>
+                  <geneRef id="1004006581"/>
+                </paralogGroup>
+                <orthologGroup id="HOG:0015853.1e_10" taxonId="10">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_4c"/>
+                  <geneRef id="1000010251"/>
+                  <geneRef id="1006000538"/>
+                </orthologGroup>
+              </orthologGroup>
+              <geneRef id="1009017246"/>
+            </orthologGroup>
+          </orthologGroup>
+          <paralogGroup>
+            <geneRef id="1002007501"/>
+            <geneRef id="1002007513"/>
+            <geneRef id="1002013073"/>
+          </paralogGroup>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1f_2" taxonId="2">
+          <score id="CompletenessScore" value="1.0"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1f_4" taxonId="4">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1f_5" taxonId="5">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003005762"/>
+              <orthologGroup id="HOG:0015853.1f_6" taxonId="6">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1f_7" taxonId="7">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_1a"/>
+                  <geneRef id="1001004486"/>
+                  <orthologGroup id="HOG:0015853.1f_8" taxonId="8">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_2a"/>
+                    <orthologGroup id="HOG:0015853.1f_9" taxonId="9">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_3c"/>
+                      <geneRef id="1004013686"/>
+                      <orthologGroup id="HOG:0015853.1f_10" taxonId="10">
+                        <score id="CompletenessScore" value="1.0"/>
+                        <property name="TaxRange" value="Neoaves_4c"/>
+                        <geneRef id="1000007223"/>
+                        <geneRef id="1006010863"/>
+                      </orthologGroup>
+                    </orthologGroup>
+                    <geneRef id="1009012148"/>
+                  </orthologGroup>
+                </orthologGroup>
+                <geneRef id="1007000179"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008006029"/>
+          </orthologGroup>
+          <geneRef id="1002015068"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1g_2" taxonId="2">
+          <score id="CompletenessScore" value="0.8889"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1g_4" taxonId="4">
+            <score id="CompletenessScore" value="0.875"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1g_5" taxonId="5">
+              <score id="CompletenessScore" value="0.8571"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003003832"/>
+              <orthologGroup id="HOG:0015853.1g_6" taxonId="6">
+                <score id="CompletenessScore" value="0.8333"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1g_7" taxonId="7">
+                  <score id="CompletenessScore" value="0.8"/>
+                  <property name="TaxRange" value="Neoaves_1a"/>
+                  <geneRef id="1001006598"/>
+                  <orthologGroup id="HOG:0015853.1g_8" taxonId="8">
+                    <score id="CompletenessScore" value="0.75"/>
+                    <property name="TaxRange" value="Neoaves_2a"/>
+                    <orthologGroup id="HOG:0015853.1g_9" taxonId="9">
+                      <score id="CompletenessScore" value="0.6667"/>
+                      <property name="TaxRange" value="Neoaves_3c"/>
+                      <geneRef id="1004010473"/>
+                      <geneRef id="1000000690"/>
+                    </orthologGroup>
+                    <geneRef id="1009010769"/>
+                  </orthologGroup>
+                </orthologGroup>
+                <geneRef id="1007009214"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008006513"/>
+          </orthologGroup>
+          <paralogGroup>
+            <geneRef id="1002003234"/>
+            <geneRef id="1002008182"/>
+          </paralogGroup>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1h_2" taxonId="2">
+          <score id="CompletenessScore" value="0.8889"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1h_4" taxonId="4">
+            <score id="CompletenessScore" value="0.875"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1h_5" taxonId="5">
+              <score id="CompletenessScore" value="0.8571"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <paralogGroup>
+                <geneRef id="1003011288"/>
+                <geneRef id="1003011289"/>
+              </paralogGroup>
+              <orthologGroup id="HOG:0015853.1h_6" taxonId="6">
+                <score id="CompletenessScore" value="0.8333"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <paralogGroup>
+                  <geneRef id="1001000489"/>
+                  <orthologGroup id="HOG:0015853.1h.5b_7" taxonId="7">
+                    <score id="CompletenessScore" value="0.8"/>
+                    <property name="TaxRange" value="Neoaves_1a"/>
+                    <geneRef id="1001000488"/>
+                    <orthologGroup id="HOG:0015853.1h.5b_8" taxonId="8">
+                      <score id="CompletenessScore" value="0.75"/>
+                      <property name="TaxRange" value="Neoaves_2a"/>
+                      <orthologGroup id="HOG:0015853.1h.5b_10" taxonId="10">
+                        <score id="CompletenessScore" value="1.0"/>
+                        <property name="TaxRange" value="Neoaves_4c"/>
+                        <paralogGroup>
+                          <geneRef id="1000008762"/>
+                          <geneRef id="1000008763"/>
+                        </paralogGroup>
+                        <geneRef id="1006011705"/>
+                      </orthologGroup>
+                      <paralogGroup>
+                        <geneRef id="1009005519"/>
+                        <geneRef id="1009004900"/>
+                      </paralogGroup>
+                    </orthologGroup>
+                  </orthologGroup>
+                </paralogGroup>
+                <geneRef id="1007001022"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008007962"/>
+          </orthologGroup>
+          <geneRef id="1002019273"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1i_2" taxonId="2">
+          <score id="CompletenessScore" value="0.8889"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1i_4" taxonId="4">
+            <score id="CompletenessScore" value="0.875"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1i_5" taxonId="5">
+              <score id="CompletenessScore" value="0.8571"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003011666"/>
+              <orthologGroup id="HOG:0015853.1i_6" taxonId="6">
+                <score id="CompletenessScore" value="0.8333"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1i_8" taxonId="8">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_2a"/>
+                  <orthologGroup id="HOG:0015853.1i_9" taxonId="9">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_3c"/>
+                    <geneRef id="1004004841"/>
+                    <orthologGroup id="HOG:0015853.1i_10" taxonId="10">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_4c"/>
+                      <geneRef id="1000003754"/>
+                      <geneRef id="1006007946"/>
+                    </orthologGroup>
+                  </orthologGroup>
+                  <geneRef id="1009005311"/>
+                </orthologGroup>
+                <geneRef id="1007002218"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008014451"/>
+          </orthologGroup>
+          <geneRef id="1002017242"/>
+        </orthologGroup>
+        <geneRef id="1003017746"/>
+        <orthologGroup id="HOG:0015853.1k_2" taxonId="2">
+          <score id="CompletenessScore" value="1.0"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1k_4" taxonId="4">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Aves"/>
+            <paralogGroup>
+              <geneRef id="1007000540"/>
+              <geneRef id="1009017532"/>
+              <geneRef id="1001011879"/>
+              <geneRef id="1003014806"/>
+              <geneRef id="1006005085"/>
+              <geneRef id="1009008809"/>
+              <geneRef id="1000010366"/>
+              <geneRef id="1004012797"/>
+            </paralogGroup>
+            <geneRef id="1008014327"/>
+          </orthologGroup>
+          <geneRef id="1002019632"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1l_2" taxonId="2">
+          <score id="CompletenessScore" value="0.8889"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1l_5" taxonId="5">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Neognathae"/>
+            <geneRef id="1003007704"/>
+            <orthologGroup id="HOG:0015853.1l_6" taxonId="6">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neoaves"/>
+              <orthologGroup id="HOG:0015853.1l_7" taxonId="7">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves_1a"/>
+                <geneRef id="1001014150"/>
+                <orthologGroup id="HOG:0015853.1l_8" taxonId="8">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_2a"/>
+                  <orthologGroup id="HOG:0015853.1l_9" taxonId="9">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_3c"/>
+                    <geneRef id="1004007965"/>
+                    <orthologGroup id="HOG:0015853.1l_10" taxonId="10">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_4c"/>
+                      <geneRef id="1000004183"/>
+                      <geneRef id="1006012438"/>
+                    </orthologGroup>
+                  </orthologGroup>
+                  <geneRef id="1009012818"/>
+                </orthologGroup>
+              </orthologGroup>
+              <geneRef id="1007007566"/>
+            </orthologGroup>
+          </orthologGroup>
+          <geneRef id="1002000958"/>
+        </orthologGroup>
+        <geneRef id="1003017344"/>
+        <orthologGroup id="HOG:0015853.1n_2" taxonId="2">
+          <score id="CompletenessScore" value="0.8889"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1n_4" taxonId="4">
+            <score id="CompletenessScore" value="0.875"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1n_5" taxonId="5">
+              <score id="CompletenessScore" value="0.8571"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003006008"/>
+              <orthologGroup id="HOG:0015853.1n_6" taxonId="6">
+                <score id="CompletenessScore" value="0.8333"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1n_7" taxonId="7">
+                  <score id="CompletenessScore" value="0.8"/>
+                  <property name="TaxRange" value="Neoaves_1a"/>
+                  <geneRef id="1001001246"/>
+                  <orthologGroup id="HOG:0015853.1n_8" taxonId="8">
+                    <score id="CompletenessScore" value="0.75"/>
+                    <property name="TaxRange" value="Neoaves_2a"/>
+                    <orthologGroup id="HOG:0015853.1n_10" taxonId="10">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_4c"/>
+                      <geneRef id="1000005150"/>
+                      <geneRef id="1006012175"/>
+                    </orthologGroup>
+                    <geneRef id="1009002946"/>
+                  </orthologGroup>
+                </orthologGroup>
+                <geneRef id="1007012996"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008006929"/>
+          </orthologGroup>
+          <geneRef id="1002002212"/>
+        </orthologGroup>
+        <geneRef id="1008009740"/>
+        <orthologGroup id="HOG:0015853.1p_2" taxonId="2">
+          <score id="CompletenessScore" value="0.7778"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1p_4" taxonId="4">
+            <score id="CompletenessScore" value="0.75"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1p_5" taxonId="5">
+              <score id="CompletenessScore" value="0.7143"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003013732"/>
+              <paralogGroup>
+                <geneRef id="1009016848"/>
+                <orthologGroup id="HOG:0015853.1p.7b_6" taxonId="6">
+                  <score id="CompletenessScore" value="0.6667"/>
+                  <property name="TaxRange" value="Neoaves"/>
+                  <orthologGroup id="HOG:0015853.1p.7b_7" taxonId="7">
+                    <score id="CompletenessScore" value="0.6"/>
+                    <property name="TaxRange" value="Neoaves_1a"/>
+                    <geneRef id="1001011281"/>
+                    <orthologGroup id="HOG:0015853.1p.7b_8" taxonId="8">
+                      <score id="CompletenessScore" value="0.5"/>
+                      <property name="TaxRange" value="Neoaves_2a"/>
+                      <geneRef id="1000004873"/>
+                      <paralogGroup>
+                        <geneRef id="1009015781"/>
+                        <geneRef id="1009007762"/>
+                      </paralogGroup>
+                    </orthologGroup>
+                  </orthologGroup>
+                  <geneRef id="1007009169"/>
+                </orthologGroup>
+              </paralogGroup>
+            </orthologGroup>
+            <geneRef id="1008003543"/>
+          </orthologGroup>
+          <geneRef id="1002000348"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1q_4" taxonId="4">
+          <score id="CompletenessScore" value="1.0"/>
+          <property name="TaxRange" value="Aves"/>
+          <orthologGroup id="HOG:0015853.1q_5" taxonId="5">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Neognathae"/>
+            <geneRef id="1003002803"/>
+            <orthologGroup id="HOG:0015853.1q_6" taxonId="6">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neoaves"/>
+              <orthologGroup id="HOG:0015853.1q_7" taxonId="7">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves_1a"/>
+                <geneRef id="1001012750"/>
+                <orthologGroup id="HOG:0015853.1q_8" taxonId="8">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_2a"/>
+                  <orthologGroup id="HOG:0015853.1q_9" taxonId="9">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_3c"/>
+                    <geneRef id="1004000145"/>
+                    <orthologGroup id="HOG:0015853.1q_10" taxonId="10">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_4c"/>
+                      <geneRef id="1000002654"/>
+                      <geneRef id="1006011487"/>
+                    </orthologGroup>
+                  </orthologGroup>
+                  <geneRef id="1009009560"/>
+                </orthologGroup>
+              </orthologGroup>
+              <geneRef id="1007011984"/>
+            </orthologGroup>
+          </orthologGroup>
+          <geneRef id="1008013209"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1r_2" taxonId="2">
+          <score id="CompletenessScore" value="0.8889"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1r_4" taxonId="4">
+            <score id="CompletenessScore" value="0.875"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1r_5" taxonId="5">
+              <score id="CompletenessScore" value="0.8571"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003007062"/>
+              <orthologGroup id="HOG:0015853.1r_6" taxonId="6">
+                <score id="CompletenessScore" value="0.8333"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1r_8" taxonId="8">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_2a"/>
+                  <orthologGroup id="HOG:0015853.1r_9" taxonId="9">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_3c"/>
+                    <geneRef id="1004007063"/>
+                    <orthologGroup id="HOG:0015853.1r_10" taxonId="10">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_4c"/>
+                      <geneRef id="1000001580"/>
+                      <geneRef id="1006002756"/>
+                    </orthologGroup>
+                  </orthologGroup>
+                  <geneRef id="1009002659"/>
+                </orthologGroup>
+                <geneRef id="1007008422"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008006320"/>
+          </orthologGroup>
+          <geneRef id="1002023660"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1s_5" taxonId="5">
+          <score id="CompletenessScore" value="0.2857"/>
+          <property name="TaxRange" value="Neognathae"/>
+          <geneRef id="1003002802"/>
+          <geneRef id="1009009559"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1t_2" taxonId="2">
+          <score id="CompletenessScore" value="1.0"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1t_4" taxonId="4">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1t_5" taxonId="5">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003007731"/>
+              <orthologGroup id="HOG:0015853.1t_6" taxonId="6">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1t_7" taxonId="7">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_1a"/>
+                  <geneRef id="1001014228"/>
+                  <orthologGroup id="HOG:0015853.1t_8" taxonId="8">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_2a"/>
+                    <orthologGroup id="HOG:0015853.1t_9" taxonId="9">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_3c"/>
+                      <geneRef id="1004001945"/>
+                      <orthologGroup id="HOG:0015853.1t_10" taxonId="10">
+                        <score id="CompletenessScore" value="1.0"/>
+                        <property name="TaxRange" value="Neoaves_4c"/>
+                        <geneRef id="1000001890"/>
+                        <geneRef id="1006005663"/>
+                      </orthologGroup>
+                    </orthologGroup>
+                    <geneRef id="1009012745"/>
+                  </orthologGroup>
+                </orthologGroup>
+                <geneRef id="1007005525"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008005358"/>
+          </orthologGroup>
+          <geneRef id="1002000207"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1u_4" taxonId="4">
+          <score id="CompletenessScore" value="0.875"/>
+          <property name="TaxRange" value="Aves"/>
+          <orthologGroup id="HOG:0015853.1u_5" taxonId="5">
+            <score id="CompletenessScore" value="0.8571"/>
+            <property name="TaxRange" value="Neognathae"/>
+            <geneRef id="1003007061"/>
+            <orthologGroup id="HOG:0015853.1u_6" taxonId="6">
+              <score id="CompletenessScore" value="0.8333"/>
+              <property name="TaxRange" value="Neoaves"/>
+              <orthologGroup id="HOG:0015853.1u_7" taxonId="7">
+                <score id="CompletenessScore" value="0.8"/>
+                <property name="TaxRange" value="Neoaves_1a"/>
+                <geneRef id="1001007285"/>
+                <orthologGroup id="HOG:0015853.1u_8" taxonId="8">
+                  <score id="CompletenessScore" value="0.75"/>
+                  <property name="TaxRange" value="Neoaves_2a"/>
+                  <orthologGroup id="HOG:0015853.1u_9" taxonId="9">
+                    <score id="CompletenessScore" value="0.6667"/>
+                    <property name="TaxRange" value="Neoaves_3c"/>
+                    <geneRef id="1004007062"/>
+                    <geneRef id="1000001579"/>
+                  </orthologGroup>
+                  <paralogGroup>
+                    <geneRef id="1009015958"/>
+                    <geneRef id="1009002658"/>
+                  </paralogGroup>
+                </orthologGroup>
+              </orthologGroup>
+              <geneRef id="1007003667"/>
+            </orthologGroup>
+          </orthologGroup>
+          <geneRef id="1008006319"/>
+        </orthologGroup>
+        <geneRef id="1002000054"/>
+        <orthologGroup id="HOG:0015853.1w_2" taxonId="2">
+          <score id="CompletenessScore" value="1.0"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1w_4" taxonId="4">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1w_5" taxonId="5">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003014960"/>
+              <orthologGroup id="HOG:0015853.1w_6" taxonId="6">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1w_7" taxonId="7">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_1a"/>
+                  <geneRef id="1001011870"/>
+                  <orthologGroup id="HOG:0015853.1w_8" taxonId="8">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_2a"/>
+                    <orthologGroup id="HOG:0015853.1w_9" taxonId="9">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_3c"/>
+                      <geneRef id="1004002183"/>
+                      <orthologGroup id="HOG:0015853.1w_10" taxonId="10">
+                        <score id="CompletenessScore" value="1.0"/>
+                        <property name="TaxRange" value="Neoaves_4c"/>
+                        <geneRef id="1000010297"/>
+                        <geneRef id="1006009698"/>
+                      </orthologGroup>
+                    </orthologGroup>
+                    <geneRef id="1009008953"/>
+                  </orthologGroup>
+                </orthologGroup>
+                <geneRef id="1007008504"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008014300"/>
+          </orthologGroup>
+          <geneRef id="1002019634"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1x_4" taxonId="4">
+          <score id="CompletenessScore" value="0.75"/>
+          <property name="TaxRange" value="Aves"/>
+          <orthologGroup id="HOG:0015853.1x_5" taxonId="5">
+            <score id="CompletenessScore" value="0.7143"/>
+            <property name="TaxRange" value="Neognathae"/>
+            <paralogGroup>
+              <geneRef id="1003002879"/>
+              <geneRef id="1003002878"/>
+              <geneRef id="1003002881"/>
+              <geneRef id="1003002877"/>
+              <geneRef id="1003002685"/>
+              <geneRef id="1003002880"/>
+            </paralogGroup>
+            <orthologGroup id="HOG:0015853.1x_7" taxonId="7">
+              <score id="CompletenessScore" value="0.8"/>
+              <property name="TaxRange" value="Neoaves_1a"/>
+              <paralogGroup>
+                <geneRef id="1001012749"/>
+                <geneRef id="1001012695"/>
+              </paralogGroup>
+              <orthologGroup id="HOG:0015853.1x_8" taxonId="8">
+                <score id="CompletenessScore" value="0.75"/>
+                <property name="TaxRange" value="Neoaves_2a"/>
+                <paralogGroup>
+                  <orthologGroup id="HOG:0015853.1x.11a_9" taxonId="9">
+                    <score id="CompletenessScore" value="0.6667"/>
+                    <property name="TaxRange" value="Neoaves_3c"/>
+                    <geneRef id="1004012741"/>
+                    <geneRef id="1000002696"/>
+                  </orthologGroup>
+                  <orthologGroup id="HOG:0015853.1x.11b_9" taxonId="9">
+                    <score id="CompletenessScore" value="0.6667"/>
+                    <property name="TaxRange" value="Neoaves_3c"/>
+                    <geneRef id="1004004595"/>
+                    <geneRef id="1000002653"/>
+                  </orthologGroup>
+                </paralogGroup>
+                <paralogGroup>
+                  <geneRef id="1009009558"/>
+                  <geneRef id="1009009725"/>
+                </paralogGroup>
+              </orthologGroup>
+            </orthologGroup>
+          </orthologGroup>
+          <paralogGroup>
+            <geneRef id="1008001914"/>
+            <geneRef id="1008013207"/>
+          </paralogGroup>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1y_2" taxonId="2">
+          <score id="CompletenessScore" value="0.7778"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1y_4" taxonId="4">
+            <score id="CompletenessScore" value="0.75"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1y_5" taxonId="5">
+              <score id="CompletenessScore" value="0.7143"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003005215"/>
+              <orthologGroup id="HOG:0015853.1y_6" taxonId="6">
+                <score id="CompletenessScore" value="0.6667"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1y_9" taxonId="9">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_3c"/>
+                  <geneRef id="1004007630"/>
+                  <orthologGroup id="HOG:0015853.1y_10" taxonId="10">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_4c"/>
+                    <geneRef id="1000008123"/>
+                    <geneRef id="1006001113"/>
+                  </orthologGroup>
+                </orthologGroup>
+                <geneRef id="1007009990"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008003995"/>
+          </orthologGroup>
+          <geneRef id="1002008073"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1z_2" taxonId="2">
+          <score id="CompletenessScore" value="0.7778"/>
+          <property name="TaxRange" value="Archosauria"/>
+          <orthologGroup id="HOG:0015853.1z_4" taxonId="4">
+            <score id="CompletenessScore" value="0.75"/>
+            <property name="TaxRange" value="Aves"/>
+            <orthologGroup id="HOG:0015853.1z_5" taxonId="5">
+              <score id="CompletenessScore" value="0.7143"/>
+              <property name="TaxRange" value="Neognathae"/>
+              <geneRef id="1003013784"/>
+              <orthologGroup id="HOG:0015853.1z_6" taxonId="6">
+                <score id="CompletenessScore" value="0.6667"/>
+                <property name="TaxRange" value="Neoaves"/>
+                <orthologGroup id="HOG:0015853.1z_7" taxonId="7">
+                  <score id="CompletenessScore" value="0.6"/>
+                  <property name="TaxRange" value="Neoaves_1a"/>
+                  <geneRef id="1001000506"/>
+                  <orthologGroup id="HOG:0015853.1z_9" taxonId="9">
+                    <score id="CompletenessScore" value="0.6667"/>
+                    <property name="TaxRange" value="Neoaves_3c"/>
+                    <geneRef id="1004010713"/>
+                    <geneRef id="1000007467"/>
+                  </orthologGroup>
+                </orthologGroup>
+                <geneRef id="1007009405"/>
+              </orthologGroup>
+            </orthologGroup>
+            <geneRef id="1008000241"/>
+          </orthologGroup>
+          <geneRef id="1002022781"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1aa_4" taxonId="4">
+          <score id="CompletenessScore" value="1.0"/>
+          <property name="TaxRange" value="Aves"/>
+          <orthologGroup id="HOG:0015853.1aa_5" taxonId="5">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Neognathae"/>
+            <geneRef id="1003006117"/>
+            <orthologGroup id="HOG:0015853.1aa_6" taxonId="6">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neoaves"/>
+              <orthologGroup id="HOG:0015853.1aa_7" taxonId="7">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves_1a"/>
+                <geneRef id="1001010583"/>
+                <orthologGroup id="HOG:0015853.1aa_8" taxonId="8">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_2a"/>
+                  <orthologGroup id="HOG:0015853.1aa_9" taxonId="9">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_3c"/>
+                    <geneRef id="1004007705"/>
+                    <orthologGroup id="HOG:0015853.1aa_10" taxonId="10">
+                      <score id="CompletenessScore" value="1.0"/>
+                      <property name="TaxRange" value="Neoaves_4c"/>
+                      <geneRef id="1000003076"/>
+                      <geneRef id="1006006186"/>
+                    </orthologGroup>
+                  </orthologGroup>
+                  <geneRef id="1009003314"/>
+                </orthologGroup>
+              </orthologGroup>
+              <geneRef id="1007004823"/>
+            </orthologGroup>
+          </orthologGroup>
+          <geneRef id="1008014527"/>
+        </orthologGroup>
+        <orthologGroup id="HOG:0015853.1ab_5" taxonId="5">
+          <score id="CompletenessScore" value="0.2857"/>
+          <property name="TaxRange" value="Neognathae"/>
+          <geneRef id="1003016571"/>
+          <geneRef id="1001015165"/>
+        </orthologGroup>
+      </paralogGroup>
+      <paralogGroup>
+        <geneRef id="1005044375"/>
+        <geneRef id="1005059398"/>
+        <geneRef id="1005108321"/>
+        <geneRef id="1005122157"/>
+        <geneRef id="1005061279"/>
+        <geneRef id="1005025121"/>
+        <geneRef id="1005001442"/>
+        <geneRef id="1005052344"/>
+        <geneRef id="1005058080"/>
+        <geneRef id="1005017946"/>
+        <geneRef id="1005064385"/>
+        <geneRef id="1005018162"/>
+        <geneRef id="1005044049"/>
+        <geneRef id="1005069824"/>
+        <geneRef id="1005001444"/>
+        <geneRef id="1005068361"/>
+        <geneRef id="1005044110"/>
+        <geneRef id="1005089092"/>
+        <geneRef id="1005098196"/>
+        <geneRef id="1005060672"/>
+        <geneRef id="1005015238"/>
+        <geneRef id="1005071079"/>
+        <geneRef id="1005067731"/>
+        <geneRef id="1005037701"/>
+        <geneRef id="1005032214"/>
+        <geneRef id="1005036415"/>
+        <geneRef id="1005002876"/>
+        <geneRef id="1005121044"/>
+        <geneRef id="1005034718"/>
+        <geneRef id="1005063291"/>
+        <geneRef id="1005010990"/>
+        <geneRef id="1005065760"/>
+        <geneRef id="1005002856"/>
+        <geneRef id="1005111660"/>
+        <geneRef id="1005017197"/>
+      </paralogGroup>
+    </orthologGroup>
+  </groups>
+</orthoXML>

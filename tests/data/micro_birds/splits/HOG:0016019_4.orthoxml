@@ -1,0 +1,98 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<orthoXML xmlns="http://orthoXML.org/2011/" origin="FastOMA 0.5.1" originVersion="2026-05-12 21:22:19" version="0.5">
+  <species name="Gallus_gallus" taxonId="17" NCBITaxId="9031">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1003013187" protId="GALGAL_R02361"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Phoenicopterus_ruber" taxonId="16" NCBITaxId="9217">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1007010718" protId="PHORUB_R03885"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Columba_livia" taxonId="15" NCBITaxId="8932">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1001007773" protId="COLLIV_R15547"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Struthio_camelus" taxonId="18" NCBITaxId="8801">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1008008644" protId="STRCAM_R14298"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Grus_americana" taxonId="13" NCBITaxId="9117">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1004001165" protId="GRUAME_R11257"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Aptenodytes_forsteri" taxonId="11" NCBITaxId="9233">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1000007151" protId="APTFOR_R15145"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Oreotrochilus_melanogaster" taxonId="12" NCBITaxId="689266">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1006010773" protId="OREMEL_R00174"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Taeniopygia_guttata" taxonId="14" NCBITaxId="59729">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1009007464" protId="TAEGUT_R19006"/>
+      </genes>
+    </database>
+  </species>
+  <groups>
+    <orthologGroup id="HOG:0016019_4" taxonId="4">
+      <score id="CompletenessScore" value="1.0"/>
+      <property name="OMAmerRootHOG" value="HOG:E0793959"/>
+      <property name="TaxRange" value="Aves"/>
+      <orthologGroup id="HOG:0016019_5" taxonId="5">
+        <score id="CompletenessScore" value="1.0"/>
+        <property name="TaxRange" value="Neognathae"/>
+        <geneRef id="1003013187"/>
+        <orthologGroup id="HOG:0016019_6" taxonId="6">
+          <score id="CompletenessScore" value="1.0"/>
+          <property name="TaxRange" value="Neoaves"/>
+          <orthologGroup id="HOG:0016019_7" taxonId="7">
+            <score id="CompletenessScore" value="1.0"/>
+            <property name="TaxRange" value="Neoaves_1a"/>
+            <geneRef id="1001007773"/>
+            <orthologGroup id="HOG:0016019_8" taxonId="8">
+              <score id="CompletenessScore" value="1.0"/>
+              <property name="TaxRange" value="Neoaves_2a"/>
+              <orthologGroup id="HOG:0016019_9" taxonId="9">
+                <score id="CompletenessScore" value="1.0"/>
+                <property name="TaxRange" value="Neoaves_3c"/>
+                <geneRef id="1004001165"/>
+                <orthologGroup id="HOG:0016019_10" taxonId="10">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_4c"/>
+                  <geneRef id="1000007151"/>
+                  <geneRef id="1006010773"/>
+                </orthologGroup>
+              </orthologGroup>
+              <geneRef id="1009007464"/>
+            </orthologGroup>
+          </orthologGroup>
+          <geneRef id="1007010718"/>
+        </orthologGroup>
+      </orthologGroup>
+      <geneRef id="1008008644"/>
+    </orthologGroup>
+  </groups>
+</orthoXML>

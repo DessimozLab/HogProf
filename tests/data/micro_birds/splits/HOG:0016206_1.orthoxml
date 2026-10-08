@@ -1,0 +1,110 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<orthoXML xmlns="http://orthoXML.org/2011/" origin="FastOMA 0.5.1" originVersion="2026-05-12 21:22:19" version="0.5">
+  <species name="Crocodylus_porosus" taxonId="3" NCBITaxId="8502">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1002010748" protId="ENSCPRP00005010618.1" main_isoform="1002010748"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Homo_sapiens" taxonId="19" NCBITaxId="9606">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1005053162" protId="ENSP00000424668.2" main_isoform="1005053162"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Columba_livia" taxonId="15" NCBITaxId="8932">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1001000446" protId="COLLIV_R11104"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Aptenodytes_forsteri" taxonId="11" NCBITaxId="9233">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1000008044" protId="APTFOR_R05645"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Struthio_camelus" taxonId="18" NCBITaxId="8801">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1008000014" protId="STRCAM_R04224"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Gallus_gallus" taxonId="17" NCBITaxId="9031">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1003010888" protId="GALGAL_R00249"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Phoenicopterus_ruber" taxonId="16" NCBITaxId="9217">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1007009931" protId="PHORUB_R10580"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Oreotrochilus_melanogaster" taxonId="12" NCBITaxId="689266">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1006005206" protId="OREMEL_R02216"/>
+      </genes>
+    </database>
+  </species>
+  <species name="Grus_americana" taxonId="13" NCBITaxId="9117">
+    <database name="database" version="2023">
+      <genes>
+        <gene id="1004012077" protId="GRUAME_R05479"/>
+      </genes>
+    </database>
+  </species>
+  <groups>
+    <orthologGroup id="HOG:0016206_1" taxonId="1">
+      <score id="CompletenessScore" value="0.9"/>
+      <property name="OMAmerRootHOG" value="HOG:E0748439"/>
+      <property name="TaxRange" value="internal_0"/>
+      <orthologGroup id="HOG:0016206_2" taxonId="2">
+        <score id="CompletenessScore" value="0.8889"/>
+        <property name="TaxRange" value="Archosauria"/>
+        <orthologGroup id="HOG:0016206_4" taxonId="4">
+          <score id="CompletenessScore" value="0.875"/>
+          <property name="TaxRange" value="Aves"/>
+          <orthologGroup id="HOG:0016206_5" taxonId="5">
+            <score id="CompletenessScore" value="0.8571"/>
+            <property name="TaxRange" value="Neognathae"/>
+            <geneRef id="1003010888"/>
+            <orthologGroup id="HOG:0016206_6" taxonId="6">
+              <score id="CompletenessScore" value="0.8333"/>
+              <property name="TaxRange" value="Neoaves"/>
+              <orthologGroup id="HOG:0016206_7" taxonId="7">
+                <score id="CompletenessScore" value="0.8"/>
+                <property name="TaxRange" value="Neoaves_1a"/>
+                <geneRef id="1001000446"/>
+                <orthologGroup id="HOG:0016206_9" taxonId="9">
+                  <score id="CompletenessScore" value="1.0"/>
+                  <property name="TaxRange" value="Neoaves_3c"/>
+                  <geneRef id="1004012077"/>
+                  <orthologGroup id="HOG:0016206_10" taxonId="10">
+                    <score id="CompletenessScore" value="1.0"/>
+                    <property name="TaxRange" value="Neoaves_4c"/>
+                    <geneRef id="1000008044"/>
+                    <geneRef id="1006005206"/>
+                  </orthologGroup>
+                </orthologGroup>
+              </orthologGroup>
+              <geneRef id="1007009931"/>
+            </orthologGroup>
+          </orthologGroup>
+          <geneRef id="1008000014"/>
+        </orthologGroup>
+        <geneRef id="1002010748"/>
+      </orthologGroup>
+      <geneRef id="1005053162"/>
+    </orthologGroup>
+  </groups>
+</orthoXML>
