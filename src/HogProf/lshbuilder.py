@@ -1,6 +1,5 @@
 import functools
 import glob
-import io
 import logging
 import multiprocessing as mp
 import os
@@ -15,7 +14,6 @@ from pathlib import Path
 import h5py
 import numpy as np
 import pandas as pd
-import tqdm
 from datasketch import MinHashLSHForest, WeightedMinHashGenerator
 from pyoma.browser import db
 from tables import open_file
@@ -666,14 +664,11 @@ def run(parsed_args):
         nperm = int(args['nperm'])
     else:
         nperm = 256
+
     if args['OMA']:
         omafile = args['OMA']
     elif args['tarfile']:
         omafile = args['tarfile']
-    elif orthoglob is not None:
-        fileglob = orthoglob
-    else:
-        raise Exception(' please specify input data ')
 
     _args = parsed_args
     output_dir = _args.outpath
@@ -706,7 +701,7 @@ def run(parsed_args):
 
     start = time.time()
     if omafile:
-        with open_file( omafile , mode="r") as h5_oma:
+        with open_file(omafile , mode="r") as h5_oma:
             lsh_builder = LSHBuilder(h5_oma=h5_oma, fileglob=orthoglob, output_dir=output_dir,
                                      numperm=nperm,
                                      treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree ,

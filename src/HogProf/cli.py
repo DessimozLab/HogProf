@@ -3,9 +3,10 @@
 import argparse
 import logging
 import sys
-from collections.abc import Iterable, Iterator
+import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import TypeVar, Iterable
+from typing import TypeVar
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -33,6 +34,7 @@ _Item = TypeVar("_Item")
 
 # Rich Console shared by both logging and progress
 console = Console(stderr=True)
+logger = logging.getLogger(__name__)
 
 
 def setup_cli(verbose: bool = False,
@@ -125,11 +127,73 @@ def track_progress(
     output_console: Console = console,
 ) -> Iterable[_Item]:
     """Iterate with a Rich progress bar when output is an interactive terminal."""
-    return track(sequence,
-                 description=description,
-                 total=total,
-                 console=output_console,
-                 disable=not output_console.is_terminal)
+    
+    if output_console.is_terminal:
+        # If output is CLI, it's all simple -- use Rich
+        yield from track(
+            sequence,
+            description=description,
+            total=total,
+            console=output_console,
+            disable=not output_console.is_terminal,
+        )
+
+    else:
+        # Otherwise if output is redirected to file (e.g. SLURM)
+        # -- report progress differently
+        if total is None:
+            try:
+                total = len(sequence)
+            except TypeError:
+                pass
+
+        start = last_log = time.monotonic()
+        last_percent = 0
+        count = 0
+
+        # how often in % to report
+        log_step = 10
+        # if log_step takes too long, how often in seconds to report anyway
+        # -- every 1 min
+        log_interval = 1 * 60
+
+        first_message = f"{description}: 0% " + f"(0/{total})" if total else ""
+        logger.info(first_message)
+        for count, item in enumerate(sequence, 1):
+
+            # First, yield item -- to feed the generator
+            yield item
+
+            now = time.monotonic()
+            elapsed = now - start
+
+            if total:
+                percent = min(100, int(100 * count / total))
+                due = percent >= last_percent + log_step
+            else:
+                percent = None
+                due = True
+
+            if due or now - last_log >= log_interval:
+                if total:
+                    eta = elapsed / count * (total - count)
+                    logger.info(
+                        "%s: %d%% (%d/%d) | ETA %.0fs",
+                        description, percent, count, total, eta,
+                    )
+                    last_percent = percent
+                else:
+                    logger.info(
+                        "%s: %d items | %.1f items/s",
+                        description, count, count / elapsed,
+                    )
+
+                last_log = now
+
+        logger.info(
+            "%s: done (%d items in %.1fs)",
+            description, count, time.monotonic() - start,
+        )
 
 
 
