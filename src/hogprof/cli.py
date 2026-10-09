@@ -235,7 +235,7 @@ def main(argv=None):
     parser.add_argument('--outpath', '-o', help='Output directory path', type=Path, required=True)
     parser.add_argument('--dbtype', help='preconfigured taxonomic ranges', choices=DB_PRESETS)
     parser.add_argument('--OMA', help='use oma data ', type = str)
-    parser.add_argument('--OrthoGlob', help='a glob expression for orthoxml files ' , type = str)
+    parser.add_argument('--OrthoGlob', help='a glob expression for orthoxml files (e.g. \'inputdir/splits/*.orthoxml\')' , type = str)
     parser.add_argument('--tarfile', help='use tarfile with orthoxml data', type = str)
     parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles',
                         type=int, default=256)
