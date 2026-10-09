@@ -1,6 +1,7 @@
 """User-facing console I/O for command-line tools"""
 
 import argparse
+import glob
 import logging
 import sys
 import time
@@ -17,18 +18,7 @@ from rich.text import Text
 from rich.traceback import install as install_rich_traceback
 
 from hogprof import __version__
-
-DB_PRESETS = {
-    'all': {'taxfilter': None, 'taxmask': None},
-    'plants': {'taxfilter': None, 'taxmask': 33090},
-    'archaea': {'taxfilter': None, 'taxmask': 2157},
-    'bacteria': {'taxfilter': None, 'taxmask': 2},
-    'eukarya': {'taxfilter': None, 'taxmask': 'Eukaryota'},
-    'protists': {'taxfilter': [2, 2157, 33090, 4751, 33208], 'taxmask': None},
-    'fungi': {'taxfilter': None, 'taxmask': 4751},
-    'metazoa': {'taxfilter': None, 'taxmask': 33208},
-    'vertebrates': {'taxfilter': None, 'taxmask': 7742},
-}
+from hogprof.presets import DB_PRESETS
 
 _Item = TypeVar("_Item")
 
@@ -93,18 +83,16 @@ def print_startup(args=None, *, output_console: Console = console) -> None:
     )
     if args is not None:
         source = (
-            f"OMA: {args['OMA']}" if args["OMA"]
-            else f"OrthoXML: {args['OrthoGlob']}"
-            if args["OrthoGlob"]
-            else f"Tar: {args['tarfile']}"
+            f"OMA: {args['oma']}" if args["oma"]
+            else f"OrthoXML: {args['orthoxml_glob']}"
+            if args["orthoxml_glob"]
+            else f"OrthoXML tar: {args['orthoxml_tar']}"
         )
         table.add_section()
         table.add_row()
         table.add_row("Input", source)
-        table.add_row("Output", str(args["outpath"]))
-
-        njobs = args["nthreads"] or args["njobs"]
-        table.add_row("Workers", str(njobs))
+        table.add_row("Output", str(args["output_dir"]))
+        table.add_row("Workers", str(args["njobs"]))
 
     output_console.print(
         Panel(table,
@@ -220,6 +208,49 @@ class RichArgumentParser(argparse.ArgumentParser):
                 text, end="", soft_wrap=True
             )
 
+def _validate_args(parser, parsed_args):
+    if parsed_args.reformat_names:
+        parser.error('--reformat-names is not supported in this version')
+
+    if parsed_args.orthoxml_tar is not None:
+        parser.error('--orthoxml-tar is not supported in this version; '
+                     'extract the archive and use --orthoxml-glob')
+
+    # check inputs
+    for option, path in (('--oma', parsed_args.oma), ('--species-tree', parsed_args.tree)):
+        if path is not None and not path.is_file():
+            parser.error(f'{option}: input file does not exist or is not a file: {path}')
+
+    # check Glob if provided
+    if parsed_args.orthoxml_glob is not None:
+        matches = glob.glob(parsed_args.orthoxml_glob)
+        if not matches:
+            parser.error('--orthoxml-glob: pattern does not match any input files')
+
+        if any(not Path(path).is_file() for path in matches):
+            parser.error('--orthoxml-glob: pattern must match only input files')
+
+
+    if parsed_args.tax_weights is not None:
+        for suffix in ('.json', '.h5'):
+            path = Path(parsed_args.tax_weights + suffix)
+            if not path.is_file():
+                parser.error(f'--tax-weights: model file does not exist or is not a file: {path}')
+
+    if parsed_args.output_dir.exists() and not parsed_args.output_dir.is_dir():
+        parser.error(f'--output-dir: path is not a directory: {parsed_args.output_dir}')
+
+    for option, value in (('--jobs', parsed_args.njobs),
+                          ('--num-permutations', parsed_args.num_permutations)):
+        if value < 1:
+            parser.error(f'{option} must be greater than zero')
+
+    if parsed_args.min_species < 0:
+        parser.error('--min-species must be nonnegative')
+
+    #if parsed_args.min_events < 0:
+    #    parser.error('--min-events must be nonnegative')
+
 
 def main(argv=None):
     # setup Rich CLI before the parser. This is to provide
@@ -227,37 +258,114 @@ def main(argv=None):
     setup_cli()
     parser = RichArgumentParser(prog="lshbuilder")
 
-    parser.add_argument('--version', action='version',
-                        version=f'%(prog)s {__version__}')
-    parser.add_argument('--taxweights', help='load optimised weights from keras model',type = str)
-    parser.add_argument('--taxmask', help='consider only one branch (e.g. Sauria)',type = str)
-    parser.add_argument('--taxfilter', help='remove these taxa', type = str, nargs='*')
-    parser.add_argument('--outpath', '-o', help='Output directory path', type=Path, required=True)
-    parser.add_argument('--dbtype', help='preconfigured taxonomic ranges', choices=DB_PRESETS)
-    parser.add_argument('--OMA', help='use oma data ', type = str)
-    parser.add_argument('--OrthoGlob', help='a glob expression for orthoxml files ' , type = str)
-    parser.add_argument('--tarfile', help='use tarfile with orthoxml data', type = str)
-    parser.add_argument('--nperm', help='number of hash functions to use when constructing profiles',
+    # Input files
+    # - 'source' is one of three options: OMA DB, tarfile with .orthoxml, or glob
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--oma',
+                        '--OMA', # compatibility option name; to remove
+                        dest='oma',
+                        help='Path to the OMA database file', type=Path)
+    source.add_argument('--orthoxml-glob',
+                        '--OrthoGlob', # compatibility option name; to remove
+                        dest='orthoxml_glob',
+                        type=str,
+                        help='A glob expression for orthoxml files')
+    source.add_argument('--orthoxml-tar',
+                        '--tarfile', # compatibility option name; to remove
+                        dest='orthoxml_tar',
+                        type=Path,
+                        help=argparse.SUPPRESS)
+
+    # - species tree
+    parser.add_argument('--species-tree', '--tree',
+                        '--mastertree', # compatibility option name; to remove
+                        dest='tree',
+                        help='Newick species tree with node names matching the OrthoXML',
+                        type=Path, required=True)
+
+    # Output
+    parser.add_argument('--output-dir', '--output',
+                        '--outpath', # compatibility option name; to remove
+                        '-o',
+                        dest='output_dir',
+                        help='Output directory path', type=Path, required=True)
+
+    # Configuration options
+    parser.add_argument('--tax-weights',
+                        '--taxweights', # compatibility option name; to remove
+                        dest='tax_weights',
+                        help=argparse.SUPPRESS,
+                        type=str
+                        )
+    parser.add_argument('--taxon-mask',
+                        '--taxmask', # compatibility option name; to remove
+                        dest='taxon_mask',
+                        help='Keep only this clade, identified by its tree node name (e.g. Sauria)',
+                        type=str)
+    parser.add_argument('--exclude-taxa',
+                        '--taxfilter', # compatibility option name; to remove
+                        dest='exclude_taxa',
+                        help='Tree node names of clades to exclude',
+                        type=str, nargs='+')
+    parser.add_argument('--min-species',
+                        '--specieslim', # compatibility option name; to remove
+                        dest='min_species',
+                        help='Species threshold: root HOGs must exceed it; subHOGs must meet it',
+                        type=int, default=10)
+    parser.add_argument('--min-events',
+                        '--eventslim', # compatibility option name; to remove
+                        dest='min_events',
+                        help='Keep subHOGs exceeding this loss or duplication count (-1 keeps all)',
+                        type=int, default=0)
+    parser.add_argument('--db-type',
+                        '--dbtype', # compatibility option name; to remove
+                        dest='db_type',
+                        help='Taxonomic range preset; --taxon-mask and --exclude-taxa override it',
+                        choices=DB_PRESETS)
+    parser.add_argument('--num-permutations',
+                        '--nperm', # compatibility option name; to remove
+                        dest='num_permutations',
+                        help='Number of hash functions used to construct each profile',
                         type=int, default=256)
-    parser.add_argument('--mastertree', help='master taxonomic tree. nodes should correspond to orthoxml' , type = str)
-
-    # limits
-    parser.add_argument('--specieslim', help='minimum number of species in a subhog' , type = int, default=10)
-    parser.add_argument('--eventslim', help='minimum number of events (loss/duplication) in a subhog' , type = int, default=0)
-
-    # multiprocessing
-    parser.add_argument('--nthreads', help='[deprecated] Number of threads for multiprocessing', type=int)
-    parser.add_argument("--njobs", help="Number of jobs for multiprocessing", type=int, default=1)
 
     # Flags
-    parser.add_argument('--lossonly', help='only compile loss events', action='store_true')
-    parser.add_argument('--duplonly', help='only compile duplication events', action='store_true')
-    parser.add_argument('--taxcodes', help='use taxid info in HOGs', action='store_true')
-    parser.add_argument('--reformat_names',
-                        help='Correct broken species trees by replacing all names with numbers.',
+    events = parser.add_mutually_exclusive_group()
+    events.add_argument('--loss-only',
+                        '--lossonly',  # compatibility option name; to remove
+                        dest='loss_only',
+                        help='Only compile loss events', action='store_true')
+    events.add_argument('--duplication-only',
+                        '--duplonly', # compatibility option name; to remove
+                        dest='duplication_only',
+                        help='Only compile duplication events', action='store_true')
+    parser.add_argument('--use-tax-ids',
+                        '--taxcodes', # compatibility option name; to remove
+                        dest='use_tax_ids',
+                        help='Match species to tree nodes by NCBI taxon ID instead of species name',
                         action='store_true')
-    parser.add_argument('--slicesubhogs', help='Make profiles for subhogs', action='store_true')
-    parser.add_argument('--verbose', '-v', help='print verbose output', action='store_true')
+    parser.add_argument('--slice-subhogs',
+                        '--slicesubhogs', # compatibility option name; to remove
+                        dest='slice_subhogs',
+                        help='Make profiles for subHOGs', action='store_true')
+
+    # Retain unsupported legacy options only to give an actionable CLI error.
+    parser.add_argument('--reformat-names',
+                        '--reformat_names',
+                        dest='reformat_names',
+                        help=argparse.SUPPRESS,
+                        action='store_true')
+
+    # Other options
+    parser.add_argument('--jobs', '--njobs', '-j',
+        '--nthreads', # compatibility option name; to remove
+        dest="njobs",
+        help="Number of worker processes", type=int, default=1)
+
+    parser.add_argument('--version', action='version',
+                        version=f'%(prog)s {__version__}')
+
+    parser.add_argument('--verbose', '-v', help='Print verbose output', action='store_true')
+
 
     argv = sys.argv[1:] if argv is None else argv
 
@@ -267,20 +375,21 @@ def main(argv=None):
     if parsed_args.verbose:
         setup_cli(verbose=True)
 
-    if not (parsed_args.OMA or parsed_args.OrthoGlob or parsed_args.tarfile):
-        parser.error('Please specify input data with --OMA, --OrthoGlob or --tarfile')
-
-    if parsed_args.reformat_names:
-        parser.error('--reformat_names is not supported in this version')
+    _validate_args(parser, parsed_args)
 
     # Suppress pyham's noisy INFO messages, including during initialization.
     logging.getLogger('pyham').setLevel(logging.WARNING)
 
     print_startup(vars(parsed_args))
 
+    build_args = vars(parsed_args).copy()
+    del build_args['reformat_names']
+    del build_args['orthoxml_tar']
+
     # import and run as late as possible to not stagger CLI
     from hogprof.lshbuilder import run
-    return run(parsed_args)
+    run(**build_args)
+    return 0
 
 
 if __name__ == '__main__':

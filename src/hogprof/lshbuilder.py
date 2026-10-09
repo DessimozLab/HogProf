@@ -8,6 +8,7 @@ import queue
 import random
 import time
 import time as t
+from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
 
@@ -18,7 +19,8 @@ from datasketch import MinHashLSHForest, WeightedMinHashGenerator
 from pyoma.browser import db
 from tables import open_file
 
-from hogprof.cli import DB_PRESETS, track_progress
+from hogprof.cli import track_progress
+from hogprof.presets import DB_PRESETS
 from hogprof.utils import hashutils, phylo, pyhamutils
 from hogprof.utils import orthoxml as oxml
 
@@ -636,85 +638,76 @@ class LSHBuilder:
         return self.hashes_path, self.lshforestpath, self.mat_path
 
 
-def run(parsed_args):
-    """Build profiles from arguments validated by the lightweight CLI."""
+def run(
+    *,
+    output_dir,
+    tree=None,
+    oma=None,
+    orthoxml_glob=None,
+    tax_weights=None,
+    taxon_mask=None,
+    exclude_taxa=None,
+    min_species=10,
+    min_events=0,
+    db_type=None,
+    num_permutations=256,
+    loss_only=False,
+    duplication_only=False,
+    use_tax_ids=False,
+    slice_subhogs=False,
+    njobs=1,
+    verbose=False,
+):
+    if (oma is not None) == (orthoxml_glob is not None):
+        raise ValueError("Supply exactly one of oma and orthoxml_glob")
 
-    taxfilter = None
-    taxmask = None
-    omafile = None
+    if loss_only and duplication_only:
+        raise ValueError("loss_only and duplication_only are mutually exclusive")
 
-    orthoglob = None
-    args = vars(parsed_args)
+    if db_type is not None:
+        preset = DB_PRESETS[db_type]
+        if taxon_mask is None:
+            taxon_mask = preset['taxon_mask']
+        if exclude_taxa is None:
+            exclude_taxa = preset['exclude_taxa']
 
-    if 'OrthoGlob' in args:
-        if args['OrthoGlob']:
-            print("Using orthoxml files from:", args['OrthoGlob'])
-            orthoglob = glob.glob(args['OrthoGlob'])
-    
-    if args['dbtype']:
-        taxfilter = DB_PRESETS[args['dbtype']]['taxfilter']
-        taxmask = DB_PRESETS[args['dbtype']]['taxmask']
-    if args['taxmask']:
-        taxmask = args['taxmask']
-    
-    if args['taxfilter']:
-        taxfilter = args['taxfilter']
-
-    if args['nperm']:
-        nperm = int(args['nperm'])
-    else:
-        nperm = 256
-
-    if args['OMA']:
-        omafile = args['OMA']
-    elif args['tarfile']:
-        omafile = args['tarfile']
-
-    _args = parsed_args
-    output_dir = _args.outpath
-    njobs = _args.njobs
-    if _args.nthreads:
-        logger.warning("--nthreads is deprecated. Please use --njobs")
-        njobs = _args.nthreads
-
-    if args['taxweights']:
+    weights = None
+    if tax_weights is not None:
         from keras.models import model_from_json
-        json_file = open(  args['taxweights']+ '.json', 'r')
-        loaded_model_json = json_file.read()
-        json_file.close()
-        model = model_from_json(loaded_model_json)
-        # load weights into new model
-        model.load_weights(  args['taxweights']+".h5")
+
+        with open(f"{tax_weights}.json") as model_file:
+            model = model_from_json(model_file.read())
+        model.load_weights(f"{tax_weights}.h5")
         logger.info("Loaded model from disk")
-        weights = model.get_weights()[0]
-        weights += 10 ** -10
-    else:
-        weights = None
-    if args['mastertree']:
-        mastertree = Path(args['mastertree'])
-    else:
-        mastertree=None
+        weights = model.get_weights()[0] + 1e-10
 
-    start = time.time()
-    if omafile:
-        with open_file(omafile , mode="r") as h5_oma:
-            lsh_builder = LSHBuilder(h5_oma=h5_oma, fileglob=orthoglob, output_dir=output_dir,
-                                     numperm=nperm,
-                                     treeweights= weights , taxfilter = taxfilter, taxmask=taxmask , masterTree =mastertree ,
-                                     lossonly=_args.lossonly , duplonly = _args.duplonly , use_taxcodes = _args.taxcodes , reformat_names=_args.reformat_names,
-                                     slicesubhogs=_args.slicesubhogs, limit_species=args['specieslim'], limit_events=args['eventslim'],
-                                     verbose=_args.verbose,)
-            lsh_builder.run_pipeline(njobs)
+    # Discover input files from the glob
+    orthoxml_files = None
+    if orthoxml_glob is not None:
+        orthoxml_files = glob.glob(orthoxml_glob)
+        logger.info("Using OrthoXML files from: %s", orthoxml_glob)
 
-    else:
-        lsh_builder = LSHBuilder(h5_oma = None,  fileglob=orthoglob, output_dir=output_dir,
-                                 numperm = nperm,
-                                 treeweights= weights , taxfilter = taxfilter, taxmask=taxmask ,
-                                 masterTree =mastertree , lossonly = _args.lossonly , duplonly = _args.duplonly , use_taxcodes = _args.taxcodes ,
-                                 reformat_names=_args.reformat_names,
-                                 slicesubhogs=_args.slicesubhogs, limit_species=args['specieslim'],
-                                 limit_events=args['eventslim'],
-                                 verbose=_args.verbose)
-        lsh_builder.run_pipeline(njobs)
+    start = time.monotonic()
+    database = open_file(oma, mode="r") if oma is not None else nullcontext(None)
+    with database as h5_oma:
+        lsh_builder = LSHBuilder(
+            h5_oma=h5_oma,
+            fileglob=orthoxml_files,
+            output_dir=Path(output_dir),
+            masterTree=Path(tree) if tree is not None else None,
+            numperm=num_permutations,
+            treeweights=weights,
+            taxfilter=exclude_taxa,
+            taxmask=taxon_mask,
+            lossonly=loss_only,
+            duplonly=duplication_only,
+            use_taxcodes=use_tax_ids,
+            slicesubhogs=slice_subhogs,
+            limit_species=min_species,
+            limit_events=min_events,
+            verbose=verbose,
+        )
+        paths = lsh_builder.run_pipeline(njobs)
 
-    logger.info("Done in %.2fs", time.time() - start)
+    logger.info("Done in %.2fs", time.monotonic() - start)
+    return paths
