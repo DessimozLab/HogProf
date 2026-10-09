@@ -26,9 +26,6 @@ from hogprof.utils import orthoxml as oxml
 
 logger = logging.getLogger(__name__)
 
-random.seed(0)
-np.random.seed(0)
-
 
 class LSHBuilder:
     """
@@ -53,7 +50,8 @@ class LSHBuilder:
                  datetime=datetime.now(),
                  reformat_names=False,
                  slicesubhogs=False,
-                 limit_species=10, limit_events=0):
+                 limit_species=10, limit_events=0,
+                 seed=0):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -74,6 +72,9 @@ class LSHBuilder:
 
         """
         print("\nInitializing LSHBuilder")
+
+        random.seed(seed)
+        np.random.seed(seed)
 
         if h5_oma:
             self.h5OMA = h5_oma
@@ -655,6 +656,7 @@ def run(
     duplication_only=False,
     use_tax_ids=False,
     slice_subhogs=False,
+    seed=0,
     njobs=1,
     verbose=False,
 ):
@@ -705,6 +707,7 @@ def run(
             slicesubhogs=slice_subhogs,
             limit_species=min_species,
             limit_events=min_events,
+            seed=seed,
             verbose=verbose,
         )
         paths = lsh_builder.run_pipeline(njobs)

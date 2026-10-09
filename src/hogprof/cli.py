@@ -93,6 +93,7 @@ def print_startup(args=None, *, output_console: Console = console) -> None:
         table.add_row("Input", source)
         table.add_row("Output", str(args["output_dir"]))
         table.add_row("Workers", str(args["njobs"]))
+        table.add_row("Seed", str(args["seed"]))
 
     output_console.print(
         Panel(table,
@@ -327,6 +328,9 @@ def main(argv=None):
                         dest='num_permutations',
                         help='Number of hash functions used to construct each profile',
                         type=int, default=256)
+    parser.add_argument('--seed',
+                        type=int, default=None,
+                        help="Random seed for reproducibility (default: random)")
 
     # Flags
     events = parser.add_mutually_exclusive_group()
