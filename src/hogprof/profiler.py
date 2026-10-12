@@ -222,35 +222,38 @@ class Profiler:
             famnr = int(self.db_obj.hog_family( entry=hog_entry ) )
             return famnr
 
-    def hog_query(self, hog_id=None, fam_id=None, k=100):
+    def hog_query(self, hog_id=None, fam_id=None, k=10):
         """
         Given a hog_id or a fam_id as a query, returns a dictionary containing the results of the LSH.
         :param hog_id: query hog id
         :param fam_id: query fam id
         :return: list containing the results of the LSH for the given query
         """
+        if (hog_id is None) == (fam_id is None):
+            raise ValueError("Provide either hog_id or fam_id")
 
         if hog_id is not None and not self.slicesubhogs:
             fam_id = hog_id
 
-        #fam2orthoxmlpath = self.fam2orthoxmlpath
-        if self.slicesubhogs:
-            query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5 , nsamples=  self.nsamples, fam2orthoxmlpath = self.fam2orthoxmlpath )
-        else:
-            query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5 , nsamples=self.nsamples)
-
+        fam2orthoxmlpath = self.fam2orthoxmlpath if self.slicesubhogs else None
+        query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5,
+                                             nsamples=self.nsamples,
+                                             fam2orthoxmlpath=fam2orthoxmlpath)
         return self.lshobj.query(query_hash, k)
 
 
-    def hog_query_sorted(self, hog_id=None, fam_id=None , k = 100, fam2orthoxmlpath = None):
+    def hog_query_sorted(self, hog_id=None, fam_id=None, k=10, fam2orthoxmlpath=None):
         """
         Given a hog_id or a fam_id as a query, returns a dictionary containing the results of the LSH.
         :param hog_id: query hog id
         :param fam_id: query fam id
         :return: list containing the results of the LSH for the given query
         """
+        if (hog_id is None) == (fam_id is None):
+            raise ValueError("Provide either hog_id or fam_id")
+
         if hog_id is not None:
-            if  self.slicesubhogs is False:
+            if not self.slicesubhogs:
                 fam_id = self.hogid2fam(hog_id)
             else:
                 ### if a family is query
@@ -262,13 +265,11 @@ class Profiler:
                     family_subhogs_list = [self.subhog_dict[i] for i in family_subhogids_list]
                 ### if a subhog is query
                 else:
-                    fam_id = int(hog_id.split('_')[0])
+                    fam_id = int(hog_id.split("_")[0])
                     family_subhogs_list = [hog_id]
                     family_subhogids_list = [self.subhogname_to_id_dict[hog_id]]
 
-                #fam_id, subhog_dict = self.hogid2fam(hog_id, reverse=True)
-        #if self.slicesubhogs and len(fam_id) == 1:
-        #       fam_id = fam_id[0]
+
         ### case where a family is given as query (including many subfamilies)
         if self.slicesubhogs:
             #print("\nHOG query sorted - Case of sliced subhogs")
@@ -303,19 +304,25 @@ class Profiler:
             subhogsdf['hit_family'] = subhogsdf['hit_subhogid'].map(self.subhogname_to_fam_dict)
             subhogsdf['hit_level'] = subhogsdf['hit_subhogid'].map(self.subhog_to_level_dict)
             subhogsdf = subhogsdf.sort_values(['jaccard', 'query_subhogid', 'hit_family', 'hit_level'], ascending=False)
-            return hogdict, subhogsdf   
+            return hogdict, subhogsdf
         else:
-            query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5 , nsamples=  self.nsamples, fam2orthoxmlpath=fam2orthoxmlpath)
-            results = self.lshobj.query(query_hash, k)
-            hogdict = self.pull_hashes(results)
-            hogdict = { hog: hogdict[hog].jaccard(query_hash) for hog in hogdict  }
-        #print(hogdict)
-        sortedhogs = [(k, v) for k, v in hogdict.items()]
-        sortedhogs = sorted(student_tuples, key=lambda x: x[1])
-        sortedhogs = [ h[0] for h in sortehogs.reverse() ]
-        return hogdict , sortedhogs
+            query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5, nsamples=self.nsamples)
+            closest_hits = [int(x) for x in self.lshobj.query(query_hash, k)]
 
-    def pull_hashes(self , hoglist, fam2orthoxmlpath = None):
+            # pull family hashes
+            fam2hash = lambda fam_id: hashutils.fam2hash_hdf5(fam_id, self.hashes_h5,
+                                                              nsamples=self.nsamples)
+            hit2hash = { hit_id: fam2hash(hit_id) for hit_id in closest_hits }
+
+            # compute jaccard similarity to every hit
+            hit2dist = {
+                hit_id: hit_hash.jaccard(query_hash)
+                for hit_id, hit_hash in hit2hash.items()
+            }
+            sorted_hogs = sorted(hit2dist, key=hit2dist.get, reverse=True)
+            return hit2dist, sorted_hogs
+
+    def pull_hashes(self, hoglist, fam2orthoxmlpath = None):
 
         """
         Given a list of hog_ids , returns a dictionary containing their hashes.
@@ -421,11 +428,15 @@ def main():
         mastertree=args["mastertree"],
     )
     print("\nProfiler object created")
-    # hogdict, sortedhogs = p.hog_query_sorted( hog_id= '0_0_0' , k = 20 )
-    x = p.hog_query(fam_id=133, k=10)
-    print(x)
 
-    hogdict, sortedhogs = p.hog_query_sorted(hog_id=133, k=20)
+    #fam_id = 133
+    #x = p.hog_query(fam_id=fam_id, k=10)
+    #print(x)
+
+    #hog_dict, sorted_hogs = p.hog_query_sorted(hog_id=fam_id, k=15000)
+    #print(hog_dict)
+    #print(sorted_hogs)
+    #print("Done")
     
     #hogdict, sortedhogs = p.hog_query_sorted( hog_id= "XP_015681225" , k = 20 )
     #print(sortedhogs)
