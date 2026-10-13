@@ -174,8 +174,7 @@ def row2hash(row , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     
     return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows'])
 
-def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128, fam2orthoxmlpath = None):
-    #read the stored hash values and return a weighted minhash
+def fam2hash_hdf5(fam, hdf5, dataset=None, nsamples=128):
     """
     Read the stored hash values and return a weighted minhash
     :param fam: hog id
@@ -184,33 +183,8 @@ def fam2hash_hdf5(fam,  hdf5, dataset = None, nsamples = 128, fam2orthoxmlpath =
     :return: minhash1: the weighted hash of your HOG
     """
     if dataset is None:
-        dataset = list(hdf5.keys())[0]
-    ### Athina comment: this here below may need fixing for levels !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ### because fam works as an index only when slicesubhogs=False
-    ### otherwise we need to get to the id again
-    #print(hdf5[dataset][:])
-    #print(fam)
-    if fam2orthoxmlpath is None:
-        hashvalues = np.asarray(hdf5[dataset][fam, :].reshape(nsamples,2 ))
-    else:
-        id2famsubhog_df = pd.read_csv(fam2orthoxmlpath, index_col=0)
-        print(id2famsubhog_df.head())
-        ### Athina note: this part takes a long time! (or not) - may not be working. {1383:[1383],1413:[1413],...}
-        fam_dict = id2famsubhog_df.groupby('fam').apply(lambda x: x.index.tolist()).to_dict()
-        #print(fam_dict)
-        #subhog_dict = id2famsubhog_df.set_index('subhog_id').to_dict(orient='index')
-        if isinstance(fam, int):
-            indices = fam_dict[fam]
-        elif isinstance(fam, list):
-            indices = fam
-        elif isinstance(fam, str):
-            fam_parts = fam.split('_')
-            fam_int = int(fam_parts[0])
-            subhog_str = '_'.join(fam_parts[1:])
-            indices = id2famsubhog_df[(id2famsubhog_df['fam'] == fam_int) & (id2famsubhog_df['subhog_id'] == subhog_str)].index.tolist() 
-        print('recursive call to fam2hash_hdf5')
-        return [fam2hash_hdf5(i, hdf5, dataset, nsamples) for i in indices]
-    #print(hashvalues)
-    hashvalues = hashvalues.astype('int64')
-    minhash1 = datasketch.WeightedMinHash( seed = 1, hashvalues=hashvalues)
+        dataset = next(iter(hdf5.keys()))
+
+    hash_values = np.asarray(hdf5[dataset][fam, :].reshape(nsamples,2 )).astype('int64')
+    minhash1 = datasketch.WeightedMinHash(seed = 1, hashvalues=hash_values)
     return minhash1
