@@ -114,7 +114,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
 
             # Family numbers are assigned by the CLI; verify each number always
             # points to one input family, including repeated rows in levels mode.
-            family_column = "fam" if levels else ""
+            family_column = "hog_key" if levels else ""
             families = {}
             for row, path in zip(rows, mapped_paths):
                 fam = int(row[family_column])
@@ -142,7 +142,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
                 forest = pickle.load(source)
 
             keys = [
-                f"{row['fam']}_{row['subhog_id']}" if levels else row[""]
+                f"{row['hog_key']}_{row['subhog_id']}" if levels else row[""]
                 for row in rows
             ]
             self.assertEqual(len(keys), len(set(keys)))
