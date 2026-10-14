@@ -236,6 +236,12 @@ class LSHBuilder:
         hog_matrix,weighted_hash = hashutils.hash_tree(pyham_tree , self.taxaIndex , self.treeweights , self.wmg)
         return ortho_fam , pyham_tree, weighted_hash,hog_matrix
 
+    def _hog_size_ok(self, hog_size, min_size, max_size):
+        result = (max_size is None or hog_size <= max_size)
+        result &= (min_size is None or hog_size >= min_size)
+        return result
+
+
     def generates_dataframes(self, size=100, minhog_size=10, maxhog_size=None):
         families = {}
         start = -1
@@ -260,12 +266,11 @@ class LSHBuilder:
                     oxml_builder = oxml.OrthoXMLBuilder()
                     ortho_fam = oxml_builder.add_loft_ids(ortho_fam)
 
+                    # filtering by HOG size in the # of species
                     hog_size = oxml.count_species(ortho_fam)
-                    #print(fam, hog_size)
-                    #print(self.idmapper)
-                    ### filtering for size already here (max HOG size and minimum species in HOG)
-                    if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
+                    if self._hog_size_ok(hog_size, minhog_size, maxhog_size):
                         families[fam] = {'ortho': ortho_fam}
+
                     if len(families) >= size:
                         pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                         pd_dataframe['Fam'] = pd_dataframe.index
@@ -287,12 +292,13 @@ class LSHBuilder:
                     #oxml = ET.parse(ortho)
                     #ortho_fam = ET.tostring( next(oxml.iter()), encoding='utf8', method='xml' ).decode()
                     orthostr = ortho.read()
-                    #print(os.path.basename(file),orthostr)
+                    # print(os.path.basename(file),orthostr)
+
+                # filtering by HOG size in the # of species
                 hog_size = orthostr.count('<species name=')
-                #print(os.path.basename(file),hog_size)
-                if (maxhog_size is None or hog_size < maxhog_size) and (minhog_size is None or hog_size > minhog_size):
-                    #print('fam',os.path.basename(file), 'saved')
+                if self._hog_size_ok(hog_size, minhog_size, maxhog_size):
                     families[i] = {'ortho': file}
+
                 if len(families) >= size:
                     pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                     pd_dataframe['Fam'] = pd_dataframe.index
