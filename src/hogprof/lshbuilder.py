@@ -353,6 +353,7 @@ class LSHBuilder:
                         ortho = row["ortho"] if self.fileglob else ""
 
                         result_dict[(row["hog_key"], subhog)] = {
+                            "hog_key": row["hog_key"],
                             "tree": row["tree_dicts"][subhog],
                             "hash": row["hash_dicts"][subhog][1],
                             "ortho": ortho
