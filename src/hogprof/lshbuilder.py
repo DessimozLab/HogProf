@@ -98,6 +98,9 @@ class LSHBuilder:
         self.limit_species = limit_species
         self.limit_events = limit_events
 
+        self.min_hog_size = 0 if self.slicesubhogs else self.limit_species
+        self.max_hog_size = np.inf
+
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -236,13 +239,20 @@ class LSHBuilder:
         hog_matrix,weighted_hash = hashutils.hash_tree(pyham_tree , self.taxaIndex , self.treeweights , self.wmg)
         return ortho_fam , pyham_tree, weighted_hash,hog_matrix
 
-    def _hog_size_ok(self, hog_size, min_size, max_size):
-        result = (max_size is None or hog_size <= max_size)
-        result &= (min_size is None or hog_size >= min_size)
+    def _hog_size_ok(self, hog_size):
+        result = (self.max_hog_size is None or hog_size <= self.max_hog_size)
+        result &= (self.min_hog_size is None or hog_size >= self.min_hog_size)
         return result
 
+    def _check_hog_size(self, orthoxml_file):
+        with open(orthoxml_file) as ortho:
+            ortho_str = ortho.read()
 
-    def generates_dataframes(self, size=100, minhog_size=10, maxhog_size=None):
+        # filtering by HOG size in the # of species
+        hog_size = oxml.count_species(ortho_str)
+        return self._hog_size_ok(hog_size)
+
+    def generates_dataframes(self, size=100):
         families = {}
         start = -1
         if self.h5OMA:
@@ -268,7 +278,7 @@ class LSHBuilder:
 
                     # filtering by HOG size in the # of species
                     hog_size = oxml.count_species(ortho_fam)
-                    if self._hog_size_ok(hog_size, minhog_size, maxhog_size):
+                    if self._hog_size_ok(hog_size):
                         families[fam] = {'ortho': ortho_fam}
 
                     if len(families) >= size:
@@ -282,22 +292,16 @@ class LSHBuilder:
                 yield pd_dataframe
 
         elif self.fileglob:
-            for i,file in enumerate(track_progress(
+            unique_fam_id = 0
+
+            for orthoxml_file in track_progress(
                 self.fileglob,
                 description="Processing OrthoXML files",
                 total=len(self.fileglob),
-            )):
-                with open(file) as ortho:
-                    #print("reading orthoxml file", file)
-                    #oxml = ET.parse(ortho)
-                    #ortho_fam = ET.tostring( next(oxml.iter()), encoding='utf8', method='xml' ).decode()
-                    orthostr = ortho.read()
-                    # print(os.path.basename(file),orthostr)
-
-                # filtering by HOG size in the # of species
-                hog_size = orthostr.count('<species name=')
-                if self._hog_size_ok(hog_size, minhog_size, maxhog_size):
-                    families[i] = {'ortho': file}
+            ):
+                if self._check_hog_size(orthoxml_file):
+                    families[unique_fam_id] = {'ortho': orthoxml_file}
+                    unique_fam_id += 1
 
                 if len(families) >= size:
                     pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
@@ -639,8 +643,7 @@ class LSHBuilder:
     def run_pipeline(self , threads):
         logger.info('Running with %d threads', threads)
         # Levels mode counts represented species on each parsed HOG
-        minhog_size = None if self.slicesubhogs else self.limit_species
-        data_generator = self.generates_dataframes(size=100, minhog_size=minhog_size)
+        data_generator = self.generates_dataframes(size=100)
         self._run_parallel(threads=threads, data_generator=data_generator)
         return self.hashes_path, self.lshforestpath, self.mat_path
 
