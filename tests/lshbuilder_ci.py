@@ -64,14 +64,22 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         with TemporaryDirectory(prefix="hogprof-ci-") as temp_dir:
             work = Path(temp_dir)
             output = work / "output"
+            # Exercise canonical names in root mode and compatibility aliases
+            # in levels mode, using the same output checks for both.
+            source_flag = "--OrthoGlob" if levels else "--orthoxml-glob"
+            tree_flag = "--mastertree" if levels else "--species-tree"
+            output_flag = "--outpath" if levels else "--output-dir"
+            species_flag = "--specieslim" if levels else "--min-species"
+            permutations_flag = "--nperm" if levels else "--num-permutations"
+            jobs_flag = "--njobs" if levels else "--jobs"
             command = [
                 executable,
-                "--OrthoGlob", str(DATA / "splits" / "*.orthoxml"),
-                "--mastertree", str(DATA / "species_tree.nwk"),
-                "--outpath", str(output),
-                "--specieslim", "1",
-                "--nperm", str(NPERM),
-                "--njobs", "2",
+                source_flag, str(DATA / "splits" / "*.orthoxml"),
+                tree_flag, str(DATA / "species_tree.nwk"),
+                output_flag, str(output),
+                species_flag, "1",
+                permutations_flag, str(NPERM),
+                jobs_flag, "2",
             ]
             if levels:
                 # Keep even event-free subHOGs so every input family is represented
