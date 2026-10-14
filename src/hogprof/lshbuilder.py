@@ -260,6 +260,9 @@ class LSHBuilder:
             ### only Fam makes sense here, the rest are OMAmer related fields
             #print(self.h5OMA.root.OrthoXML.Index.colnames)
             self.rows = len(self.groups)
+
+            unique_hog_id = 0
+
             for i, row in enumerate(track_progress(
                 self.groups,
                 description="Processing OMA groups",
@@ -279,16 +282,18 @@ class LSHBuilder:
                     # filtering by HOG size in the # of species
                     hog_size = oxml.count_species(ortho_fam)
                     if self._hog_size_ok(hog_size):
-                        families[fam] = {'ortho': ortho_fam}
+                        families[unique_hog_id] = {'ortho': ortho_fam, 'hog': fam}
+                        unique_hog_id += 1
+
 
                     if len(families) >= size:
                         pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                        pd_dataframe['Fam'] = pd_dataframe.index
+                        pd_dataframe['hog_key'] = pd_dataframe.index
                         yield pd_dataframe
                         families = {}
             if families:
                 pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                pd_dataframe['Fam'] = pd_dataframe.index
+                pd_dataframe['hog_key'] = pd_dataframe.index
                 yield pd_dataframe
 
         elif self.fileglob:
@@ -305,14 +310,14 @@ class LSHBuilder:
 
                 if len(families) >= size:
                     pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                    pd_dataframe['Fam'] = pd_dataframe.index
+                    pd_dataframe['hog_key'] = pd_dataframe.index
                     #print(pd_dataframe)
                     yield pd_dataframe
                     families = {}
 
             if families:
                 pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
-                pd_dataframe['Fam'] = pd_dataframe.index
+                pd_dataframe['hog_key'] = pd_dataframe.index
                 yield pd_dataframe
 
 
@@ -326,13 +331,13 @@ class LSHBuilder:
                 
             if self.slicesubhogs:
                 tree_dicts = []
-                for index, row in df[["Fam", "ortho"]].iterrows():
+                for index, row in df[["hog_key", "ortho"]].iterrows():
                     result = self.HAM_PIPELINE(row)
                     tree_dicts.append(result)
 
                 # Assign the results back to the DataFrame
                 df["tree_dicts"] = tree_dicts
-                df["hash_dicts"] = df[["Fam", "tree_dicts"]].apply(
+                df["hash_dicts"] = df[["hog_key", "tree_dicts"]].apply(
                     self.HASH_PIPELINE, axis=1
                 )
 
@@ -347,7 +352,7 @@ class LSHBuilder:
                         # don't save orthoxml strings if OMA
                         ortho = row["ortho"] if self.fileglob else ""
 
-                        result_dict[(row["Fam"], subhog)] = {
+                        result_dict[(row["hog_key"], subhog)] = {
                             "tree": row["tree_dicts"][subhog],
                             "hash": row["hash_dicts"][subhog][1],
                             "ortho": ortho
@@ -355,16 +360,16 @@ class LSHBuilder:
                 result_dict = pd.DataFrame.from_dict(result_dict, orient="index")
                 result_queue.put(result_dict)
             else:
-                df["tree"] = df[["Fam", "ortho"]].apply(self.HAM_PIPELINE, axis=1)
+                df["tree"] = df[["hog_key", "ortho"]].apply(self.HAM_PIPELINE, axis=1)
                 # add a dictionary of results with subhogs { fam_sub1: { 'tree':tp , 'Fam':fam }  , fam_sub2: { 'tree':tp , 'Fam':fam } , ... }
                 # returned_df = pd.DataFrame.from_dict(df['tree'].to_dict(), orient='index')
                 # merge with pandas on right e.g. df.merge( returned_df , on = 'Fam' , how = 'right' )
 
-                df[["hash", "rows"]] = df[["Fam", "tree"]].apply(self.HASH_PIPELINE, axis=1)
+                df[["hash", "rows"]] = df[["hog_key", "tree"]].apply(self.HASH_PIPELINE, axis=1)
                 if self.fileglob:
-                    result_queue.put(df[["Fam", "hash", "ortho"]])
+                    result_queue.put(df[["hog_key", "hash", "ortho"]])
                 else:
-                    result_queue.put(df[["Fam", "hash"]])
+                    result_queue.put(df[["hog_key", "hash", "hog"]])
 
     
     def _make_tax_str(self):
@@ -390,7 +395,11 @@ class LSHBuilder:
         if frames:
             mapping = pd.concat(frames)
         else:
-            mapping = pd.DataFrame(columns=['Fam', 'ortho'])
+            mapping = pd.DataFrame(columns=['hog_key', 'hog', 'ortho'])
+
+        if not 'hog' in mapping.columns:
+            mapping['hog'] = ''
+
         mapping.to_csv(self.output_dir / 'fam2orthoxml.csv')
 
 
@@ -463,7 +472,9 @@ class LSHBuilder:
 
                         count += len(hashes)
                         if self.fileglob:
-                            mapping_frames.append(this_dataframe[['ortho']])
+                            mapping_frames.append(this_dataframe[['hog_key', 'ortho']])
+                        else:
+                            mapping_frames.append(this_dataframe[['hog_key', 'hog']])
 
                         if hashes and t.time() - save_start > 200:
                             h5hashes.flush()
@@ -471,8 +482,8 @@ class LSHBuilder:
                             logger.debug('Testing forest')
                             logger.debug(forest.query(hashes[fam], k=10))
 
-                            if self.fileglob:
-                                self._save_family_mapping(mapping_frames)
+                            #if self.fileglob:
+                            self._save_family_mapping(mapping_frames)
                             save_start = t.time()
                     else:
                         logger.debug('Saver received an empty result batch')
@@ -483,8 +494,8 @@ class LSHBuilder:
                     self._index_and_save(forest)
 
                     h5hashes.flush()
-                    if self.fileglob:
-                        self._save_family_mapping(mapping_frames)
+                    #if self.fileglob:
+                    self._save_family_mapping(mapping_frames)
 
                     logger.info('Saver wrote %d hashes', count)
                     done = True
@@ -611,7 +622,7 @@ class LSHBuilder:
                     df = pd.read_csv(csv_path, index_col=[0, 1])  # Read first two columns as index
                     #print(df.head())
                     #print(df.size)
-                    df.index.set_names(['fam', 'subhog_id'], inplace=True)  # Set correct names
+                    df.index.set_names(['hog_key', 'subhog_id'], inplace=True)  # Set correct names
                     df.to_csv(csv_path)  # Overwrite with corrected index names
                     #print(df.size)
 
@@ -632,14 +643,7 @@ class LSHBuilder:
 
         logger.info('Pipeline complete')
 
-    def safe_ham(self, row):
-            try:
-                return self.HAM_PIPELINE(row)
-            except Exception as e:
-                if self.verbose:
-                    print(f"Error in HAM_PIPELINE for Fam={row['Fam']}: {e}")
-                return None
-    
+
     def run_pipeline(self , threads):
         logger.info('Running with %d threads', threads)
         # Levels mode counts represented species on each parsed HOG
