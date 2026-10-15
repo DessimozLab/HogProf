@@ -14,6 +14,7 @@ import polars as pl
 import tables
 from pyoma.browser import db
 
+from hogprof.metadata import HogEntry, HogEntryIndex, HogQueryResult, HogQueryHit
 from hogprof.utils import hashutils
 
 np.random.seed(0)
@@ -71,35 +72,7 @@ class Profiler:
         self.fam2orthoxmlpath = f"{os.path.dirname(lshforestpath)}/fam2orthoxml.csv"
 
         self.hog_index = HogEntryIndex(Path(self.fam2orthoxmlpath))
-        self._load_hog_fam_mappings()
 
-        ### special operations for sliced subhogs
-        if self.slicesubhogs:
-            logger.info('Sliced subhogs mode')
-
-            # Reconstruct the subhog_id for each row and create a subhog_dict
-            subhog_dict = self.id2famsubhog_df.apply(lambda x: f"{x['fam']}_{x['subhog_id']}", axis=1).to_dict()
-            self.subhog_dict = subhog_dict
-
-            # Create the reverse dictionary too
-            subhogname_to_id_dict = {subhogname: subhogid for subhogid, subhogname in subhog_dict.items()}
-            self.subhogname_to_id_dict = subhogname_to_id_dict
-
-            # Connect subhognames to fams
-            subhogname_to_fam_dict = {subhog_id: subhog_id.split('_')[0] for subhog_id in subhogname_to_id_dict.keys()}
-            self.subhogname_to_fam_dict = subhogname_to_fam_dict
-
-            # Connect subhogids to levels
-            self.subhog_to_level_dict = {
-                subhog_id: subhog_id.partition('_')[2]
-                for subhog_id in subhogname_to_id_dict.keys()
-            }
-
-            # Connect subhogids to hashids (use default row index as hashids)
-            subhog_to_hashids_dict = {s:h for h, s in self.id2famsubhog_df['subhog_id'].to_dict().items()}
-            self.subhog_to_hashids_dict = subhog_to_hashids_dict
-            
-            
         logger.debug("H5" + str(self.hashes_h5) + " " + str(self.hashes_h5.keys()))
         self.nsamples = nsamples
         
@@ -109,45 +82,6 @@ class Profiler:
 
         logger.debug('Profiler init over')
 
-    def _load_hog_fam_mappings(self):
-        if self.oma:
-            return
-
-        if not self.slicesubhogs:
-            # The CSV index is the builder's HDF5 row ID, not the HOG
-            # number or the position of the CSV record.
-            mapping = pd.read_csv(self.fam2orthoxmlpath, index_col=0)
-            self.hog2fam = {}
-            for family, source in mapping['ortho'].items():
-                hog_name = Path(source).stem
-                if hog_name in self.hog2fam:
-                    raise ValueError(f"Duplicate rootHOG filename stem: {hog_name}")
-                self.hog2fam[hog_name] = int(family)
-            return
-
-
-        #######################################################################################
-        # Get a dictionary of subHOG IDs
-        self.id2famsubhog_df = pd.read_csv(self.fam2orthoxmlpath, index_col=None)
-
-        # Extract the HOG number (string) from subhog_id, e.g. "61_HOG:0099866_474" → HOG:0099866_474
-        self.id2famsubhog_df["hog_num"] = (
-            self.id2famsubhog_df["subhog_id"].str.partition("_")[2]
-        )
-        #self.fam_dict = (
-        #    self.id2famsubhog_df.groupby("hog_num")
-        #    .apply(lambda x: x.index.tolist())
-        #    .to_dict()
-        #)
-        self.hog2fam = dict(zip(self.id2famsubhog_df["hog_num"], self.id2famsubhog_df.index))
-
-        # Create the reverse dictionary too
-        #self.hog2fam = {
-        #    subhogid: fam
-        #    for fam, subhogid_list in self.fam_dict.items()
-        #    for subhogid in subhogid_list
-        #}
-            
     def get_subhogs_of_fam(self, fam_id: int) -> Iterable[int]:
         """
         Returns what sub HOG ID (row numbers in the fam2orthoxml.csv)
@@ -231,21 +165,32 @@ class Profiler:
         if not isinstance(hog_name, str) or not hog_name.startswith('HOG:'):
             raise TypeError("`hog_name` must be a string of format 'HOG:{number}'")
 
-        hog_key = self.resolve_hog_name(hog_name)
-        query_hash = hashutils.fam2hash_hdf5(hog_key, self.hashes_h5, nsamples=self.nsamples)
+        hog = self.hog_index.get_hog_by_hog_id(hog_name)
+        query_hash = hashutils.fam2hash_hdf5(hog.hog_key, self.hashes_h5, nsamples=self.nsamples)
 
         rows = []
         hit_keys = self.forest.query(query_hash, k)
         for hit_key in hit_keys:
+            hit_key = int(hit_key)
 
+            # get hit metadata
+            hit = self.hog_index.get_hog_by_key(hit_key)
+
+            # compute jaccard
+            hit_hash = hashutils.fam2hash_hdf5(hit_key, self.hashes_h5, nsamples=self.nsamples)
+            jaccard = query_hash.jaccard(hit_hash)
+
+            # report
             rows.append(
-                {
-                    "query_hog_id": hog_name,
-                    "hit_family": hit.family,
-                    "jaccard": hit.jaccard,
-                }
+                HogQueryHit(
+                    query_hog_id=hog_name,
+                    hit_hog_id=hit.hog_id,
+                    hit_level=hit.level,
+                    jaccard=jaccard,
+                )
             )
-        return HogQueryResult(pl.DataFrame(rows))
+
+        return HogQueryResult.from_hits(rows)
 
 
     def query_fam(self, fam_id: str, k=10):
@@ -263,6 +208,8 @@ class Profiler:
             HOG_id : [ list of closest neibhbor IDs ]
         }
         """
+        raise NotImplementedError()
+
         if self.slicesubhogs:
             # resolve fam_id -> list of forest key for every subHOG
             subhog_keys = self.get_subhogs_of_fam(fam_id)

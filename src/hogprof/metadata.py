@@ -1,8 +1,18 @@
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import polars as pl
+
+
+@dataclass(frozen=True, slots=True)
+class HogQueryHit:
+    """One HOG similarity search hit"""
+
+    query_hog_id: str
+    hit_hog_id: str
+    hit_level: str
+    jaccard: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -10,6 +20,20 @@ class HogQueryResult:
     """Search results for one or more HOG queries"""
 
     hits: pl.DataFrame
+
+    @classmethod
+    def from_hits(cls, hits: list[HogQueryHit]) -> "HogQueryResult":
+        return cls(
+            pl.DataFrame(
+                [asdict(hit) for hit in hits],
+                schema={
+                    "query_hog_id": pl.String,
+                    "hit_hog_id": pl.String,
+                    "hit_level": pl.String,
+                    "jaccard": pl.Float64,
+                },
+            )
+        )
 
     def __len__(self) -> int:
         return self.hits.height
@@ -70,15 +94,18 @@ class HogEntryIndex:
 
         # make O(1) search indexes
         self._by_key: dict[int, int] = {}
-        self._by_hog_id: dict[str, list[int]] = defaultdict(list)
+        self._by_hog_id: dict[str, int] = {}
         self._by_level: dict[str, list[int]] = defaultdict(list)
 
         for i, (key, _, hog_id, level, _) in enumerate(self._df.iter_rows()):
             if key in self._by_key:
                 raise ValueError(f"Duplicate hog_key: {key}")
-
             self._by_key[key] = i
-            self._by_hog_id[hog_id].append(i)
+
+            if hog_id in self._by_hog_id:
+                raise ValueError(f"Duplicate HOG id: {hog_id}")
+            self._by_hog_id[hog_id] = i
+
             self._by_level[level].append(i)
 
     def __len__(self) -> int:
@@ -87,12 +114,20 @@ class HogEntryIndex:
     def _entry_at(self, i: int) -> HogEntry:
         return HogEntry(*self._df.row(i))
 
-    def get_hog_by_key(self, key: int) -> HogEntry | None:
-        i = self._by_key.get(key)
-        return self._entry_at(i) if i is not None else None
+    def get_hog_by_key(self, key: int) -> HogEntry:
+        if not isinstance(key, int):
+            raise TypeError(f"key must be an integer, got {type(key)}")
 
-    def search_by_hog_id(self, hog_id: str) -> list[HogEntry]:
-        return [self._entry_at(i) for i in self._by_hog_id.get(hog_id, ())]
+        i = self._by_key.get(key)
+        if i is None:
+            raise ValueError(f"Invalid HOG key: {key}")
+        return self._entry_at(i)
+
+    def get_hog_by_hog_id(self, hog_id: str) -> HogEntry:
+        i = self._by_hog_id.get(hog_id)
+        if i is None:
+            raise ValueError(f"Invalid HOG ID: {hog_id}")
+        return self._entry_at(i)
 
     def search_by_level(self, level: str) -> list[HogEntry]:
         return [self._entry_at(i) for i in self._by_level.get(level, ())]
