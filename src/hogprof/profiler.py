@@ -9,12 +9,10 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-import pandas as pd
-import polars as pl
 import tables
 from pyoma.browser import db
 
-from hogprof.metadata import HogEntry, HogEntryIndex, HogQueryResult, HogQueryHit
+from hogprof.metadata import HogEntry, HogEntryIndex, HogQueryHit, HogQueryResult
 from hogprof.utils import hashutils
 
 np.random.seed(0)
@@ -157,15 +155,34 @@ class Profiler:
             entry = self.db_obj.entry_by_entry_nr(self.db_obj.id_resolver.resolve(hog_name))
             return int(self.db_obj.hog_family(entry=entry))
 
+    def _get_hog_of_level(self, hog_entries: list[HogEntry], level: str) -> HogEntry:
+        for h in hog_entries:
+            if h.level == level:
+                return h
 
-    def query_hog(self, hog_name: str, k: int = 10) -> HogQueryResult:
+        raise ValueError(f"Cannot find the HOG at level {level}")
+
+
+    def query_hog(self, hog_name: str, level=None, k: int = 10) -> HogQueryResult:
         """
         Query the LSH index directly. `hog_id` MUST be a forest key
         """
         if not isinstance(hog_name, str) or not hog_name.startswith('HOG:'):
             raise TypeError("`hog_name` must be a string of format 'HOG:{number}'")
 
-        hog = self.hog_index.get_hog_by_hog_id(hog_name)
+        hogs = self.hog_index.get_hog_by_hog_id(hog_name)
+        if len(hogs) == 0:
+            raise ValueError(f"Unknown HOG identifier: {hog_name!r}")
+
+        if len(hogs) > 1:
+            if not level:
+                levels = [h.level for h in hogs]
+                raise ValueError(f"{hog_name} exists at different levels: {levels}. Please indicate a level")
+
+            hog = self._get_hog_of_level(hogs, level)
+        else:
+            hog = hogs[0]
+
         query_hash = hashutils.fam2hash_hdf5(hog.hog_key, self.hashes_h5, nsamples=self.nsamples)
 
         rows = []
@@ -190,7 +207,9 @@ class Profiler:
                 )
             )
 
-        return HogQueryResult.from_hits(rows)
+        hqr = HogQueryResult.from_hits(rows)
+        hqr.hits.sort("jaccard", descending=True)
+        return hqr
 
 
     def query_fam(self, fam_id: str, k=10):
@@ -248,80 +267,7 @@ class Profiler:
             raise ValueError("Provide either hog_id or fam_id")
 
 
-    def hog_query_sorted(self, hog_id=None, fam_id=None, k=10, fam2orthoxmlpath=None) -> HogQueryResult:
-        """
-        Given a hog_id or a fam_id as a query, returns a dictionary containing the results of the LSH.
-        :param hog_id: query hog id
-        :param fam_id: query fam id
-        :return: list containing the results of the LSH for the given query
-        """
-        if (hog_id is None) == (fam_id is None):
-            raise ValueError("Provide either hog_id or fam_id")
-
-        if self.slicesubhogs:
-            query_id = hog_id if hog_id is not None else fam_id
-            if isinstance(query_id, (int, np.integer)) and query_id not in self.fam_dict:
-                return {}, pd.DataFrame()
-            family_subhogids_list, _ = self.hogid2fam(query_id)
-            fam_id = self.hog2fam[family_subhogids_list[0]]
-        else:
-            fam_id = self.hogid2fam(hog_id if hog_id is not None else fam_id)
-
-
-        ### case where a family is given as query (including many subfamilies)
-        if self.slicesubhogs:
-            #print("\nHOG query sorted - Case of sliced subhogs")
-            #print(hog_id,'first fam_id', fam_id[0]) # family, [index1, index2, ...]
-            query_hashes_dict = {i:hashutils.fam2hash_hdf5(i, self.hashes_h5 , nsamples=  self.nsamples) 
-                        for i in family_subhogids_list}
-            #print('query_hashes',list(query_hashes_dict.keys())[0],query_hashes_dict[list(query_hashes_dict.keys())[0]]) # index1: hash1, index2: hash2, ...
-            ### works without filtering
-            results_dict = {fam: self.forest.query(query_hash, k) for fam, query_hash in query_hashes_dict.items()}
-            #print('results',list(results_dict.keys())[0],'first result hogid',results_dict[list(results_dict.keys())[0]][0]) # index1: results1, index2: results2, ...
-            ### the line below is not optimised!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            hogdict = { fam: self.pull_hashes(results, fam2orthoxmlpath=fam2orthoxmlpath) for fam, results in results_dict.items() }
-            #print('hogdict',list(hogdict.keys())[0],'first result: 0_0_0',hogdict[list(hogdict.keys())[0]]['0_0_0']) # {index1:{hitsubhog1:hash1, hitsubhog2:hash2, ...}, index2:{subhog1:hash1, subhog2:hash2, ...}, ...}             
-            hogdict = { fam: { subhog: hogdict[fam][subhog].jaccard(query_hashes_dict[fam]) for subhog in hogdict[fam] } for fam in hogdict }
-            #print('hogdict',list(hogdict.keys())[0],'first result: 0_0_0',hogdict[list(hogdict.keys())[0]]['0_0_0']) # {index1: jaccard1, index2: jaccard2, ...}
-
-            ### making df instead of sorted list to include family info
-            data = []
-            for index, hit_dict in hogdict.items():
-                for subhoghit, jaccard in hit_dict.items():
-                    data.append({
-                        'query_subhogid': self.subhog_dict[index],
-                        'hit_subhogid': subhoghit,
-                        'jaccard': jaccard
-                    })
-            subhogsdf = pd.DataFrame(data, columns=['query_subhogid', 'hit_subhogid', 'jaccard'])
-            subhogsdf['query_family'] = fam_id
-            #print(subhogsdf.head())
-            # Add query_family and query_level columns using the dictionaries
-            subhogsdf['query_level'] = subhogsdf['query_subhogid'].map(self.subhog_to_level_dict)
-            # Add hit_family and hit_level columns using the dictionaries
-            subhogsdf['hit_family'] = subhogsdf['hit_subhogid'].map(self.subhogname_to_fam_dict)
-            subhogsdf['hit_level'] = subhogsdf['hit_subhogid'].map(self.subhog_to_level_dict)
-            subhogsdf = subhogsdf.sort_values(['jaccard', 'query_subhogid', 'hit_family', 'hit_level'], ascending=False)
-            return hogdict, subhogsdf
-        else:
-            query_hash = hashutils.fam2hash_hdf5(fam_id, self.hashes_h5, nsamples=self.nsamples)
-            closest_hits = [int(x) for x in self.forest.query(query_hash, k)]
-
-            # pull family hashes
-            fam2hash = lambda fam_id: hashutils.fam2hash_hdf5(fam_id, self.hashes_h5,
-                                                              nsamples=self.nsamples)
-            hit2hash = { hit_id: fam2hash(hit_id) for hit_id in closest_hits }
-
-            # compute jaccard similarity to every hit
-            hit2dist = {
-                hit_id: hit_hash.jaccard(query_hash)
-                for hit_id, hit_hash in hit2hash.items()
-            }
-            sorted_hogs = sorted(hit2dist, key=hit2dist.get, reverse=True)
-            return hit2dist, sorted_hogs
-
     def pull_hashes(self, hoglist, fam2orthoxmlpath = None):
-
         """
         Given a list of hog_ids , returns a dictionary containing their hashes.
         This uses the hdf5 file to get the hashvalues
@@ -433,6 +379,10 @@ def main():
 
     hog_id = "HOG:0016206_1"
     x = p.query_hog(hog_id)
+    print(x)
+
+    hog_id = "HOG:0015853.1q_4"
+    #x = p.query_hog(hog_id, level="Archosauria")
     print(x)
 
     #hog_dict, sorted_hogs = p.hog_query_sorted(hog_id=fam_id, k=15000)

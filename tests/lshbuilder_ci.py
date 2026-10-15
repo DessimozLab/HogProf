@@ -17,10 +17,12 @@ from tempfile import TemporaryDirectory
 
 import h5py
 import numpy as np
+import polars as pl
 from datasketch import WeightedMinHash
 from ete3 import Tree
 
 from hogprof.metadata import HogEntryIndex
+from hogprof.profiler import Profiler
 
 DATA = Path(__file__).resolve().parent / "data" / "micro_birds"
 NS = {"o": "http://orthoXML.org/2011/"}
@@ -46,8 +48,47 @@ class LshbuilderIntegrationTest(unittest.TestCase):
     def test_root_families(self):
         self.build_and_check(levels=False)
 
+        work = self._get_work_dir()
+        output = work / "output"
+
+        p = Profiler(
+            lshforestpath=output / "newlshforest.pkl",
+            hashes_h5=output / "hashes.h5",
+            nsamples=NPERM,
+        )
+        hog_id = "HOG:0016206_1"
+        result = p.query_hog(hog_id, k=3)
+        self.assertEqual(len(result), 3)
+
+        self.assertTrue(result.hits.select((pl.col("hit_hog_id") == "HOG:0016019_4").any()).item())
+        self.assertFalse(
+            result.hits.select((pl.col("hit_hog_id") == "HOG:0015853_1").any()).item()
+        )
+
     def test_subhog_families(self):
         self.build_and_check(levels=True)
+
+        work = self._get_work_dir()
+        output = work / "output"
+
+        p = Profiler(
+            lshforestpath=output / "newlshforest.pkl",
+            hashes_h5=output / "hashes.h5",
+            nsamples=NPERM,
+        )
+        hog_id = "HOG:0015853.1q_4"
+        result = p.query_hog(hog_id, level="Archosauria")
+        self.assertEqual(len(result), 10)
+
+        self.assertTrue(result.hits.select((pl.col("hit_hog_id") == "HOG:0015853.1b_2").any()).item())
+        self.assertFalse(
+            result.hits.select((pl.col("hit_hog_id") == "HOG:0015853_1").any()).item()
+        )
+
+    def _get_work_dir(self):
+        if not hasattr(self, "work_dir"):
+            self.work_dir = TemporaryDirectory(prefix="hogprof-ci-")
+        return Path(self.work_dir.name)
 
     def build_and_check(self, *, levels):
 
@@ -63,116 +104,115 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         expected_families = {family_id(path) for path in inputs}
         self.assertEqual(len(inputs), len(expected_families))
 
-        with TemporaryDirectory(prefix="hogprof-ci-") as temp_dir:
-            work = Path(temp_dir)
-            output = work / "output"
-            # Exercise canonical names in root mode and compatibility aliases
-            # in levels mode, using the same output checks for both.
-            source_flag = "--OrthoGlob" if levels else "--orthoxml-glob"
-            tree_flag = "--mastertree" if levels else "--species-tree"
-            output_flag = "--outpath" if levels else "--output-dir"
-            species_flag = "--specieslim" if levels else "--min-species"
-            permutations_flag = "--nperm" if levels else "--num-permutations"
-            jobs_flag = "--njobs" if levels else "--jobs"
-            command = [
-                executable,
-                source_flag, str(DATA / "splits" / "*.orthoxml"),
-                tree_flag, str(DATA / "species_tree.nwk"),
-                output_flag, str(output),
-                species_flag, "1",
-                permutations_flag, str(NPERM),
-                jobs_flag, "2",
-            ]
-            if levels:
-                # Keep even event-free subHOGs so every input family is represented
-                command += ["--slicesubhogs", "--eventslim", "-1"]
-            result = subprocess.run(
-                command, cwd=work, capture_output=True, text=True, timeout=120,
-                check=False,
-                env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
-            )
-            # check success
-            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        work = self._get_work_dir()
+        output = work / "output"
+        # Exercise canonical names in root mode and compatibility aliases
+        # in levels mode, using the same output checks for both.
+        source_flag = "--OrthoGlob" if levels else "--orthoxml-glob"
+        tree_flag = "--mastertree" if levels else "--species-tree"
+        output_flag = "--outpath" if levels else "--output-dir"
+        species_flag = "--specieslim" if levels else "--min-species"
+        permutations_flag = "--nperm" if levels else "--num-permutations"
+        jobs_flag = "--njobs" if levels else "--jobs"
+        command = [
+            executable,
+            source_flag, str(DATA / "splits" / "*.orthoxml"),
+            tree_flag, str(DATA / "species_tree.nwk"),
+            output_flag, str(output),
+            species_flag, "1",
+            permutations_flag, str(NPERM),
+            jobs_flag, "2",
+        ]
+        if levels:
+            # Keep even event-free subHOGs so every input family is represented
+            command += ["--slicesubhogs", "--eventslim", "-1"]
+        result = subprocess.run(
+            command, cwd=work, capture_output=True, text=True, timeout=120,
+            check=False,
+            env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
+        )
+        # check success
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
-            for name in OUTPUT_FILES:
-                with self.subTest(output=name):
-                    path = output / name
-                    self.assertTrue(path.is_file(), f"Missing {path}\n{result.stderr}")
-                    self.assertGreater(path.stat().st_size, 0, f"Empty {path}")
+        for name in OUTPUT_FILES:
+            with self.subTest(output=name):
+                path = output / name
+                self.assertTrue(path.is_file(), f"Missing {path}\n{result.stderr}")
+                self.assertGreater(path.stat().st_size, 0, f"Empty {path}")
 
-            ############ Check outputs ############
-            with (output / "fam2orthoxml.csv").open(newline="") as source:
-                reader = csv.DictReader(source)
-                self.assertEqual(list(HogEntryIndex.COLUMNS), reader.fieldnames)
-                rows = list(reader)
+        ############ Check outputs ############
+        with (output / "fam2orthoxml.csv").open(newline="") as source:
+            reader = csv.DictReader(source)
+            self.assertEqual(list(HogEntryIndex.COLUMNS), reader.fieldnames)
+            rows = list(reader)
 
-            self.assertTrue(rows, "The family mapping must not be empty")
-            mapped_paths = [Path(row["source"]).resolve() for row in rows]
+        self.assertTrue(rows, "The family mapping must not be empty")
+        mapped_paths = [Path(row["source"]).resolve() for row in rows]
 
-            self.assertEqual(set(inputs), set(mapped_paths))
-            self.assertEqual(expected_families, {family_id(path) for path in mapped_paths})
+        self.assertEqual(set(inputs), set(mapped_paths))
+        self.assertEqual(expected_families, {family_id(path) for path in mapped_paths})
 
-            # for the default mode, the number of files = len(mapping)
+        # for the default mode, the number of files = len(mapping)
+        if not levels:
+            self.assertEqual(Counter(inputs), Counter(mapped_paths))
+
+        # Every retained profile has a unique key; subHOGs share fam_id.
+        families = {}
+        for row, path in zip(rows, mapped_paths):
+            fam = row["fam_id"]
+            self.assertEqual(path, families.setdefault(fam, path))
+            self.assertEqual(path.stem, fam)
+            self.assertTrue(row["hog_id"].startswith("HOG:"))
             if not levels:
-                self.assertEqual(Counter(inputs), Counter(mapped_paths))
+                self.assertEqual(fam, row["hog_id"])
 
-            # Every retained profile has a unique key; subHOGs share fam_id.
-            families = {}
-            for row, path in zip(rows, mapped_paths):
-                fam = row["fam_id"]
-                self.assertEqual(path, families.setdefault(fam, path))
-                self.assertEqual(path.stem, fam)
-                self.assertTrue(row["hog_id"].startswith("HOG:"))
-                if not levels:
-                    self.assertEqual(fam, row["hog_id"])
+        self.assertEqual(expected_families, set(families))
+        index = HogEntryIndex(output / "fam2orthoxml.csv")
+        self.assertEqual(len(rows), len(index))
+        if levels:
+            self.assertGreater(len(rows), len(inputs))
+            self.assertEqual(list(range(len(rows))), [int(row["hog_key"]) for row in rows])
 
-            self.assertEqual(expected_families, set(families))
-            index = HogEntryIndex(output / "fam2orthoxml.csv")
-            self.assertEqual(len(rows), len(index))
-            if levels:
-                self.assertGreater(len(rows), len(inputs))
-                self.assertEqual(list(range(len(rows))), [int(row["hog_key"]) for row in rows])
+        with (output / "taxaIndex.pkl").open("rb") as source:
+            taxa = pickle.load(source)
 
-            with (output / "taxaIndex.pkl").open("rb") as source:
-                taxa = pickle.load(source)
+        tree = Tree(
+            str(output / "master_tree.corrected.nwk"),
+            format=1, quoted_node_names=True,
+        )
+        self.assertEqual({node.name for node in tree.traverse()}, set(taxa))
+        self.assertEqual(len(taxa), len(set(taxa.values())))
 
-            tree = Tree(
-                str(output / "master_tree.corrected.nwk"),
-                format=1, quoted_node_names=True,
-            )
-            self.assertEqual({node.name for node in tree.traverse()}, set(taxa))
-            self.assertEqual(len(taxa), len(set(taxa.values())))
+        with (output / "wmg.pkl").open("rb") as source:
+            generator = pickle.load(source)
 
-            with (output / "wmg.pkl").open("rb") as source:
-                generator = pickle.load(source)
+        self.assertEqual(NPERM, generator.sample_size)
+        self.assertEqual(3 * (max(taxa.values()) + 1), generator.dim)
 
-            self.assertEqual(NPERM, generator.sample_size)
-            self.assertEqual(3 * (max(taxa.values()) + 1), generator.dim)
+        with (output / "newlshforest.pkl").open("rb") as source:
+            forest = pickle.load(source)
 
-            with (output / "newlshforest.pkl").open("rb") as source:
-                forest = pickle.load(source)
+        keys = [row["hog_key"] for row in rows]
+        self.assertEqual(len(keys), len(set(keys)))
+        self.assertEqual(set(keys), set(forest.keys))
+        self.assertFalse(forest.is_empty())
 
-            keys = [row["hog_key"] for row in rows]
-            self.assertEqual(len(keys), len(set(keys)))
-            self.assertEqual(set(keys), set(forest.keys))
-            self.assertFalse(forest.is_empty())
+        with h5py.File(output / "hashes.h5", "r") as hashes:
+            self.assertEqual(["NoFilterNoMask"], list(hashes))
+            dataset = hashes["NoFilterNoMask"]
+            self.assertEqual(2 * NPERM, dataset.shape[1])
+            self.assertGreaterEqual(dataset.shape[0], len(keys))
 
-            with h5py.File(output / "hashes.h5", "r") as hashes:
-                self.assertEqual(["NoFilterNoMask"], list(hashes))
-                dataset = hashes["NoFilterNoMask"]
-                self.assertEqual(2 * NPERM, dataset.shape[1])
-                self.assertGreaterEqual(dataset.shape[0], len(keys))
+            for row, key in zip(rows, keys):
+                hash_row = int(row["hog_key"])
 
-                for row, key in zip(rows, keys):
-                    hash_row = int(row["hog_key"])
+                # Match the int64 representation used by datasketch and
+                # HogProf's hash reader (HDF5 stores compact int32 values).
+                values = dataset[hash_row].reshape(NPERM, 2).astype(np.int64)
+                self.assertTrue(np.any(values), f"Missing hash for {key}")
 
-                    # Match the int64 representation used by datasketch and
-                    # HogProf's hash reader (HDF5 stores compact int32 values).
-                    values = dataset[hash_row].reshape(NPERM, 2).astype(np.int64)
-                    self.assertTrue(np.any(values), f"Missing hash for {key}")
-
-                    hashed = WeightedMinHash(seed=generator.seed, hashvalues=values)
-                    self.assertIn(key, forest.query(hashed, k=len(keys)))
+                hashed = WeightedMinHash(seed=generator.seed, hashvalues=values)
+                self.assertIn(key, forest.query(hashed, k=len(keys)))
 
 
 if __name__ == "__main__":

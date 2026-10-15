@@ -353,6 +353,7 @@ class LSHBuilder:
                     for subhog in row["hash_dicts"]:
                         level = row["tree_dicts"][subhog].name
                         hashed = row["hash_dicts"][subhog][1]
+
                         rows.append(
                             {
                                 "hog_key": row["hog_key"],

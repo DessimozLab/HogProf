@@ -23,17 +23,16 @@ class HogQueryResult:
 
     @classmethod
     def from_hits(cls, hits: list[HogQueryHit]) -> "HogQueryResult":
-        return cls(
-            pl.DataFrame(
-                [asdict(hit) for hit in hits],
-                schema={
-                    "query_hog_id": pl.String,
-                    "hit_hog_id": pl.String,
-                    "hit_level": pl.String,
-                    "jaccard": pl.Float64,
-                },
-            )
+        df = pl.DataFrame(
+            [asdict(hit) for hit in hits],
+            schema={
+                "query_hog_id": pl.String,
+                "hit_hog_id": pl.String,
+                "hit_level": pl.String,
+                "jaccard": pl.Float64,
+            },
         )
+        return cls(df.sort("jaccard", descending=True))
 
     def __len__(self) -> int:
         return self.hits.height
@@ -94,7 +93,7 @@ class HogEntryIndex:
 
         # make O(1) search indexes
         self._by_key: dict[int, int] = {}
-        self._by_hog_id: dict[str, int] = {}
+        self._by_hog_id: dict[str, list[int]] = defaultdict(list)
         self._by_level: dict[str, list[int]] = defaultdict(list)
 
         for i, (key, _, hog_id, level, _) in enumerate(self._df.iter_rows()):
@@ -102,10 +101,7 @@ class HogEntryIndex:
                 raise ValueError(f"Duplicate hog_key: {key}")
             self._by_key[key] = i
 
-            if hog_id in self._by_hog_id:
-                raise ValueError(f"Duplicate HOG id: {hog_id}")
-            self._by_hog_id[hog_id] = i
-
+            self._by_hog_id[hog_id].append(i)
             self._by_level[level].append(i)
 
     def __len__(self) -> int:
@@ -123,11 +119,8 @@ class HogEntryIndex:
             raise ValueError(f"Invalid HOG key: {key}")
         return self._entry_at(i)
 
-    def get_hog_by_hog_id(self, hog_id: str) -> HogEntry:
-        i = self._by_hog_id.get(hog_id)
-        if i is None:
-            raise ValueError(f"Invalid HOG ID: {hog_id}")
-        return self._entry_at(i)
+    def get_hog_by_hog_id(self, hog_id: str) -> list[HogEntry]:
+        return [self._entry_at(i) for i in self._by_hog_id.get(hog_id, ())]
 
     def search_by_level(self, level: str) -> list[HogEntry]:
         return [self._entry_at(i) for i in self._by_level.get(level, ())]
