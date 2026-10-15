@@ -20,6 +20,8 @@ import numpy as np
 from datasketch import WeightedMinHash
 from ete3 import Tree
 
+from hogprof.metadata import HogEntryIndex
+
 DATA = Path(__file__).resolve().parent / "data" / "micro_birds"
 NS = {"o": "http://orthoXML.org/2011/"}
 NPERM = 32
@@ -100,10 +102,12 @@ class LshbuilderIntegrationTest(unittest.TestCase):
 
             ############ Check outputs ############
             with (output / "fam2orthoxml.csv").open(newline="") as source:
-                rows = list(csv.DictReader(source))
+                reader = csv.DictReader(source)
+                self.assertEqual(list(HogEntryIndex.COLUMNS), reader.fieldnames)
+                rows = list(reader)
 
             self.assertTrue(rows, "The family mapping must not be empty")
-            mapped_paths = [Path(row["ortho"]).resolve() for row in rows]
+            mapped_paths = [Path(row["source"]).resolve() for row in rows]
 
             self.assertEqual(set(inputs), set(mapped_paths))
             self.assertEqual(expected_families, {family_id(path) for path in mapped_paths})
@@ -112,15 +116,22 @@ class LshbuilderIntegrationTest(unittest.TestCase):
             if not levels:
                 self.assertEqual(Counter(inputs), Counter(mapped_paths))
 
-            # Family numbers are assigned by the CLI; verify each number always
-            # points to one input family, including repeated rows in levels mode.
-            family_column = "hog_key" if levels else ""
+            # Every retained profile has a unique key; subHOGs share fam_id.
             families = {}
             for row, path in zip(rows, mapped_paths):
-                fam = int(row[family_column])
+                fam = row["fam_id"]
                 self.assertEqual(path, families.setdefault(fam, path))
+                self.assertEqual(path.stem, fam)
+                self.assertTrue(row["hog_id"].startswith("HOG:"))
+                if not levels:
+                    self.assertEqual(fam, row["hog_id"])
 
-            self.assertEqual(set(range(len(inputs))), set(families))
+            self.assertEqual(expected_families, set(families))
+            index = HogEntryIndex(output / "fam2orthoxml.csv")
+            self.assertEqual(len(rows), len(index))
+            if levels:
+                self.assertGreater(len(rows), len(inputs))
+                self.assertEqual(list(range(len(rows))), [int(row["hog_key"]) for row in rows])
 
             with (output / "taxaIndex.pkl").open("rb") as source:
                 taxa = pickle.load(source)
@@ -141,10 +152,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
             with (output / "newlshforest.pkl").open("rb") as source:
                 forest = pickle.load(source)
 
-            keys = [
-                f"{row['hog_key']}_{row['subhog_id']}" if levels else row[""]
-                for row in rows
-            ]
+            keys = [row["hog_key"] for row in rows]
             self.assertEqual(len(keys), len(set(keys)))
             self.assertEqual(set(keys), set(forest.keys))
             self.assertFalse(forest.is_empty())
@@ -155,8 +163,8 @@ class LshbuilderIntegrationTest(unittest.TestCase):
                 self.assertEqual(2 * NPERM, dataset.shape[1])
                 self.assertGreaterEqual(dataset.shape[0], len(keys))
 
-                for index, (row, key) in enumerate(zip(rows, keys)):
-                    hash_row = index if levels else int(row[""])
+                for row, key in zip(rows, keys):
+                    hash_row = int(row["hog_key"])
 
                     # Match the int64 representation used by datasketch and
                     # HogProf's hash reader (HDF5 stores compact int32 values).

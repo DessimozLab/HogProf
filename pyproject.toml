@@ -23,6 +23,7 @@ dependencies = [
   "lxml",
   "numpy",
   "pandas",
+  "polars",
   "pyham>=1.1.10",
   "pyoma>=0.14.2",
   "rich",
