@@ -316,7 +316,7 @@ def main(argv=None):
     parser.add_argument('--min-events',
                         '--eventslim', # compatibility option name; to remove
                         dest='min_events',
-                        help='Keep subHOGs exceeding this loss or duplication count (-1 keeps all)',
+                        help='Minimal number of loss or duplication events for a subHOG to consider it',
                         type=int, default=0)
     parser.add_argument('--db-type',
                         '--dbtype', # compatibility option name; to remove
