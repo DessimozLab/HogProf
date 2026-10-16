@@ -1,9 +1,7 @@
-import argparse
 import logging
 import os
 import pickle
 import random
-import sys
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -11,7 +9,6 @@ import h5py
 import numpy as np
 import tables
 from pyoma.browser import db
-from rich.console import Console
 
 from hogprof.metadata import HogEntry, HogEntryIndex, HogQueryHit, HogQueryResult
 from hogprof.utils import hashutils
@@ -19,7 +16,6 @@ from hogprof.utils import hashutils
 np.random.seed(0)
 random.seed(0)
 logger = logging.getLogger(__name__)
-stdout = Console(stderr=True)
 
 
 class Profiler:
@@ -334,7 +330,4 @@ def run_search(index_dir: Path,
         nsamples=nsamples,
         slicesubhogs=slice_subhogs,
     )
-    result = p.query_hog(hog_id, level=level, k=k)
-
-    # results are printed to stdout not logging
-    print(result.hits)
+    return p.query_hog(hog_id, level=level, k=k).hits

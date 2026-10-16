@@ -9,6 +9,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import TypeVar
 
+import polars as pl
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.panel import Panel
@@ -186,6 +187,32 @@ def track_progress(
             description, count, time.monotonic() - start,
         )
 
+
+def print_search_result(df: pl.DataFrame) -> None:
+    """Pretty print for `hogprof search` results"""
+    stdout = Console(file=sys.stdout)
+
+    if not stdout.is_terminal:
+        df.write_csv(sys.stdout, separator="\t")
+        return
+
+    table = Table(show_header=True, header_style="bold cyan", show_lines=False)
+
+    for column in df.columns:
+        table.add_column(
+            column,
+            justify="right" if df.schema[column].is_numeric() else "left",
+        )
+
+    for row in df.iter_rows():
+        table.add_row(*(
+            f"{value:.4f}" if isinstance(value, float)
+            else "—" if value is None
+            else str(value)
+            for value in row
+        ))
+
+    stdout.print(table)
 
 
 class RichArgumentParser(argparse.ArgumentParser):
@@ -414,7 +441,8 @@ def run_search(parsed_args):
     del search_args["func"]
 
     from hogprof.profiler import run_search
-    run_search(**search_args)
+    results = run_search(**search_args)
+    print_search_result(results)
 
 
 def main(argv=None):
