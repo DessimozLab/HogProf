@@ -355,7 +355,7 @@ def add_build_arguments(parser):
 
     # Other options
     parser.add_argument('--jobs', '--njobs', '-j',
-        '--nthreads',  # compatibility option name; to remove
+                        '--nthreads',  # compatibility option name; to remove
                         dest="njobs",
                         help="Number of worker processes", type=int, default=1)
 
@@ -363,10 +363,26 @@ def add_build_arguments(parser):
     return parser
 
 
-def add_query_arguments(parser):
-
-    # ...
-
+def add_search_arguments(parser):
+    parser.add_argument("hog_id",
+                        help="HOG ID for similarity search",
+                        type=str),
+    parser.add_argument("--k", "-k",
+                        help="Number of nearest neighbors to consider",
+                        type=int, default=10)
+    parser.add_argument("--level",
+                        help="Taxonomic level at which the query is defined."
+                             "Used for ambiguous HOG names defined at"
+                             "multiple levels.",
+                        type=str)
+    parser.add_argument("--index-dir",
+                        help="Directory containing HogProf index files. "
+                             "Produced by `build`", type=str, required=True)
+    parser.add_argument("--oma", help="Path to OmaServer.h5 file", type=str)
+    parser.add_argument("--nsamples", help="no of samples", type=int, default=256)
+    parser.add_argument("--slice-subhogs",
+                        help="Use slice_subhogs mode",
+                        action="store_true")
     return parser
 
 
@@ -391,7 +407,15 @@ def run_build(parsed_args):
 
 
 def run_search(parsed_args):
-    console.print("The search command is not implemented yet.")
+    setup_cli(verbose=False)
+
+    search_args = vars(parsed_args).copy()
+    del search_args["command"]
+    del search_args["func"]
+
+    from hogprof.profiler import run_search
+    run_search(**search_args)
+
 
 def main(argv=None):
     # setup Rich CLI before the parser. This is to provide
@@ -413,7 +437,7 @@ def main(argv=None):
 
     # set up the `search` command
     search_parser = subparsers.add_parser("search", help="Query an LSH index")
-    add_query_arguments(search_parser)
+    add_search_arguments(search_parser)
     search_parser.set_defaults(func=run_search)
 
     # parse and go

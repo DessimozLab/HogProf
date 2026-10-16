@@ -11,6 +11,7 @@ import h5py
 import numpy as np
 import tables
 from pyoma.browser import db
+from rich.console import Console
 
 from hogprof.metadata import HogEntry, HogEntryIndex, HogQueryHit, HogQueryResult
 from hogprof.utils import hashutils
@@ -18,6 +19,7 @@ from hogprof.utils import hashutils
 np.random.seed(0)
 random.seed(0)
 logger = logging.getLogger(__name__)
+stdout = Console(stderr=True)
 
 
 class Profiler:
@@ -134,26 +136,6 @@ class Profiler:
         rows = list(self.fam_dict[family])
         return rows, {row: self.subhog_dict[row] for row in rows}
 
-    def get_hog_by_key(self, hog_key: int) -> HogEntry:
-        pass
-
-    def resolve_hog_name(self, hog_name: str) -> int:
-        """
-        Resolve HOG string ID into `hog_key` -- the primary key
-        of that HOG in the hashes.h5.
-
-        Example: HOG:0013665.1d_8 -> 42
-        """
-        # for orthoxml, we have loaded a mapping already
-        if not self.oma:
-            return self.hog2fam[hog_name]
-
-        # otherwise query the database
-        if hog_name.startswith('HOG:'):
-            return int(self.db_obj.parse_hog_id(hog_name))
-        else:
-            entry = self.db_obj.entry_by_entry_nr(self.db_obj.id_resolver.resolve(hog_name))
-            return int(self.db_obj.hog_family(entry=entry))
 
     def _get_hog_of_level(self, hog_entries: list[HogEntry], level: str) -> HogEntry:
         for h in hog_entries:
@@ -335,81 +317,24 @@ class Profiler:
         return hashes[0].jaccard(hashes[1])
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--lshforestpath", help="Path to the newlshforest.plk file", type=str
-    )
-    parser.add_argument("--hashes_h5", help="Path to the hashes.h5 file", type=str)
-    parser.add_argument(
-        "--mat_path", help="Path to the fam2orthoxml.csv file", type=str
-    )
-    parser.add_argument("--OMA", help="Path to OmaServer.h5 file", type=str)
-    parser.add_argument("--nsamples", help="no of samples", type=int, default=256)
-    parser.add_argument(
-        "--slicesubhogs", help="Use slicesubhogs mode", action="store_true"
-    )
-    parser.add_argument(
-        "--mastertree",
-        help="master taxonomic tree. nodes should correspond to orthoxml",
-        type=str,
-    )
-    args = vars(parser.parse_args(sys.argv[1:]))
-    print("\nReading arguments")
+def run_search(index_dir: Path,
+               hog_id: str,
+               level: str = None,
+               k: int = 10,
+               oma=None,
+               nsamples=None,
+               slice_subhogs=False,
+               ):
 
-    if args["slicesubhogs"] == "True":
-        args["slicesubhogs"] = True
-    elif args["slicesubhogs"] == "False":
-        args["slicesubhogs"] = False
-
+    index_dir = Path(index_dir)
     p = Profiler(
-        lshforestpath=args["lshforestpath"],
-        hashes_h5=args["hashes_h5"],
-        oma=args["OMA"],
-        nsamples=args["nsamples"],
-        slicesubhogs=args["slicesubhogs"],
+        lshforestpath=index_dir / "newlshforest.pkl",
+        hashes_h5=index_dir / "hashes.h5",
+        oma=oma,
+        nsamples=nsamples,
+        slicesubhogs=slice_subhogs,
     )
-    print("\nProfiler object created")
+    result = p.query_hog(hog_id, level=level, k=k)
 
-    ##########################################
-    # Mini birds
-    #fam_id = 0
-    #x = p.query_fam(fam_id, k=10)
-    #print(x)
-
-    hog_id = "HOG:0016206_1"
-    x = p.query_hog(hog_id)
-    print(x)
-
-    hog_id = "HOG:0015853.1q_4"
-    #x = p.query_hog(hog_id, level="Archosauria")
-    print(x)
-
-    #hog_dict, sorted_hogs = p.hog_query_sorted(hog_id=fam_id, k=15000)
-    #print(hog_dict)
-    #print(sorted_hogs)
-    #print("Done")
-
-    #hog_dict, sorted_hogs = p.hog_query_sorted(hog_id="HOG:0005499_1", k=5000)
-    #print(hog_dict)
-
-    #print the first and the last HOG from the list of the closest ones
-    #for idx in [0, -5, -4, -3, -2, -1]:
-    #    hog_id = sorted_hogs[idx]
-    #    print(hog_id, hog_dict[hog_id])
-
-    ##########################################
-    # Mini birds levels
-    # fam_id = 102
-    # x = p.query_fam(fam_id, k=10)
-    # print(x)
-    #
-    # hog_id = "HOG:0001547_2"
-    # key = p.resolve_hog_id(hog_id)
-    # x = p.query_hog(key, k=10)
-    # print(x)
-
-
-
-if __name__ == '__main__':
-    main()
+    # results are printed to stdout not logging
+    print(result.hits)
