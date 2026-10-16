@@ -59,6 +59,15 @@ class OrthoXMLBuilder:
         return tree_str.getvalue()
 
 
+def get_root_hog_id(orthoxml: str) -> str:
+    groups = ET.fromstring(orthoxml).findall(
+        '{http://orthoXML.org/2011/}groups/{http://orthoXML.org/2011/}orthologGroup'
+    )
+    if len(groups) != 1:
+        raise ValueError(f'Expected one root HOG, found {len(groups)}')
+    return groups[0].attrib['id']
+
+
 def count_species(ortho_fam):
     return ortho_fam.count('<species name=')
 

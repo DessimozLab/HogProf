@@ -254,7 +254,7 @@ class LSHBuilder:
         hog_size = oxml.count_species(ortho_str)
         return self._hog_size_ok(hog_size)
 
-    def generates_dataframes(self, size=100):
+    def generate_dataframes(self, size=100):
         families = {}
         start = -1
         if self.h5OMA:
@@ -282,7 +282,10 @@ class LSHBuilder:
                     # filtering by HOG size in the # of species
                     hog_size = oxml.count_species(ortho_fam)
                     if self._hog_size_ok(hog_size):
-                        families[unique_hog_id] = {'ortho': ortho_fam, 'hog_id': fam}
+                        families[unique_hog_id] = {
+                            'ortho': ortho_fam,
+                            'hog_id': oxml.get_root_hog_id(ortho_fam),
+                        }
                         unique_hog_id += 1
 
                     if len(families) >= size:
@@ -627,7 +630,7 @@ class LSHBuilder:
     def run_pipeline(self , threads):
         logger.info('Running with %d threads', threads)
         # Levels mode counts represented species on each parsed HOG
-        data_generator = self.generates_dataframes(size=100)
+        data_generator = self.generate_dataframes(size=100)
         self._run_parallel(threads=threads, data_generator=data_generator)
         return self.hashes_path, self.lshforestpath, self.mat_path
 
