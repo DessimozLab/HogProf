@@ -13,7 +13,8 @@ class OrthoXMLBuilder:
         self.NS = "http://orthoXML.org/2011/"
         ET.register_namespace('', self.NS)  # Register default namespace
 
-    def add_loft_ids(self, orthoxml):
+    def add_loft_ids(self, orthoxml: str | ET.Element) -> str:
+        """Annotate XML text or an already parsed root, modifying it in place."""
 
         def encode_paralog_cluster_id(prefix, nr):
             letters = []
@@ -46,8 +47,8 @@ class OrthoXMLBuilder:
                 # Set the id to the geneRef id
                 node.set('LOFT', og)
 
-        doc = ET.parse(StringIO(orthoxml))
-        xml = doc.getroot()
+        xml = ET.fromstring(orthoxml) if isinstance(orthoxml, str) else orthoxml
+        doc = ET.ElementTree(xml)
         for i, el in enumerate(xml.findall(".//groups/orthologGroup", {"": self.NS})):
             og = el.get('id', f"HOG:{i+1:08d}")
             dups = collections.defaultdict(int)
@@ -59,8 +60,9 @@ class OrthoXMLBuilder:
         return tree_str.getvalue()
 
 
-def get_root_hog_id(orthoxml: str) -> str:
-    groups = ET.fromstring(orthoxml).findall(
+def get_root_hog_id(orthoxml: str | ET.Element) -> str:
+    xml = ET.fromstring(orthoxml) if isinstance(orthoxml, str) else orthoxml
+    groups = xml.findall(
         '{http://orthoXML.org/2011/}groups/{http://orthoXML.org/2011/}orthologGroup'
     )
     if len(groups) != 1:
@@ -68,7 +70,9 @@ def get_root_hog_id(orthoxml: str) -> str:
     return groups[0].attrib['id']
 
 
-def count_species(ortho_fam):
+def count_species(ortho_fam: str | ET.Element) -> int:
+    if isinstance(ortho_fam, ET.Element):
+        return len(ortho_fam.findall('{http://orthoXML.org/2011/}species'))
     return ortho_fam.count('<species name=')
 
 

@@ -7,6 +7,7 @@ import queue
 import random
 import time
 import time as t
+import xml.etree.ElementTree as ET
 from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
@@ -259,8 +260,8 @@ class LSHBuilder:
         start = -1
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
-            ### only Fam makes sense here, the rest are OMAmer related fields
-            #print(self.h5OMA.root.OrthoXML.Index.colnames)
+            buffer = self.h5OMA.root.OrthoXML.Buffer
+            oxml_builder = oxml.OrthoXMLBuilder()
             self.rows = len(self.groups)
 
             unique_hog_id = 0
@@ -271,20 +272,18 @@ class LSHBuilder:
                 total=self.rows,
             )):
                 if i > start:
-                    #### family here is HOG ID minus the "HOG:E" prefix
-                    fam = row[0]
-                    ortho_fam = self.READ_ORTHO(fam)
-
-                    ### for older versions of OMA that do not have subhogIDs
-                    oxml_builder = oxml.OrthoXMLBuilder()
-                    ortho_fam = oxml_builder.add_loft_ids(ortho_fam)
+                    # The current index row already locates the unaugmented XML
+                    offset = int(row['HogBufferOffset'])
+                    stop = offset + int(row['HogBufferLength'])
+                    xml = ET.fromstring(buffer[offset:stop].tobytes().decode())
 
                     # filtering by HOG size in the # of species
-                    hog_size = oxml.count_species(ortho_fam)
+                    hog_size = oxml.count_species(xml)
                     if self._hog_size_ok(hog_size):
+                        ortho_fam = oxml_builder.add_loft_ids(xml)
                         families[unique_hog_id] = {
                             'ortho': ortho_fam,
-                            'hog_id': oxml.get_root_hog_id(ortho_fam),
+                            'hog_id': oxml.get_root_hog_id(xml),
                         }
                         unique_hog_id += 1
 
