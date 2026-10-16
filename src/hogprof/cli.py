@@ -252,13 +252,7 @@ def _validate_args(parser, parsed_args):
     #if parsed_args.min_events < 0:
     #    parser.error('--min-events must be nonnegative')
 
-
-def main(argv=None):
-    # setup Rich CLI before the parser. This is to provide
-    # rich-formatted output for argparse argument validation, --help, etc.
-    setup_cli()
-    parser = RichArgumentParser(prog="lshbuilder")
-
+def add_build_arguments(parser):
     # Input files
     # - 'source' is one of three options: OMA DB, tarfile with .orthoxml, or glob
     source = parser.add_mutually_exclusive_group(required=True)
@@ -279,52 +273,52 @@ def main(argv=None):
 
     # - species tree
     parser.add_argument('--species-tree', '--tree',
-                        '--mastertree', # compatibility option name; to remove
+                        '--mastertree',  # compatibility option name; to remove
                         dest='tree',
                         help='Newick species tree with node names matching the OrthoXML',
                         type=Path, required=True)
 
     # Output
     parser.add_argument('--output-dir', '--output',
-                        '--outpath', # compatibility option name; to remove
+                        '--outpath',  # compatibility option name; to remove
                         '-o',
                         dest='output_dir',
                         help='Output directory path', type=Path, required=True)
 
     # Configuration options
     parser.add_argument('--tax-weights',
-                        '--taxweights', # compatibility option name; to remove
+                        '--taxweights',  # compatibility option name; to remove
                         dest='tax_weights',
                         help=argparse.SUPPRESS,
                         type=str
                         )
     parser.add_argument('--taxon-mask',
-                        '--taxmask', # compatibility option name; to remove
+                        '--taxmask',  # compatibility option name; to remove
                         dest='taxon_mask',
                         help='Keep only this clade, identified by its tree node name (e.g. Sauria)',
                         type=str)
     parser.add_argument('--exclude-taxa',
-                        '--taxfilter', # compatibility option name; to remove
+                        '--taxfilter',  # compatibility option name; to remove
                         dest='exclude_taxa',
                         help='Tree node names of clades to exclude',
                         type=str, nargs='+')
     parser.add_argument('--min-species',
-                        '--specieslim', # compatibility option name; to remove
+                        '--specieslim',  # compatibility option name; to remove
                         dest='min_species',
                         help='Species threshold: root HOGs must exceed it; subHOGs must meet it',
                         type=int, default=10)
     parser.add_argument('--min-events',
-                        '--eventslim', # compatibility option name; to remove
+                        '--eventslim',  # compatibility option name; to remove
                         dest='min_events',
-                        help='Minimal number of loss or duplication events for a subHOG to consider it',
+                        help='Keep subHOGs exceeding this loss or duplication count (-1 keeps all)',
                         type=int, default=0)
     parser.add_argument('--db-type',
-                        '--dbtype', # compatibility option name; to remove
+                        '--dbtype',  # compatibility option name; to remove
                         dest='db_type',
                         help='Taxonomic range preset; --taxon-mask and --exclude-taxa override it',
                         choices=DB_PRESETS)
     parser.add_argument('--num-permutations',
-                        '--nperm', # compatibility option name; to remove
+                        '--nperm',  # compatibility option name; to remove
                         dest='num_permutations',
                         help='Number of hash functions used to construct each profile',
                         type=int, default=256)
@@ -343,12 +337,12 @@ def main(argv=None):
                         dest='duplication_only',
                         help='Only compile duplication events', action='store_true')
     parser.add_argument('--use-tax-ids',
-                        '--taxcodes', # compatibility option name; to remove
+                        '--taxcodes',  # compatibility option name; to remove
                         dest='use_tax_ids',
                         help='Match species to tree nodes by NCBI taxon ID instead of species name',
                         action='store_true')
     parser.add_argument('--slice-subhogs',
-                        '--slicesubhogs', # compatibility option name; to remove
+                        '--slicesubhogs',  # compatibility option name; to remove
                         dest='slice_subhogs',
                         help='Make profiles for subHOGs', action='store_true')
 
@@ -361,25 +355,24 @@ def main(argv=None):
 
     # Other options
     parser.add_argument('--jobs', '--njobs', '-j',
-        '--nthreads', # compatibility option name; to remove
-        dest="njobs",
-        help="Number of worker processes", type=int, default=1)
-
-    parser.add_argument('--version', action='version',
-                        version=f'%(prog)s {__version__}')
+        '--nthreads',  # compatibility option name; to remove
+                        dest="njobs",
+                        help="Number of worker processes", type=int, default=1)
 
     parser.add_argument('--verbose', '-v', help='Print verbose output', action='store_true')
+    return parser
 
 
-    argv = sys.argv[1:] if argv is None else argv
+def add_query_arguments(parser):
 
-    # print help if no args provided
-    parsed_args = parser.parse_args(argv if argv else ['-h'])
+    # ...
 
+    return parser
+
+
+def run_build(parsed_args):
     if parsed_args.verbose:
         setup_cli(verbose=True)
-
-    _validate_args(parser, parsed_args)
 
     # Suppress pyham's noisy INFO messages, including during initialization.
     logging.getLogger('pyham').setLevel(logging.WARNING)
@@ -389,10 +382,47 @@ def main(argv=None):
     build_args = vars(parsed_args).copy()
     del build_args['reformat_names']
     del build_args['orthoxml_tar']
+    del build_args['command']
+    del build_args['func']
 
     # import and run as late as possible to not stagger CLI
     from hogprof.lshbuilder import run
     run(**build_args)
+
+
+def run_search(parsed_args):
+    console.print("The search command is not implemented yet.")
+
+def main(argv=None):
+    # setup Rich CLI before the parser. This is to provide
+    # rich-formatted output for argparse argument validation, --help, etc.
+    setup_cli()
+    parser = RichArgumentParser(prog="hogprof")
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+
+    # set up the 'build' command
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    builder_parser = subparsers.add_parser("build", help="Build a searchable LSH index")
+    add_build_arguments(builder_parser)
+    builder_parser.set_defaults(func=run_build)
+
+    # set up the `search` command
+    search_parser = subparsers.add_parser("search", help="Query an LSH index")
+    add_query_arguments(search_parser)
+    search_parser.set_defaults(func=run_search)
+
+    # parse and go
+    argv = sys.argv[1:] if argv is None else argv
+    args = parser.parse_args(argv if argv else ["-h"])
+    if args.command == "build":
+        _validate_args(builder_parser, args)
+    args.func(args)
+
     return 0
 
 

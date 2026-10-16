@@ -51,7 +51,8 @@ ml = ["keras"]
 "Docs" = "https://dessimozlab.github.io/HogProf/"
 
 [project.scripts]
-lshbuilder = "hogprof.cli:main"
+hogprof = "hogprof.cli:main"
+hp = "hogprof.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

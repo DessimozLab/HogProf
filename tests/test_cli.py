@@ -33,6 +33,7 @@ class CliTest(unittest.TestCase):
 
     def arguments(self):
         return [
+            'build',
             '--orthoxml-glob', str(self.orthoxml),
             '--species-tree', str(self.tree),
             '--output-dir', str(self.output),
@@ -51,6 +52,7 @@ class CliTest(unittest.TestCase):
         for source_flag in ('--oma', '--orthoxml-glob'):
             with self.subTest(source=source_flag):
                 self.assert_cli_error([
+                    'build',
                     source_flag, str(self.work / 'missing'),
                     '--tree', str(self.tree), '--output', str(self.output),
                 ], source_flag)
@@ -75,10 +77,59 @@ class CliTest(unittest.TestCase):
 
     def test_sources_are_mutually_exclusive(self):
         self.assert_cli_error([
+            'build',
             '--tree', str(self.tree), '--output', str(self.output),
         ], 'one of the arguments')
         self.assert_cli_error(self.arguments() + ['--oma', str(self.orthoxml)],
                               'not allowed with argument')
+
+    def test_build_dispatch(self):
+        self.assertEqual(0, cli.main(self.arguments() + ['--jobs', '2', '--seed', '42']))
+        self.run.assert_called_once_with(
+            oma=None, orthoxml_glob=str(self.orthoxml), tree=self.tree,
+            output_dir=self.output, tax_weights=None, taxon_mask=None,
+            exclude_taxa=None, min_species=10, min_events=0, db_type=None,
+            num_permutations=256, seed=42, loss_only=False,
+            duplication_only=False, use_tax_ids=False, slice_subhogs=False,
+            njobs=2, verbose=False,
+        )
+        self.startup.assert_called_once()
+
+    def test_process_arguments_are_used(self):
+        with patch.object(sys, 'argv', ['hogprof'] + self.arguments()):
+            self.assertEqual(0, cli.main())
+        self.run.assert_called_once()
+
+    def test_help(self):
+        for arguments in ([], ['-h'], ['--help'], ['build', '--help'], ['search', '-h']):
+            with self.subTest(arguments=arguments):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout), self.assertRaises(SystemExit) as error:
+                    cli.main(arguments)
+                self.assertEqual(0, error.exception.code)
+                self.assertIn('usage: hogprof', stdout.getvalue())
+                if arguments and arguments[0] == 'build':
+                    self.assertIn('usage: hogprof build', stdout.getvalue())
+                    self.assertIn('--species-tree', stdout.getvalue())
+                elif not arguments or arguments[0].startswith('-'):
+                    self.assertIn('build', stdout.getvalue())
+                    self.assertIn('search', stdout.getvalue())
+        self.run.assert_not_called()
+
+    def test_version(self):
+        stdout = io.StringIO()
+        with redirect_stdout(stdout), self.assertRaises(SystemExit) as error:
+            cli.main(['--version'])
+        self.assertEqual(0, error.exception.code)
+        self.assertEqual(f'hogprof {__version__}\n', stdout.getvalue())
+        self.run.assert_not_called()
+
+    def test_search_placeholder(self):
+        output = io.StringIO()
+        with patch.object(cli, 'console', cli.Console(file=output)):
+            self.assertEqual(0, cli.main(['search']))
+        self.assertIn('not implemented yet', output.getvalue())
+        self.run.assert_not_called()
 
 
 if __name__ == '__main__':
