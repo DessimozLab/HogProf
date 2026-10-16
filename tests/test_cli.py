@@ -124,13 +124,5 @@ class CliTest(unittest.TestCase):
         self.assertEqual(f'hogprof {__version__}\n', stdout.getvalue())
         self.run.assert_not_called()
 
-    def test_search_placeholder(self):
-        output = io.StringIO()
-        with patch.object(cli, 'console', cli.Console(file=output)):
-            self.assertEqual(0, cli.main(['search']))
-        self.assertIn('not implemented yet', output.getvalue())
-        self.run.assert_not_called()
-
-
 if __name__ == '__main__':
     unittest.main()
