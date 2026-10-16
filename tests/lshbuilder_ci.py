@@ -93,8 +93,8 @@ class LshbuilderIntegrationTest(unittest.TestCase):
     def build_and_check(self, *, levels):
 
         # check that command is present
-        executable = shutil.which("lshbuilder")
-        self.assertIsNotNone(executable, "Install hogprof to provide lshbuilder")
+        executable = shutil.which("hogprof")
+        self.assertIsNotNone(executable, "Install hogprof locally")
 
         # check the input data are there
         inputs = sorted((DATA / "splits").glob("*.orthoxml"))
@@ -116,6 +116,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         jobs_flag = "--njobs" if levels else "--jobs"
         command = [
             executable,
+            "build",
             source_flag, str(DATA / "splits" / "*.orthoxml"),
             tree_flag, str(DATA / "species_tree.nwk"),
             output_flag, str(output),
