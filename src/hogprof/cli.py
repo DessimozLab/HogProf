@@ -6,6 +6,7 @@ import logging
 import sys
 import time
 from collections.abc import Iterable
+from datetime import timedelta
 from pathlib import Path
 from typing import TypeVar
 
@@ -169,9 +170,10 @@ def track_progress(
             if due or now - last_log >= log_interval:
                 if total:
                     eta = elapsed / count * (total - count)
+                    eta_str = str(timedelta(seconds=round(eta)))
                     logger.info(
-                        "%s: %d%% (%d/%d) | ETA %.0fs",
-                        description, percent, count, total, eta,
+                        "%s: %d%% (%d/%d) | ETA %s",
+                        description, percent, count, total, eta_str,
                     )
                     last_percent = percent
                 else:

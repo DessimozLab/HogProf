@@ -73,7 +73,7 @@ class LSHBuilder:
             - limit_events (int): the minimum number of events (loss,duplication) in a subHOG that is included in the database (default: 0)
 
         """
-        print("\nInitializing LSHBuilder")
+        logger.debug("Initializing LSHBuilder")
 
         random.seed(seed)
         np.random.seed(seed)
@@ -141,12 +141,12 @@ class LSHBuilder:
 
         self.wmg = wmg
 
-        logger.debug('\nConfiguring pyham functions')
-        logger.debug('taxfilter', self.tax_filter)
-        logger.debug('taxmask', self.tax_mask)
-        logger.debug('swap ids', self.swap2taxcode)
-        logger.debug('reformat names', self.reformat_names)
-        logger.debug('use taxcodes', self.swap2taxcode)
+        logger.debug("Configuring pyham functions")
+        logger.debug("taxfilter: %s", self.tax_filter)
+        logger.debug("taxmask: %s", self.tax_mask)
+        logger.debug("swap ids: %s", self.swap2taxcode)
+        logger.debug("reformat names: %s", self.reformat_names)
+        logger.debug("use taxcodes: %s", self.swap2taxcode)
 
         hamfunction = pyhamutils.get_ham_treemap_from_row
         hashfunction = hashutils.row2hash
@@ -186,8 +186,6 @@ class LSHBuilder:
                 self.dataset_nodes = [node.name for node in tax_mask_node.traverse()]
             else:
                 raise RuntimeError(f"No node found with name: {self.tax_mask}")
-        
-        print("Kept dataset nodes:", self.dataset_nodes)
 
         self.HAM_PIPELINE = functools.partial(
             hamfunction, tree_string=self.tree_string, swap_ids=self.swap2taxcode,
@@ -197,7 +195,8 @@ class LSHBuilder:
 
         ### set up the hash pipeline
         self.HASH_PIPELINE = functools.partial( hashfunction , taxaIndex=self.taxaIndex, treeweights=self.treeweights, wmg=wmg , lossonly = lossonly, duplonly = duplonly)
-        print("\nSetting up input data reader")
+
+        logger.debug("Setting up input data reader")
         ### if the input is an OMA hdf5 file, set up the function to read the orthoxml data
         if self.h5OMA:
             self.READ_ORTHO = functools.partial(pyhamutils.get_orthoxml_oma, db_obj=self.db_obj)
@@ -215,7 +214,7 @@ class LSHBuilder:
         self.mat_path = self.output_dir / 'hogmat.h5'
         self.columns = len(self.taxaIndex)
         self.verbose = verbose
-        logger.debug('done')
+        logger.debug('Done.')
 
     def _get_species_names(self):
         """Read the DB or orthoxml to extract the list of species"""
