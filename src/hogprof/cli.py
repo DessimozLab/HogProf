@@ -407,7 +407,6 @@ def add_search_arguments(parser):
     parser.add_argument("--index-dir",
                         help="Directory containing HogProf index files. "
                              "Produced by `build`", type=str, required=True)
-    parser.add_argument("--oma", help="Path to OmaServer.h5 file", type=str)
     parser.add_argument("--nsamples", help="no of samples", type=int, default=256)
     parser.add_argument("--slice-subhogs",
                         help="Use slice_subhogs mode",
