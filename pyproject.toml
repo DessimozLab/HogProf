@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hogprof"
-version = "0.2.0"
+version = "0.3.0"
 authors = [
   { name = "Dave Moi", email = "dmoi@unil.ch" },
   { name = "Athina Gavriilidou", email = "athina.gavriilidou@unil.ch" },
@@ -23,6 +23,7 @@ dependencies = [
   "lxml",
   "numpy",
   "pandas",
+  "polars",
   "pyham>=1.1.10",
   "pyoma>=0.14.2",
   "rich",
@@ -50,7 +51,8 @@ ml = ["keras"]
 "Docs" = "https://dessimozlab.github.io/HogProf/"
 
 [project.scripts]
-lshbuilder = "hogprof.cli:main"
+hogprof = "hogprof.cli:main"
+hp = "hogprof.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

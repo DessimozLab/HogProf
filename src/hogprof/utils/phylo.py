@@ -178,7 +178,7 @@ def generate_taxa_index(tree , taxfilter= None, taxmask=None):
     taxa_index_reverse = {}
     for i, n in enumerate(tree.traverse()):
         taxa_index_reverse[i] = n.name
-        taxa_index[n.name] = i-1
+        taxa_index[n.name] = i
 
     return taxa_index, taxa_index_reverse
 

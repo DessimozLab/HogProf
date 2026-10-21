@@ -178,7 +178,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
 
     def get_candidates(p, query_sig, k):
         # query LSH forest for candidate hash ids - get top k
-        candidate_subhogids = [target_hog[target_hog.find('_')+1:] for target_hog in p.lshobj.query(query_sig, k)]
+        candidate_subhogids = [target_hog[target_hog.find('_')+1:] for target_hog in p.forest.query(query_sig, k)]
         candidate_hashids = [p.subhog_to_hashids_dict[target_hog] for target_hog in candidate_subhogids]
         local_hashid_to_subhog = {int(h): s for h, s in zip(candidate_hashids, candidate_subhogids)}
         # pull candidate signatures (dict: hashid -> MinHash)

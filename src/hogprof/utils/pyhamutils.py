@@ -107,7 +107,7 @@ def _check_limits(treemap, limit_events):
     """
     duplications = sum(node.dupl or 0 for node in treemap.traverse())
     losses = sum(node.lost or 0 for node in treemap.traverse())
-    return duplications > limit_events or losses > limit_events
+    return duplications >= limit_events or losses >= limit_events
 
 
 def _subhog_keys(hogs, family):
