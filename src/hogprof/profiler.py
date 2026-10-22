@@ -318,7 +318,7 @@ def run_search(index_dir: Path,
                level: str = None,
                k: int = 10,
                oma=None,
-               nsamples=None,
+               nsamples=256,
                slice_subhogs=False,
                ):
 
