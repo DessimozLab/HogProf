@@ -8,7 +8,7 @@ HogProf is an extensible and tunable approach to phylogenetic profiling using or
 
 ## Features
 
-- Build phylogenetic profiles of families (HOGs) from orthology data.
+- Build phylogenetic profiles of families ([HOGs](https://doi.org/10.1007/s00239-025-10277-1)) from orthology data.
 - Profiles include ancestral states and evolutionary events, including gene losses and duplications.
 - Search for similar profiles using locality-sensitive hashing (LSH).
 - Generate profiles for subfamilies (subHOGs) to investigate evolutionary patterns at different taxonomic levels.
@@ -76,16 +76,6 @@ hogprof build \
 
 Adjust `--jobs` to control the number of worker processes.
 
-Use `--slice-subhogs` to generate profiles for subHOGs:
-
-```bash
-hogprof build \
-    --oma oma_data/OmaServer.h5 \
-    --species-tree oma_data/speciestree.nwk \
-    --output-dir hogprof_index \
-    --jobs 20 \
-    --slice-subhogs 
-```
 
 ### Option 2: Using FastOMA results
 
@@ -119,18 +109,6 @@ hogprof build \
     --jobs 20
 ```
 
-Use `--slice-subhogs` to generate profiles for subHOGs:
-
-```bash
-hogprof build \
-    --orthoxml-glob "/path/to/split/*.orthoxml" \
-    --species-tree "/path/to/species_tree_checked.nwk" \
-    --output-dir hogprof_index \
-    --slice-subhogs \
-    --jobs 20
-```
-
-Adjust `--jobs` to control the number of worker processes. Additional filtering options, such as `--min-species` and `--min-events`, are described under [Common build options](#common-build-options).
 
 ### Common build options
 
@@ -193,14 +171,14 @@ hogprof search --help
 
 HogProf also provides scripts and notebooks for downstream analyses, including:
 
-- Tutorial showing basic functionalities.
-- Preparing coevolution networks for visualization in Cytoscape.
+- [Tutorial](notebooks/Tutorial.ipynb)  showing basic functionalities.
+- Preparing coevolution networks for [visualization in Cytoscape](notebooks/cytoscape_import.ipynb).
 
 These analyses require additional inputs beyond the index and search commands. See the relevant scripts and notebooks in the repository for details.
 
 ## Planned additions
 
-- Generating a statistical threshold (empirical) to search for significantly similar profiles
+- Generating a statistical threshold (empirical) to search for significantly similar profiles of subHOGs
 
 ## Citation
 
