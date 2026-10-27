@@ -206,7 +206,7 @@ These analyses require additional inputs beyond the index and search commands. S
 
 If you use HogProf in your research, please cite:
 
-Moi D, Dessimoz C, Gonnet GH. (2020). *Efficient phylogenetic profiling using the OMA orthology database*. PLOS Computational Biology.
+Moi D,  Kilchoer L, Aguilar PS, Dessimoz C. (2020). *Scalable phylogenetic profiling using MinHash uncovers likely eukaryotic sexual reproduction genes*. PLOS Computational Biology.
 
 [https://doi.org/10.1371/journal.pcbi.1007553](https://doi.org/10.1371/journal.pcbi.1007553)
 
