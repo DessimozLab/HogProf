@@ -334,12 +334,12 @@ def add_build_arguments(parser):
     parser.add_argument('--min-species',
                         '--specieslim',  # compatibility option name; to remove
                         dest='min_species',
-                        help='Species threshold: root HOGs must exceed it; subHOGs must meet it',
+                        help='Species threshold: root HOGs must exceed it; subHOGs must meet it (default:10)',
                         type=int, default=10)
     parser.add_argument('--min-events',
                         '--eventslim',  # compatibility option name; to remove
                         dest='min_events',
-                        help='Keep subHOGs exceeding this loss or duplication count (-1 keeps all)',
+                        help='Keep subHOGs exceeding this loss or duplication count (-1 keeps all) (default:0)',
                         type=int, default=0)
     parser.add_argument('--db-type',
                         '--dbtype',  # compatibility option name; to remove
@@ -349,7 +349,7 @@ def add_build_arguments(parser):
     parser.add_argument('--num-permutations',
                         '--nperm',  # compatibility option name; to remove
                         dest='num_permutations',
-                        help='Number of hash functions used to construct each profile',
+                        help='Number of hash functions used to construct each profile (default:256)',
                         type=int, default=256)
     parser.add_argument('--seed',
                         type=int, default=None,
@@ -386,7 +386,7 @@ def add_build_arguments(parser):
     parser.add_argument('--jobs', '--njobs', '-j',
                         '--nthreads',  # compatibility option name; to remove
                         dest="njobs",
-                        help="Number of worker processes", type=int, default=1)
+                        help="Number of worker processes (default:1)", type=int, default=1)
 
     parser.add_argument('--verbose', '-v', help='Print verbose output', action='store_true')
     return parser
@@ -397,7 +397,7 @@ def add_search_arguments(parser):
                         help="HOG ID for similarity search",
                         type=str),
     parser.add_argument("--k", "-k",
-                        help="Number of nearest neighbors to consider",
+                        help="Number of nearest neighbors to consider (default:10)",
                         type=int, default=10)
     parser.add_argument("--level",
                         help="Taxonomic level at which the query is defined."
@@ -408,7 +408,7 @@ def add_search_arguments(parser):
                         help="Directory containing HogProf index files. "
                              "Produced by `build`", type=str, required=True)
     parser.add_argument("--oma", help="Path to OmaServer.h5 file", type=str)
-    parser.add_argument("--nsamples", help="no of samples", type=int, default=256)
+    parser.add_argument("--nsamples", help="no of samples (default:256)", type=int, default=256)
     parser.add_argument("--slice-subhogs",
                         help="Use slice_subhogs mode",
                         action="store_true")
