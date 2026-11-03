@@ -1,38 +1,55 @@
 """User-facing console I/O for command-line tools"""
 
-import argparse
-import glob
-import logging
-import sys
-import time
-from collections.abc import Iterable
-from datetime import timedelta
-from pathlib import Path
-from typing import TypeVar
+from __future__ import annotations
 
-import polars as pl
-from rich.console import Console
-from rich.logging import RichHandler
-from rich.panel import Panel
-from rich.progress import track
-from rich.table import Table
-from rich.text import Text
-from rich.traceback import install as install_rich_traceback
+import argparse
+import sys
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, TypeVar
+
+if TYPE_CHECKING:
+    import polars as pl
+    from rich.console import Console
 
 from hogprof import __version__
 from hogprof.presets import DB_PRESETS
 
 _Item = TypeVar("_Item")
 
-# Rich Console shared by both logging and progress
-console = Console(stderr=True)
-logger = logging.getLogger(__name__)
+# Rich Console shared by logging and progress, created only when needed
+_console = None
+
+
+def _get_console() -> Console:
+    """Singleton for Console"""
+    global _console
+    if _console is None:
+        from rich.console import Console
+        _console = Console(stderr=True)
+    return _console
+
+
+def __getattr__(name):
+    # Preserve access to the shared console without initializing Rich on import
+    if name == "console":
+        return _get_console()
+
+    if name == "logger":
+        import logging
+        return logging.getLogger(__name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def setup_cli(verbose: bool = False,
               *,
-              output_console: Console = console) -> None:
+              output_console: Console | None = None) -> None:
     """Configure application logging and terminal tracebacks for a CLI run."""
+    import logging
+
+    from rich.logging import RichHandler
+
+    if output_console is None:
+        output_console = _get_console()
     level = logging.DEBUG if verbose else logging.INFO
 
     handler = RichHandler(
@@ -53,12 +70,19 @@ def setup_cli(verbose: bool = False,
     # if in console (not redirected to file),
     # format error traceback nicely with Rich
     if output_console.is_terminal:
+        from rich.traceback import install as install_rich_traceback
         install_rich_traceback(console=output_console,
                                show_locals=verbose,
                                word_wrap=True)
 
-def print_startup(args=None, *, output_console: Console = console) -> None:
+def print_startup(args=None, *, output_console: Console | None = None) -> None:
     """Print the banner and, when supplied, the initial CLI configuration."""
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.text import Text
+
+    if output_console is None:
+        output_console = _get_console()
 
     table = Table.grid(padding=(0, 3))
     table.add_column(style="dim")
@@ -117,11 +141,14 @@ def track_progress(
     *,
     description: str,
     total: int | None = None,
-    output_console: Console = console,
+    output_console: Console | None = None,
 ) -> Iterable[_Item]:
     """Iterate with a Rich progress bar when output is an interactive terminal."""
-    
+    if output_console is None:
+        output_console = _get_console()
+
     if output_console.is_terminal:
+        from rich.progress import track
         # If output is CLI, it's all simple -- use Rich
         yield from track(
             sequence,
@@ -132,6 +159,11 @@ def track_progress(
         )
 
     else:
+        import logging
+        import time
+        from datetime import timedelta
+
+        logger = logging.getLogger(__name__)
         # Otherwise if output is redirected to file (e.g. SLURM)
         # -- report progress differently
         if total is None:
@@ -192,11 +224,15 @@ def track_progress(
 
 def print_search_result(df: pl.DataFrame) -> None:
     """Pretty print for `hogprof search` results"""
+    from rich.console import Console
+
     stdout = Console(file=sys.stdout)
 
     if not stdout.is_terminal:
         df.write_csv(sys.stdout, separator="\t")
         return
+
+    from rich.table import Table
 
     table = Table(show_header=True, header_style="bold cyan", show_lines=False)
 
@@ -221,12 +257,21 @@ class RichArgumentParser(argparse.ArgumentParser):
     """Render argparse output with Rich while preserving streams and exit codes."""
 
     def print_help(self, file=None):
+        from rich.console import Console
+
         file = sys.stdout if file is None else file
         print_startup(output_console=Console(file=file))
         super().print_help(file)
 
     def _print_message(self, message, file=None):
         if message:
+            # Version output is plain text and needs no Rich rendering.
+            if message == f"{self.prog} {__version__}\n":
+                return super()._print_message(message, file)
+
+            from rich.console import Console
+            from rich.text import Text
+
             text = Text(message)
             text.highlight_regex(r"(?<!\w)--?[\w-]+", style="cyan")
             text.highlight_regex(
@@ -239,6 +284,9 @@ class RichArgumentParser(argparse.ArgumentParser):
             )
 
 def _validate_args(parser, parsed_args):
+    import glob
+    from pathlib import Path
+
     if parsed_args.reformat_names:
         parser.error('--reformat-names is not supported in this version')
 
@@ -282,6 +330,8 @@ def _validate_args(parser, parsed_args):
     #    parser.error('--min-events must be nonnegative')
 
 def add_build_arguments(parser):
+    from pathlib import Path
+
     # Input files
     # - 'source' is one of three options: OMA DB, tarfile with .orthoxml, or glob
     source = parser.add_mutually_exclusive_group(required=True)
@@ -415,8 +465,9 @@ def add_search_arguments(parser):
 
 
 def run_build(parsed_args):
-    if parsed_args.verbose:
-        setup_cli(verbose=True)
+    import logging
+
+    setup_cli(verbose=parsed_args.verbose)
 
     # Suppress pyham's noisy INFO messages, including during initialization.
     logging.getLogger('pyham').setLevel(logging.WARNING)
@@ -447,9 +498,9 @@ def run_search(parsed_args):
 
 
 def main(argv=None):
-    # setup Rich CLI before the parser. This is to provide
-    # rich-formatted output for argparse argument validation, --help, etc.
-    setup_cli()
+    # The parser renders its own help and errors. Logging and tracebacks are
+    # configured only when dispatching an actual command.
+    argv = sys.argv[1:] if argv is None else argv
     parser = RichArgumentParser(prog="hogprof")
 
     parser.add_argument(
@@ -461,16 +512,17 @@ def main(argv=None):
     # set up the 'build' command
     subparsers = parser.add_subparsers(dest="command", required=True)
     builder_parser = subparsers.add_parser("build", help="Build a searchable LSH index")
-    add_build_arguments(builder_parser)
+    if argv and argv[0] == "build":
+        add_build_arguments(builder_parser)
     builder_parser.set_defaults(func=run_build)
 
     # set up the `search` command
     search_parser = subparsers.add_parser("search", help="Query an LSH index")
-    add_search_arguments(search_parser)
+    if argv and argv[0] == "search":
+        add_search_arguments(search_parser)
     search_parser.set_defaults(func=run_search)
 
     # parse and go
-    argv = sys.argv[1:] if argv is None else argv
     args = parser.parse_args(argv if argv else ["-h"])
     if args.command == "build":
         _validate_args(builder_parser, args)

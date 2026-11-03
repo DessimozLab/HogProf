@@ -1,5 +1,4 @@
 name = "HogProf"
 
-from importlib.metadata import version
-# expose HogProf's version
-__version__ = version("HogProf")
+# Also used by setuptools; keep package import independent of metadata discovery.
+__version__ = "0.3.0"
