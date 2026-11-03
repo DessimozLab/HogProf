@@ -145,7 +145,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
                         mastertree = treepath,
                         slicesubhogs = True
                         )
-    p.slicesubhogs = False ### setting as False to use original hogid2fam function in profiler.py
+    p.slice_subhogs = False ### setting as False to use original hogid2fam function in profiler.py
     # the reason for this is using family IDS vs hashids for querying. the original function used hashids,
     # sometimes in levels we want to query everything within a family though.
     print("Pulling hashes...")

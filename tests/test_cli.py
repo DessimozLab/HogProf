@@ -1,7 +1,9 @@
 """Basic argument parsing, validation and builder dispatch checks."""
 
 import io
+import subprocess
 import sys
+import textwrap
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -123,6 +125,43 @@ class CliTest(unittest.TestCase):
         self.assertEqual(0, error.exception.code)
         self.assertEqual(f'hogprof {__version__}\n', stdout.getvalue())
         self.run.assert_not_called()
+
+
+class StartupImportsTest(unittest.TestCase):
+    def test_help_and_version_avoid_execution_dependencies(self):
+        # A fresh process catches eager imports hidden by the test runner's
+        # module cache. Help must work without initializing the search stack.
+        code = textwrap.dedent('''
+            import sys
+            from hogprof.cli import main
+
+            try:
+                main()
+            except SystemExit as error:
+                assert error.code == 0, error.code
+            else:
+                raise AssertionError("Expected help/version to exit")
+
+            blocked = (
+                "polars", "numpy", "pandas", "h5py", "tables", "datasketch",
+                "pyoma", "pyham", "importlib.metadata", "pygments",
+                "rich.progress", "rich.traceback", "rich.logging",
+            )
+            loaded = [name for name in sys.modules
+                      if any(name == prefix or name.startswith(prefix + ".")
+                             for prefix in blocked)]
+            assert not loaded, loaded
+            if sys.argv[1:] == ["--version"]:
+                assert "rich" not in sys.modules
+        ''')
+        for arguments in ([], ['--help'], ['--version'], ['build', '--help'], ['search', '--help']):
+            with self.subTest(arguments=arguments):
+                completed = subprocess.run(
+                    [sys.executable, '-B', '-c', code, *arguments],
+                    capture_output=True, text=True,
+                )
+                self.assertEqual(0, completed.returncode, completed.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()
