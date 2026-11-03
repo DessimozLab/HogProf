@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hogprof"
-version = "0.3.0"
+dynamic = ["version"]
 authors = [
   { name = "Dave Moi", email = "dmoi@unil.ch" },
   { name = "Athina Gavriilidou", email = "athina.gavriilidou@unil.ch" },
@@ -24,7 +24,7 @@ dependencies = [
   "numpy",
   "pandas",
   "polars",
-  "pyham>=1.1.10",
+  "pyham>=1.1.10,<2",
   "pyoma>=0.14.2",
   "rich",
   "tables",
@@ -56,6 +56,9 @@ hp = "hogprof.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+
+[tool.setuptools.dynamic]
+version = {attr = "hogprof.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
