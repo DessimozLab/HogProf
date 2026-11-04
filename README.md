@@ -109,6 +109,7 @@ hogprof build \
     --jobs 20
 ```
 
+**Note:** Keep the `--orthoxml-glob` pattern in quotes to prevent the shell from expanding it into a list of filenames before passing it to HogProf. Without quotes, a large number of split OrthoXML files may exceed the system's maximum argument-list length, resulting in an `Argument list too long` error.
 
 ### Common build options
 
