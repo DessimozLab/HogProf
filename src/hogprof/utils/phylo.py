@@ -194,7 +194,15 @@ class TreeValidator:
         self._validate_format()
         tree = from_file(self.filename)
 
+        self._fix_tree_root(tree)
         self._fix_internal_species(tree)
+
+        # we fixed the root if it didn't have a name;
+        # other nodes are expected to be named
+        for node in tree.traverse():
+            if not node.name:
+                logger.error("Empty node name: " + str(node))
+                raise ValueError("All non-root tree nodes must have names")
 
         leaf_names_before = tree.get_leaf_names()
         new_tree = self._promote_single_leaves(tree.copy())
@@ -232,6 +240,11 @@ class TreeValidator:
                 )
             raise ValueError("Invalid species tree (" + "; ".join(problems) + ")")
 
+    def _fix_tree_root(self, tree):
+        """Checks if the root name is empty, and names it, if it is"""
+        root = tree.get_tree_root()
+        if not root.name:
+            root.name = "root"
 
     def _fix_internal_species(self, tree):
         """
