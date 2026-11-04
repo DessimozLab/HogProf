@@ -88,6 +88,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
     def _get_work_dir(self):
         if not hasattr(self, "work_dir"):
             self.work_dir = TemporaryDirectory(prefix="hogprof-ci-")
+            self.addCleanup(self.work_dir.cleanup)
         return Path(self.work_dir.name)
 
     def build_and_check(self, *, levels):
