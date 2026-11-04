@@ -5,9 +5,10 @@ import random
 from collections.abc import Iterable
 from pathlib import Path
 
-import h5py
 import numpy as np
 
+from hogprof import hashstore
+from hogprof.hashstore import HashStore
 from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntry, HogEntryIndex, HogQueryHit, HogQueryResult
 from hogprof.utils import hashutils
@@ -36,7 +37,7 @@ class Profiler:
         from the index manifest.
 
         lshforestpath (str, optional): Path to the pickled LSH forest object.
-        hashes_h5 (h5py.File): H5 file containing HOGs.
+        hashes_h5 (Path): hashes.h5 of the index.
         nsamples (int, optional): Number of permutations of the index. Defaults to 256.
         slicesubhogs (bool): Whether the index has subHOG profiles.
         hash_seed (int): Seed of the hash generator used to build the index.
@@ -47,17 +48,16 @@ class Profiler:
             self.forest = pickle.loads(lshpickle.read())
             logger.debug('Indexing LSH')
 
-        self.hashes_h5 = h5py.File(hashes_h5, mode='r')
+        self.hashes = HashStore(hashes_h5, num_permutations=nsamples,
+                                dataset=hashes_dataset, seed=hash_seed)
         self.slice_subhogs = slicesubhogs
 
         self.fam2orthoxmlpath = f"{os.path.dirname(lshforestpath)}/fam2orthoxml.csv"
 
         self.hog_index = HogEntryIndex(Path(self.fam2orthoxmlpath))
 
-        logger.debug("H5" + str(self.hashes_h5) + " " + str(self.hashes_h5.keys()))
+        logger.debug("Hashes: %s, dataset %s", self.hashes.path, self.hashes.dataset_name)
         self.nsamples = nsamples
-        self.hash_seed = hash_seed
-        self.hashes_dataset = hashes_dataset
 
         logger.debug('Profiler init over')
 
@@ -75,11 +75,14 @@ class Profiler:
             hashes_dataset=manifest.hashes_dataset,
         )
 
-    def _get_hash(self, hog_key: int):
-        return hashutils.fam2hash_hdf5(hog_key, self.hashes_h5,
-                                       dataset=self.hashes_dataset,
-                                       nsamples=self.nsamples,
-                                       seed=self.hash_seed)
+    def close(self) -> None:
+        self.hashes.close()
+
+    def __enter__(self) -> "Profiler":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
 
     def get_subhogs_of_fam(self, fam_id: int) -> Iterable[int]:
         """
@@ -128,9 +131,8 @@ class Profiler:
         else:
             hog = hogs[0]
 
-        query_hash = self._get_hash(hog.hog_key)
-
-        rows = []
+        query_packed = self.hashes.get_one(hog.hog_key)
+        query_hash = hashstore.to_minhash(query_packed, seed=self.hashes.seed)
 
         # FIXME: there must be a better way of doing
         # this, e.g. with splitting the forest into sets
@@ -140,42 +142,33 @@ class Profiler:
         # hits, since they might be filtered out further
         # if they are from a wrong level.
         queried_k = 2 * k if level else k
-        reported_hits = 0
 
-        hit_keys = self.forest.query(query_hash, queried_k)
-        for hit_key in hit_keys:
-            hit_key = int(hit_key)
-
-            # we have enough reported hits
-            if reported_hits >= k:
-                break
-
-            # get hit metadata
-            hit = self.hog_index.get_hog_by_key(hit_key)
-
-            # compute jaccard
-            hit_hash = self._get_hash(hit_key)
-            jaccard = query_hash.jaccard(hit_hash)
+        hits = []
+        for hit_key in self.forest.query(query_hash, queried_k):
+            hit = self.hog_index.get_hog_by_key(int(hit_key))
 
             # If --level is provided, we need to make sure that
             # neighbors are defined at the same level as the query.
             if level and level != hit.level:
                 continue
 
-            # report a hit
-            rows.append(
-                HogQueryHit(
-                    query_hog_id=hog_name,
-                    hit_hog_id=hit.hog_id,
-                    hit_level=hit.level,
-                    jaccard=jaccard,
-                )
-            )
-            reported_hits += 1
+            hits.append(hit)
+            if len(hits) >= k:
+                break
 
-        hqr = HogQueryResult.from_hits(rows)
-        hqr.hits.sort("jaccard", descending=True)
-        return hqr
+        # one bulk read and comparison for all hits
+        jaccards = hashstore.jaccard(query_packed, self.hashes.get([h.hog_key for h in hits]))
+
+        rows = [
+            HogQueryHit(
+                query_hog_id=hog_name,
+                hit_hog_id=hit.hog_id,
+                hit_level=hit.level,
+                jaccard=float(j),
+            )
+            for hit, j in zip(hits, jaccards)
+        ]
+        return HogQueryResult.from_hits(rows)
 
 
     def query_fam(self, fam_id: str, k=10):
