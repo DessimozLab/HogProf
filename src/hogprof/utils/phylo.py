@@ -38,15 +38,20 @@ def from_string(string: str, **kwargs) -> ete3.Tree:
     ete3_kwargs.update(kwargs)
     return ete3.Tree(string, **ete3_kwargs)
 
+# ete3 omits the root name unless asked; we need it,
+# because it becomes the level of HOGs defined at the root
+default_write_kwargs = {
+    **default_kwargs,
+    "format_root_node": True,
+}
+
 def to_file(tree: ete3.Tree, filename: Union[str, Path], **kwargs) -> None:
     logger.debug(f"Saving to file {filename}")
-    ete3_kwargs = default_kwargs.copy()
-    ete3_kwargs.update(kwargs)
     with open(filename, 'w') as outfile:
-        outfile.write(tree.write(**ete3_kwargs))
+        outfile.write(to_string(tree, **kwargs))
 
 def to_string(tree: ete3.Tree, **kwargs) -> str:
-    ete3_kwargs = default_kwargs.copy()
+    ete3_kwargs = default_write_kwargs.copy()
     ete3_kwargs.update(kwargs)
     return tree.write(**ete3_kwargs)
 

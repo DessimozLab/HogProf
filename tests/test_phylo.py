@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from hogprof.utils.phylo import TreeValidator
+from hogprof.utils.phylo import TreeValidator, from_string, to_string
 
 
 class TreeValidatorTest(unittest.TestCase):
@@ -44,6 +44,19 @@ class TreeValidatorTest(unittest.TestCase):
             },
             {leaf.name for leaf in tree.iter_leaves()},
         )
+
+    def test_names_unnamed_root_and_writes_it(self):
+        tree_path = self.write_tree("((a:1,b:1)ab:1,c:1);")
+        tree = TreeValidator(tree_path, {"a", "b", "c"}).run()
+        self.assertEqual("root", tree.name)
+
+        # the name must survive a newick round trip (pyham gets the string)
+        self.assertEqual("root", from_string(to_string(tree)).name)
+
+    def test_keeps_named_root(self):
+        tree_path = self.write_tree("((a:1,b:1)ab:1,c:1)Amniota;")
+        tree = TreeValidator(tree_path, {"a", "b", "c"}).run()
+        self.assertEqual("Amniota", from_string(to_string(tree)).name)
 
     def test_rejects_missing_species(self):
         tree_path = self.write_tree("(species_a:1,species_b:1)root;")

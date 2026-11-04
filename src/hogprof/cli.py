@@ -326,8 +326,8 @@ def _validate_args(parser, parsed_args):
     if parsed_args.min_species < 0:
         parser.error('--min-species must be nonnegative')
 
-    #if parsed_args.min_events < 0:
-    #    parser.error('--min-events must be nonnegative')
+    if parsed_args.min_events < 0:
+        parser.error('--min-events must be nonnegative')
 
 def add_build_arguments(parser):
     from pathlib import Path
@@ -389,7 +389,8 @@ def add_build_arguments(parser):
     parser.add_argument('--min-events',
                         '--eventslim',  # compatibility option name; to remove
                         dest='min_events',
-                        help='Keep subHOGs exceeding this loss or duplication count (-1 keeps all) (default:0)',
+                        help='Minimum number of events (losses + duplications) a profile '
+                             'must have to be kept; 0 keeps all (default:0)',
                         type=int, default=0)
     parser.add_argument('--db-type',
                         '--dbtype',  # compatibility option name; to remove
@@ -457,10 +458,6 @@ def add_search_arguments(parser):
     parser.add_argument("--index-dir",
                         help="Directory containing HogProf index files. "
                              "Produced by `build`", type=str, required=True)
-    parser.add_argument("--nsamples", help="no of samples", type=int, default=256)
-    parser.add_argument("--slice-subhogs",
-                        help="Use slice_subhogs mode",
-                        action="store_true")
     return parser
 
 

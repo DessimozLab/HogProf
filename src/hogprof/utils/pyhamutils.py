@@ -93,21 +93,26 @@ def orthoxml2numerical(orthoxml , mapper):
     orthoxml = ET.tostring(root, encoding='unicode', method='xml')
     return orthoxml 
 
-def _root_treemap(ham, root_hog, *, dataset_nodes, **kwargs):
+def _root_treemap(ham, root_hog, *, dataset_nodes, limit_events, **kwargs):
     """Make a treemap for the rootHOG"""
     if dataset_nodes is not None and root_hog.genome.name not in dataset_nodes:
         return None
 
-    return ham.create_tree_profile(hog=root_hog).treemap
+    treemap = ham.create_tree_profile(hog=root_hog).treemap
+    return treemap if _has_min_events(treemap, limit_events) else None
 
 
-def _check_limits(treemap, limit_events):
+def count_events(treemap):
+    """Total number of losses and duplications in a tree profile"""
+    return sum((node.dupl or 0) + (node.lost or 0) for node in treemap.traverse())
+
+
+def _has_min_events(treemap, limit_events):
     """
-    Check if |losses| AND |duplications| are less than limit_events
+    Check that the profile has at least `limit_events` events
+    (losses + duplications). `limit_events=0` keeps every profile.
     """
-    duplications = sum(node.dupl or 0 for node in treemap.traverse())
-    losses = sum(node.lost or 0 for node in treemap.traverse())
-    return duplications >= limit_events or losses >= limit_events
+    return limit_events <= 0 or count_events(treemap) >= limit_events
 
 
 def _subhog_keys(hogs, family):
@@ -152,7 +157,7 @@ def _subhog_treemaps(ham, root_hog, *, family, limit_species,
         treemap = ham.create_tree_profile(hog=hog).treemap
 
         # check the minimal number of events
-        if _check_limits(treemap, limit_events):
+        if _has_min_events(treemap, limit_events):
             treemaps[key] = treemap
 
     if verbose:

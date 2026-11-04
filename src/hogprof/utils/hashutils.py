@@ -6,6 +6,9 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+# Seed of the WeightedMinHashGenerator used by `build`
+HASH_SEED = 1
+
 
 def generate_treeweights( mastertree, taxaIndex ,  taxfilter= None, taxmask=None ):
     #weighing function for tax level, masking levels etc. sets all weights to 1 if they are in taxmask or filter
@@ -174,17 +177,19 @@ def row2hash(row , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
     
     return  pd.Series([weighted_hash,hog_matrix], index=['hash','rows'])
 
-def fam2hash_hdf5(fam, hdf5, dataset=None, nsamples=128):
+def fam2hash_hdf5(fam, hdf5, dataset=None, nsamples=128, seed=HASH_SEED):
     """
     Read the stored hash values and return a weighted minhash
     :param fam: hog id
     :param hdf5: h5py object of the hashvalues
     :param dataset: which dataset to use when constructing the hash
+    :param nsamples: number of permutations the index was built with
+    :param seed: seed of the generator the index was built with
     :return: minhash1: the weighted hash of your HOG
     """
     if dataset is None:
         dataset = next(iter(hdf5.keys()))
 
     hash_values = np.asarray(hdf5[dataset][fam, :].reshape(nsamples,2 )).astype('int64')
-    minhash1 = datasketch.WeightedMinHash(seed = 1, hashvalues=hash_values)
+    minhash1 = datasketch.WeightedMinHash(seed=seed, hashvalues=hash_values)
     return minhash1

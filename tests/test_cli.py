@@ -66,6 +66,7 @@ class CliTest(unittest.TestCase):
             (['--jobs', '0'], '--jobs must be greater than zero'),
             (['--num-permutations', '0'], '--num-permutations must be greater than zero'),
             (['--min-species', '-1'], '--min-species must be nonnegative'),
+            (['--min-events', '-1'], '--min-events must be nonnegative'),
             (['--loss-only', '--duplication-only'], 'not allowed with argument'),
             (['--reformat_names'], 'not supported'),
             (['--tax-weights', str(self.work / 'model')], '--tax-weights'),
@@ -96,6 +97,16 @@ class CliTest(unittest.TestCase):
             njobs=2, verbose=False,
         )
         self.startup.assert_called_once()
+
+    def test_search_parameters_come_from_the_index(self):
+        # --nsamples and --slice-subhogs are read from the manifest instead
+        for option in (['--nsamples', '32'], ['--slice-subhogs']):
+            with self.subTest(option=option):
+                stderr = io.StringIO()
+                with redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
+                    cli.main(['search', 'HOG:1', '--index-dir', str(self.work), *option])
+                self.assertEqual(2, error.exception.code)
+                self.assertIn('unrecognized arguments', stderr.getvalue())
 
     def test_process_arguments_are_used(self):
         with patch.object(sys, 'argv', ['hogprof'] + self.arguments()):

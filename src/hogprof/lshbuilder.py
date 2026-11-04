@@ -21,6 +21,7 @@ from pyoma.browser import db
 from tables import open_file
 
 from hogprof.cli import track_progress
+from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntry, HogEntryIndex
 from hogprof.presets import DB_PRESETS
 from hogprof.utils import hashutils, phylo, pyhamutils
@@ -53,7 +54,7 @@ class LSHBuilder:
                  reformat_names=False,
                  slicesubhogs=False,
                  limit_species=10, limit_events=0,
-                 seed=0):
+                 seed=0, provenance=None):
                 
         """
             Initializes the LSHBuilder class with the specified parameters and sets up the necessary objects.
@@ -70,7 +71,8 @@ class LSHBuilder:
             - verbose (bool): whether to print verbose output (default: False)
             - slicesubhogs (bool): whether to slice the subhogs (default: False)
             - limit_species (int): the minimum number of species in a subHOG that is included in the database (default: 10)
-            - limit_events (int): the minimum number of events (loss,duplication) in a subHOG that is included in the database (default: 0)
+            - limit_events (int): the minimum number of events (losses + duplications) a profile must have to be included in the database; 0 keeps all (default: 0)
+            - provenance (dict): extra information about the inputs to record in the index manifest
 
         """
         logger.debug("Initializing LSHBuilder")
@@ -99,12 +101,18 @@ class LSHBuilder:
         self.date_string = "{:%B_%d_%Y_%H_%M}".format(datetime.now())
         self.limit_species = limit_species
         self.limit_events = limit_events
+        self.lossonly = lossonly
+        self.duplonly = duplonly
+        self.seed = seed
+        self.provenance = dict(provenance or {})
 
         self.min_hog_size = 0 if self.slicesubhogs else self.limit_species
         self.max_hog_size = np.inf
 
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        # an old manifest would mark a partially rebuilt index as complete
+        IndexManifest.remove(self.output_dir)
 
         species = self._get_species_names()
         if masterTree is None:
@@ -134,7 +142,7 @@ class LSHBuilder:
             #load machine learning weights
             self.treeweights = treeweights
         tax_max = max(self.taxaIndex.values())+1
-        wmg = WeightedMinHashGenerator(3*tax_max , sample_size = numperm , seed=1)
+        wmg = WeightedMinHashGenerator(3*tax_max , sample_size = numperm , seed=hashutils.HASH_SEED)
 
         with open(self.output_dir / 'wmg.pkl', 'wb') as wmgout:
             wmgout.write( pickle.dumps(wmg))
@@ -625,11 +633,39 @@ class LSHBuilder:
         logger.info('Pipeline complete')
 
 
+    def _save_manifest(self):
+        num_hogs = (
+            pl.scan_csv(self.output_dir / 'fam2orthoxml.csv')
+            .select(pl.len()).collect().item()
+        )
+        manifest = IndexManifest(
+            num_permutations=self.numperm,
+            hash_seed=self.wmg.seed,
+            hashes_dataset=self._make_tax_str(),
+            slice_subhogs=self.slicesubhogs,
+            num_hogs=num_hogs,
+            build={
+                **self.provenance,
+                "taxon_mask": self.tax_mask,
+                "exclude_taxa": self.tax_filter,
+                "min_species": self.limit_species,
+                "min_events": self.limit_events,
+                "loss_only": self.lossonly,
+                "duplication_only": self.duplonly,
+                "use_tax_ids": self.swap2taxcode,
+                "seed": self.seed,
+            },
+        )
+        path = manifest.write(self.output_dir)
+        logger.info('Wrote index manifest: %s', path)
+
     def run_pipeline(self , threads):
         logger.info('Running with %d threads', threads)
         # Levels mode counts represented species on each parsed HOG
         data_generator = self.generate_dataframes(size=100)
         self._run_parallel(threads=threads, data_generator=data_generator)
+        # written last: its presence marks a complete index
+        self._save_manifest()
         return self.hashes_path, self.lshforestpath, self.mat_path
 
 
@@ -703,6 +739,13 @@ def run(
             limit_events=min_events,
             seed=seed,
             verbose=verbose,
+            provenance={
+                "oma": str(oma) if oma is not None else None,
+                "orthoxml_glob": orthoxml_glob,
+                "species_tree": str(tree) if tree is not None else None,
+                "db_type": db_type,
+                "tax_weights": tax_weights,
+            },
         )
         paths = lsh_builder.run_pipeline(njobs)
 

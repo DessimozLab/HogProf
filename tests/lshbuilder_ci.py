@@ -21,6 +21,7 @@ import polars as pl
 from datasketch import WeightedMinHash
 from ete3 import Tree
 
+from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntryIndex
 from hogprof.profiler import Profiler
 
@@ -34,6 +35,7 @@ OUTPUT_FILES = {
     "hashes.h5",
     "newlshforest.pkl",
     "fam2orthoxml.csv",
+    "manifest.json",
 }
 
 
@@ -51,11 +53,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         work = self._get_work_dir()
         output = work / "output"
 
-        p = Profiler(
-            lshforestpath=output / "newlshforest.pkl",
-            hashes_h5=output / "hashes.h5",
-            nsamples=NPERM,
-        )
+        p = Profiler.from_index_dir(output)
         hog_id = "HOG:0016206_1"
         result = p.query_hog(hog_id, k=3)
         self.assertEqual(len(result), 3)
@@ -71,11 +69,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         work = self._get_work_dir()
         output = work / "output"
 
-        p = Profiler(
-            lshforestpath=output / "newlshforest.pkl",
-            hashes_h5=output / "hashes.h5",
-            nsamples=NPERM,
-        )
+        p = Profiler.from_index_dir(output)
         hog_id = "HOG:0015853.1q_4"
         result = p.query_hog(hog_id, level="Archosauria")
         self.assertEqual(len(result), 10)
@@ -127,7 +121,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         ]
         if levels:
             # Keep even event-free subHOGs so every input family is represented
-            command += ["--slicesubhogs", "--eventslim", "-1"]
+            command += ["--slicesubhogs", "--eventslim", "0"]
         result = subprocess.run(
             command, cwd=work, capture_output=True, text=True, timeout=120,
             check=False,
@@ -171,6 +165,17 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         self.assertEqual(expected_families, set(families))
         index = HogEntryIndex(output / "fam2orthoxml.csv")
         self.assertEqual(len(rows), len(index))
+
+        # HOGs at the tree root get the root's name as their level
+        self.assertTrue(all(row["level"] for row in rows), "Every HOG must have a level")
+
+        manifest = IndexManifest.read(output)
+        self.assertEqual(NPERM, manifest.num_permutations)
+        self.assertEqual(levels, manifest.slice_subhogs)
+        self.assertEqual(len(rows), manifest.num_hogs)
+        self.assertEqual("NoFilterNoMask", manifest.hashes_dataset)
+        self.assertEqual(0, manifest.build["min_events"])
+        self.assertEqual(1, manifest.build["min_species"])
         if levels:
             self.assertGreater(len(rows), len(inputs))
             self.assertEqual(list(range(len(rows))), [int(row["hog_key"]) for row in rows])
@@ -189,6 +194,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
             generator = pickle.load(source)
 
         self.assertEqual(NPERM, generator.sample_size)
+        self.assertEqual(generator.seed, manifest.hash_seed)
         self.assertEqual(3 * (max(taxa.values()) + 1), generator.dim)
 
         with (output / "newlshforest.pkl").open("rb") as source:

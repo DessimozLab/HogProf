@@ -8,6 +8,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
+from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntry, HogEntryIndex, HogQueryHit, HogQueryResult
 from hogprof.utils import hashutils
 
@@ -24,16 +25,22 @@ class Profiler:
                  lshforestpath=None,
                  hashes_h5=None,
                  nsamples=256,
-                 slicesubhogs=False):
+                 slicesubhogs=False,
+                 hash_seed=hashutils.HASH_SEED,
+                 hashes_dataset=None):
         """
         The Profiler class initializes a profiler object for querying the
         LSH with HOGs and returning a list of result HOGs.
 
+        Prefer `Profiler.from_index_dir`, which reads these parameters
+        from the index manifest.
+
         lshforestpath (str, optional): Path to the pickled LSH forest object.
         hashes_h5 (h5py.File): H5 file containing HOGs.
-        nsamples (int): Number of samples to use.
-        slicesubhogs (bool): Whether to slice subhogs.
-        nsamples (int, optional): Number of samples to use. Defaults to 256.
+        nsamples (int, optional): Number of permutations of the index. Defaults to 256.
+        slicesubhogs (bool): Whether the index has subHOG profiles.
+        hash_seed (int): Seed of the hash generator used to build the index.
+        hashes_dataset (str, optional): Dataset name in `hashes_h5`; the first one if None.
         """
         logger.debug('Loading LSH')
         with open(lshforestpath, 'rb') as lshpickle:
@@ -49,8 +56,30 @@ class Profiler:
 
         logger.debug("H5" + str(self.hashes_h5) + " " + str(self.hashes_h5.keys()))
         self.nsamples = nsamples
+        self.hash_seed = hash_seed
+        self.hashes_dataset = hashes_dataset
 
         logger.debug('Profiler init over')
+
+    @classmethod
+    def from_index_dir(cls, index_dir) -> "Profiler":
+        """Open an index built by `hogprof build`, configured from its manifest"""
+        index_dir = Path(index_dir)
+        manifest = IndexManifest.read(index_dir)
+        return cls(
+            lshforestpath=index_dir / "newlshforest.pkl",
+            hashes_h5=index_dir / "hashes.h5",
+            nsamples=manifest.num_permutations,
+            slicesubhogs=manifest.slice_subhogs,
+            hash_seed=manifest.hash_seed,
+            hashes_dataset=manifest.hashes_dataset,
+        )
+
+    def _get_hash(self, hog_key: int):
+        return hashutils.fam2hash_hdf5(hog_key, self.hashes_h5,
+                                       dataset=self.hashes_dataset,
+                                       nsamples=self.nsamples,
+                                       seed=self.hash_seed)
 
     def get_subhogs_of_fam(self, fam_id: int) -> Iterable[int]:
         """
@@ -99,7 +128,7 @@ class Profiler:
         else:
             hog = hogs[0]
 
-        query_hash = hashutils.fam2hash_hdf5(hog.hog_key, self.hashes_h5, nsamples=self.nsamples)
+        query_hash = self._get_hash(hog.hog_key)
 
         rows = []
 
@@ -125,7 +154,7 @@ class Profiler:
             hit = self.hog_index.get_hog_by_key(hit_key)
 
             # compute jaccard
-            hit_hash = hashutils.fam2hash_hdf5(hit_key, self.hashes_h5, nsamples=self.nsamples)
+            hit_hash = self._get_hash(hit_key)
             jaccard = query_hash.jaccard(hit_hash)
 
             # If --level is provided, we need to make sure that
@@ -277,15 +306,6 @@ def run_search(index_dir: Path,
                hog_id: str,
                level: str = None,
                k: int = 10,
-               nsamples=256,
-               slice_subhogs=False,
                ):
-
-    index_dir = Path(index_dir)
-    p = Profiler(
-        lshforestpath=index_dir / "newlshforest.pkl",
-        hashes_h5=index_dir / "hashes.h5",
-        nsamples=nsamples,
-        slicesubhogs=slice_subhogs,
-    )
+    p = Profiler.from_index_dir(index_dir)
     return p.query_hog(hog_id, level=level, k=k).hits
