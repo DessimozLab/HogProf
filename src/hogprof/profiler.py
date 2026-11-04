@@ -102,9 +102,24 @@ class Profiler:
         query_hash = hashutils.fam2hash_hdf5(hog.hog_key, self.hashes_h5, nsamples=self.nsamples)
 
         rows = []
-        hit_keys = self.forest.query(query_hash, k)
+
+        # FIXME: there must be a better way of doing
+        # this, e.g. with splitting the forest into sets
+        # of forests, one per level, and querying exactly k
+        # in the required level-defined forest.
+        # Current solution: for levels, let's query twice more
+        # hits, since they might be filtered out further
+        # if they are from a wrong level.
+        queried_k = 2 * k if level else k
+        reported_hits = 0
+
+        hit_keys = self.forest.query(query_hash, queried_k)
         for hit_key in hit_keys:
             hit_key = int(hit_key)
+
+            # we have enough reported hits
+            if reported_hits >= k:
+                break
 
             # get hit metadata
             hit = self.hog_index.get_hog_by_key(hit_key)
@@ -113,7 +128,12 @@ class Profiler:
             hit_hash = hashutils.fam2hash_hdf5(hit_key, self.hashes_h5, nsamples=self.nsamples)
             jaccard = query_hash.jaccard(hit_hash)
 
-            # report
+            # If --level is provided, we need to make sure that
+            # neighbors are defined at the same level as the query.
+            if level and level != hit.level:
+                continue
+
+            # report a hit
             rows.append(
                 HogQueryHit(
                     query_hog_id=hog_name,
@@ -122,6 +142,7 @@ class Profiler:
                     jaccard=jaccard,
                 )
             )
+            reported_hits += 1
 
         hqr = HogQueryResult.from_hits(rows)
         hqr.hits.sort("jaccard", descending=True)
