@@ -135,13 +135,19 @@ def _subhog_keys(hogs, family):
         yield key
 
 
-def _subhog_treemaps(ham, root_hog, *, family, limit_species,
-                     limit_events, dataset_nodes, verbose):
-    """Make treemaps for the levels mode"""
+def _iter_subhog_treemaps(ham, root_hog, *, family, limit_species,
+                          limit_events, dataset_nodes, verbose):
+    """
+    Yield (key, treemap) for the levels mode, one at a time.
+
+    A treemap is a copy of the species subtree below the subHOG, so a large
+    family (tens of thousands of subHOGs) needs many GB if all are kept at once.
+    Consumers should hash each treemap and drop it.
+    """
     hogs = root_hog.get_all_descendant_hogs()
 
     fallback_id = root_hog.hog_id if root_hog.hog_id is not None else family
-    treemaps = {}
+    retained = 0
 
     # for every subhog
     for key, hog in zip(_subhog_keys(hogs, fallback_id), hogs):
@@ -158,12 +164,17 @@ def _subhog_treemaps(ham, root_hog, *, family, limit_species,
 
         # check the minimal number of events
         if _has_min_events(treemap, limit_events):
-            treemaps[key] = treemap
+            retained += 1
+            yield key, treemap
 
     if verbose:
         logger.debug("Family %s: retained %d of %d HOG profiles",
-                     family, len(treemaps), len(hogs))
-    return treemaps
+                     family, retained, len(hogs))
+
+
+def _subhog_treemaps(ham, root_hog, **kwargs):
+    """Make treemaps for the levels mode"""
+    return dict(_iter_subhog_treemaps(ham, root_hog, **kwargs))
 
 
 # Profiling strategies supported in HogProf
@@ -172,7 +183,10 @@ _PROFILE_STRATEGIES = {
     "root": _root_treemap,
 
     # Levels -- 1 profile per rootHOG + every subHOG
-    "levels": _subhog_treemaps
+    "levels": _subhog_treemaps,
+
+    # Levels, lazily: yields (key, treemap) pairs
+    "levels-lazy": _iter_subhog_treemaps,
 }
 
 
@@ -183,18 +197,19 @@ def get_ham_treemap_from_row(row, tree_string,
                              use_internal_name=True,
                              limit_species=10, limit_events=0,
                              dataset_nodes=None, verbose=False,
-                             slicesubhogs=False):
+                             slicesubhogs=False, lazy=False):
     """Parse one root-HOG input and produce treemaps depending on the mode:
 
     - Root mode (default) returns a treemap or None
     - Levels mode (slicesubhogs=True) returns a dictionary,
     including the root when it passes the species and event thresholds.
+    With lazy=True it returns an iterator of (key, treemap) pairs instead.
     """
     family, orthoxml = row
 
     if not orthoxml:
         logger.warning("Family %s: empty OrthoXML provided", family)
-        return {} if slicesubhogs else None
+        return ({} if not lazy else iter(())) if slicesubhogs else None
 
     if swap_ids:
         if not orthoXML_as_string:
@@ -214,7 +229,10 @@ def get_ham_treemap_from_row(row, tree_string,
         raise ValueError(f"Family {family}: expected one top-level HOG, found {len(roots)}")
 
     # pick the profiling strategy
-    strategy = _PROFILE_STRATEGIES["levels" if slicesubhogs else "root"]
+    if slicesubhogs:
+        strategy = _PROFILE_STRATEGIES["levels-lazy" if lazy else "levels"]
+    else:
+        strategy = _PROFILE_STRATEGIES["root"]
 
     return strategy(ham, roots[0],
                     family=family,

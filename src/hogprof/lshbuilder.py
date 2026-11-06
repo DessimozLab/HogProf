@@ -115,6 +115,10 @@ class LSHBuilder:
         IndexManifest.remove(self.output_dir)
 
         species = self._get_species_names()
+        self.species_rename = {}
+        if masterTree is not None and self.h5OMA and not self.swap2taxcode:
+            self.species_rename = self._oma_species_rename(masterTree)
+            species = {self.species_rename.get(name, name) for name in species}
         if masterTree is None:
             if not h5_oma:
                 raise TypeError('Please specify either a database or a tree')
@@ -242,6 +246,41 @@ class LSHBuilder:
                         
             return names
 
+    def _oma_species_rename(self, masterTree):
+        """
+        Some OMA species trees (e.g. All.Jul2024) name a species' leaf by its
+        UniProt code, because its scientific name is taken by the internal node
+        above it (the species, with strains as children). Map such species to
+        their code, so that they stay leaves under their own species node.
+        Flattening that node instead puts the species on the wrong level and
+        breaks HOGs defined at it in pyham.
+        """
+        tree = phylo.from_file(masterTree)
+        leaves = set(tree.get_leaf_names())
+        internal = {node.name for node in tree.traverse() if not node.is_leaf()}
+        genomes = self.h5OMA.root.Genome.read()
+
+        rename = {}
+        for name, code in zip(genomes['SciName'], genomes['UniProtSpeciesCode']):
+            name, code = name.decode(), code.decode()
+            if name in internal and code in leaves:
+                rename[name] = code
+        if rename:
+            logger.warning(
+                "Using UniProt codes for %d species whose names are internal tree nodes: %s",
+                len(rename), ", ".join(f"{k} -> {v}" for k, v in sorted(rename.items())),
+            )
+        return rename
+
+    def _rename_species(self, xml):
+        """Apply species_rename to the <species> elements of a parsed OrthoXML"""
+        if self.species_rename:
+            for node in xml.findall('{http://orthoXML.org/2011/}species'):
+                name = node.get('name')
+                if name in self.species_rename:
+                    node.set('name', self.species_rename[name])
+        return xml
+
     def load_one(self, fam):
         #test function to try out the pipeline on one orthoxml
         ortho_fam = self.READ_ORTHO(fam)
@@ -287,7 +326,7 @@ class LSHBuilder:
                     # filtering by HOG size in the # of species
                     hog_size = oxml.count_species(xml)
                     if self._hog_size_ok(hog_size):
-                        ortho_fam = oxml_builder.add_loft_ids(xml)
+                        ortho_fam = oxml_builder.add_loft_ids(self._rename_species(xml))
                         families[unique_hog_id] = {
                             'ortho': ortho_fam,
                             'hog_id': oxml.get_root_hog_id(xml),
@@ -340,28 +379,21 @@ class LSHBuilder:
                 break
                 
             if self.slicesubhogs:
-                tree_dicts = []
-                for index, row in df[["hog_key", "ortho"]].iterrows():
-                    result = self.HAM_PIPELINE(row)
-                    tree_dicts.append(result)
-
-                # Assign the results back to the DataFrame
-                df["tree_dicts"] = tree_dicts
-                df["hash_dicts"] = df[["hog_key", "tree_dicts"]].apply(
-                    self.HASH_PIPELINE, axis=1
-                )
-
-                # Filter out rows with empty hash_dicts to save time
-                df = df[df["hash_dicts"].apply(bool)]
-                if df.empty:
-                    continue
-
+                # Hash every subHOG profile as soon as it is made and drop it:
+                # keeping all treemaps of a batch needs ~100 KB per orthologGroup,
+                # i.e. tens of GB for the largest OMA families
                 rows = []
                 for _, row in df.iterrows():
                     fam_id = self._extract_hog_name(row["ortho"]) if self.fileglob else str(row["hog_id"])
-                    for subhog in row["hash_dicts"]:
-                        level = row["tree_dicts"][subhog].name
-                        hashed = row["hash_dicts"][subhog][1]
+                    treemaps = self.HAM_PIPELINE((row["hog_key"], row["ortho"]), lazy=True)
+                    for subhog, treemap in treemaps:
+                        level = treemap.name
+                        _, hashed = hashutils.hash_tree(
+                            treemap, self.taxaIndex, self.treeweights, self.wmg,
+                            lossonly=self.lossonly, duplonly=self.duplonly,
+                        )
+                        if hashed is None:
+                            continue
 
                         rows.append(
                             {
@@ -376,6 +408,9 @@ class LSHBuilder:
                                 "source": str(row["ortho"]) if self.fileglob else "",
                             }
                         )
+
+                if not rows:
+                    continue
 
                 result_queue.put(pl.DataFrame(rows))
             else:
