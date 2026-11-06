@@ -301,8 +301,15 @@ class LSHBuilder:
         hog_size = oxml.count_species(ortho_str)
         return self._hog_size_ok(hog_size)
 
-    def generate_dataframes(self, size=100):
+    def generate_dataframes(self, size=100, max_batch_bytes=4_000_000):
+        """
+        Yield batches of families for the workers: `size` families, or fewer
+        once their OrthoXML reaches `max_batch_bytes`. Large families are slow
+        and memory-hungry; this keeps several of them from ending up in one
+        batch (in OMA they are often next to each other).
+        """
         families = {}
+        batch_bytes = 0
         start = -1
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
@@ -332,12 +339,14 @@ class LSHBuilder:
                             'hog_id': oxml.get_root_hog_id(xml),
                         }
                         unique_hog_id += 1
+                        batch_bytes += len(ortho_fam)
 
-                    if len(families) >= size:
+                    if families and (len(families) >= size or batch_bytes >= max_batch_bytes):
                         pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                         pd_dataframe['hog_key'] = pd_dataframe.index
                         yield pd_dataframe
                         families = {}
+                        batch_bytes = 0
             if families:
                 pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
                 pd_dataframe['hog_key'] = pd_dataframe.index
@@ -383,6 +392,7 @@ class LSHBuilder:
                 # keeping all treemaps of a batch needs ~100 KB per orthologGroup,
                 # i.e. tens of GB for the largest OMA families
                 rows = []
+                hashes = []
                 for _, row in df.iterrows():
                     fam_id = self._extract_hog_name(row["ortho"]) if self.fileglob else str(row["hog_id"])
                     treemaps = self.HAM_PIPELINE((row["hog_key"], row["ortho"]), lazy=True)
@@ -401,18 +411,20 @@ class LSHBuilder:
                                 "fam_id": fam_id,
                                 "hog_id": subhog.removeprefix(f"{level}_"),
                                 "level": level,
-                                # Polars Object columns cannot be pickled by mp.Queue.
-                                # Send native values and reconstruct the hash in saver
-                                "hash": hashed.hashvalues.tolist(),
                                 "hash_seed": hashed.seed,
                                 "source": str(row["ortho"]) if self.fileglob else "",
                             }
                         )
+                        hashes.append(hashed.hashvalues)
 
                 if not rows:
                     continue
 
-                result_queue.put(pl.DataFrame(rows))
+                # Polars Object columns cannot be pickled by mp.Queue.
+                # Send hash values as an Array column; the saver rebuilds the hashes
+                result = pl.DataFrame(rows).with_columns(
+                    pl.Series("hash", np.stack(hashes).reshape(len(hashes), -1)))
+                result_queue.put(result)
             else:
                 df["tree"] = df[["hog_key", "ortho"]].apply(self.HAM_PIPELINE, axis=1)
                 df[["hash", "rows"]] = df[["hog_key", "tree"]].apply(self.HASH_PIPELINE, axis=1)
@@ -496,16 +508,21 @@ class LSHBuilder:
                 # Temporary: Pandas is to be replaced by Polars everywhere.
                 # currently we still use pd for the rootHOG mode
                 is_polars = isinstance(current_df, pl.DataFrame)
-                rows = current_df.to_dicts() if is_polars else current_df.to_dict("records")
-                for row in rows:
-                    hashed = row["hash"]
-                    if hashed is None:
+                if is_polars:
+                    hash_values = current_df["hash"].to_numpy().astype(np.int64, copy=False)
+                    hash_values = hash_values.reshape(len(current_df), -1, 2)
+                    rows = current_df.drop("hash").to_dicts()
+                else:
+                    rows = current_df.to_dict("records")
+                for j, row in enumerate(rows):
+                    hashed = None if is_polars else row["hash"]
+                    if not is_polars and hashed is None:
                         continue
 
                     if is_polars:
                         hashed = WeightedMinHash(
                             seed=row["hash_seed"],
-                            hashvalues=np.asarray(hashed, dtype=np.int64),
+                            hashvalues=hash_values[j],
                         )
 
                     key = hog_key if self.slicesubhogs else int(row["hog_key"])

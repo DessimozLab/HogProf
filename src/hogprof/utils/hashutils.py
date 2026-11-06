@@ -49,11 +49,42 @@ def generate_treeweights( mastertree, taxaIndex ,  taxfilter= None, taxmask=None
             weights[taxmax*i + taxaIndex[n.name] ] = 1
     return weights
 
+def weighted_minhash(wmg, v):
+    """
+    Same result as `wmg.minhash(v)` (datasketch.WeightedMinHashGenerator),
+    vectorized over the samples and restricted to the nonzero entries of v.
+
+    datasketch loops over the samples and computes every one on the full
+    dimension, with zeros masked as NaN; profiles are sparse, so this is
+    much faster. The float32 arithmetic is the same, element by element, and
+    the first minimum among nonzero entries is the one nanargmin picks.
+    """
+    v = np.asarray(v, dtype=np.float32)
+    if v.shape != (wmg.dim,):
+        raise ValueError("Input dimension mismatch, expecting %d" % wmg.dim)
+    nonzero = np.flatnonzero(v)
+    if nonzero.size == 0:
+        raise ValueError("Input is all zeros")
+
+    vlog = np.log(v[nonzero])
+    rs = wmg.rs[:, nonzero]
+    betas = wmg.betas[:, nonzero]
+    t = np.floor((vlog / rs) + betas)
+    ln_y = (t - betas) * rs
+    ln_a = wmg.ln_cs[:, nonzero] - ln_y - rs
+    k = np.argmin(ln_a, axis=1)
+
+    hashvalues = np.zeros((wmg.sample_size, 2), dtype=int)
+    hashvalues[:, 0] = nonzero[k]
+    hashvalues[:, 1] = t[np.arange(wmg.sample_size), k]
+    return datasketch.WeightedMinHash(wmg.seed, hashvalues)
+
+
 def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly = False ):
     """
     Generate a weighted minhash and binary matrix row for a tree profile
 
-    :param tp: a pyham tree profile
+    :param tp: a tree profile (pyham treemap or pyhamutils.TreeProfile)
     :param taxaIndex: dict mapping taxa to columns
     :param treeweights: a vector of weights for each tax levels
     :param wmg: Datasketch weighted minhash generator
@@ -65,41 +96,38 @@ def hash_tree(tp , taxaIndex , treeweights , wmg , lossonly = False , duplonly =
         return None, None
 
     taxaIndex_max = max(taxaIndex.values())+1
-    hog_matrix_weighted = np.zeros((1, 3*taxaIndex_max))
+    hog_matrix_weighted = np.zeros(3*taxaIndex_max)
     hog_matrix_binary = np.zeros((1, 3*taxaIndex_max))
 
-    losses = [ taxaIndex[n.name]  for n in tp.traverse() if n.lost and n.name in taxaIndex  ]
-    dupl = [ taxaIndex[n.name]  for n in tp.traverse() if n.dupl  and n.name in taxaIndex  ]
-    presence = [ taxaIndex[n.name]  for n in tp.traverse() if n.nbr_genes > 0  and n.name in taxaIndex ]
-    indices = dict(zip (['presence', 'loss', 'dup'],[presence,losses,dupl] ) )
+    presence, losses, dupl = [], [], []
+    for n in tp.traverse():
+        index = taxaIndex.get(n.name)
+        if index is None:
+            continue
+        if n.nbr_genes > 0:
+            presence.append(index)
+        if n.lost:
+            losses.append(index)
+        if n.dupl:
+            dupl.append(index)
+
     ### Athina comment:
     ### change things here to do permutation test!!!!
-    for i,event in enumerate(indices):
-        if len(indices[event])>0:
-            try:
-                hogindex = np.asarray(indices[event])+i*taxaIndex_max
-                
-                hog_matrix_weighted[:,hogindex] = treeweights[hogindex , : ].ravel()
-                
-                if lossonly == True and event != 'loss':
-                    hog_matrix_weighted[:,hogindex] = 0
-                if duplonly == True and event != 'dup':
-                    hog_matrix_weighted[:,hogindex] = 0
-                if lossonly == False and duplonly == False:
-                    hog_matrix_binary[:,hogindex] = 1
+    for i, (event, indices) in enumerate((('presence', presence), ('loss', losses), ('dup', dupl))):
+        if not indices:
+            continue
+        hogindex = np.asarray(indices) + i*taxaIndex_max
 
-            except Exception:
-                logger.exception(
-                    'Error hashing event %s (indices=%s, hogindex=%s)',
-                    event,
-                    indices[event],
-                    hogindex,
-                )
+        if lossonly and event != 'loss':
+            continue
+        if duplonly and event != 'dup':
+            continue
+        hog_matrix_weighted[hogindex] = treeweights[hogindex, :].ravel()
+        if not lossonly and not duplonly:
+            hog_matrix_binary[:, hogindex] = 1
 
-    input_vec = list(hog_matrix_weighted.flatten())
-
-    if wmg.dim == len(input_vec) and sum(input_vec) > 0:
-        weighted_hash = wmg.minhash(input_vec)
+    if wmg.dim == hog_matrix_weighted.size and hog_matrix_weighted.sum() > 0:
+        weighted_hash = weighted_minhash(wmg, hog_matrix_weighted)
         return  hog_matrix_binary , weighted_hash
 
     else:

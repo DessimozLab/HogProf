@@ -1,10 +1,185 @@
 import xml.etree.ElementTree as ET
+import contextlib
 import logging
 import os
 import sys
+import types
 import pyham
+import pyham.ham
+import pyham.taxonomy
 
 logger = logging.getLogger(__name__)
+
+
+class _CachedTaxonomies:
+    """
+    Per-process cache of pyham taxonomies, one per tree string.
+
+    pyham.Ham parses the newick species tree for every family, and looks species
+    up by a linear search over all tree nodes. For a ~5000 node tree this is
+    most of the cost of small families. Here the tree is parsed once, nodes are
+    indexed by name, and the per-family state pyham attaches to the nodes
+    (the "genome" feature) is cleared before every reuse.
+
+    A cached taxonomy must not be shared by two live Ham objects: families are
+    processed one after another, and treemaps hold no references to the tree.
+    """
+
+    def __init__(self):
+        self._cache = {}
+
+    def get(self, tree_string, **kwargs):
+        key = (tree_string, tuple(sorted(kwargs.items())))
+        taxonomy = self._cache.get(key)
+        if taxonomy is None:
+            taxonomy = pyham.taxonomy.Taxonomy(tree_string, **kwargs)
+            self._index(taxonomy)
+            self._cache[key] = taxonomy
+        else:
+            self._reset(taxonomy)
+        return taxonomy
+
+    @staticmethod
+    def _index(taxonomy):
+        tree = taxonomy.tree
+        by_name = {}
+        for node in tree.traverse():
+            by_name.setdefault(node.name, []).append(node)
+        search_nodes = tree.search_nodes
+
+        def fast_search_nodes(**conditions):
+            if len(conditions) == 1 and "name" in conditions:
+                return list(by_name.get(conditions["name"], ()))
+            return search_nodes(**conditions)
+
+        # pyham only calls tree.search_nodes(name=...)
+        tree.search_nodes = fast_search_nodes
+
+    @staticmethod
+    def _reset(taxonomy):
+        for node in taxonomy.leaves | taxonomy.internal_nodes:
+            if "genome" in node.features:
+                node.del_feature("genome")
+        taxonomy.leaves = set()
+        taxonomy.internal_nodes = set()
+
+
+_taxonomies = _CachedTaxonomies()
+
+
+@contextlib.contextmanager
+def _use_cached_taxonomy():
+    """Make pyham.Ham take its Taxonomy from the per-process cache"""
+    original = pyham.ham.tax
+    pyham.ham.tax = types.SimpleNamespace(
+        Taxonomy=lambda tree_file, **kwargs: _taxonomies.get(tree_file, **kwargs))
+    try:
+        yield
+    finally:
+        pyham.ham.tax = original
+
+
+class ProfileNode:
+    """One level of a tree profile, with the fields of a pyham TreeProfile node"""
+    __slots__ = ("name", "nbr_genes", "dupl", "lost", "retained",
+                 "duplication", "nbr_events", "gain")
+
+    def __init__(self, name, nbr_genes, dupl, lost, retained, duplication, nbr_events):
+        self.name = name
+        self.nbr_genes = nbr_genes
+        self.dupl = dupl
+        self.lost = lost
+        self.retained = retained
+        self.duplication = duplication
+        self.nbr_events = nbr_events
+        self.gain = None
+
+
+class TreeProfile:
+    """
+    Lightweight replacement for pyham's TreeProfile.treemap: the levels below a
+    HOG with their gene counts and events, without the tree structure.
+
+    Supports the parts of the ete3 treemap HogProf uses: `.name` (the level of
+    the HOG) and `.traverse()`.
+    """
+    __slots__ = ("name", "nodes")
+
+    def __init__(self, name, nodes):
+        self.name = name
+        self.nodes = nodes
+
+    def traverse(self):
+        return iter(self.nodes)
+
+
+def tree_profile(hog, genes_by_species=None):
+    """
+    Compute the tree profile of a HOG: the equivalent of
+    `ham.create_tree_profile(hog=hog).treemap` (pyham.TreeProfile.computeTP_hog).
+
+    Unlike pyham, works on the taxonomy nodes directly instead of a copy of the
+    subtree made through newick. Besides being much faster, that keeps node
+    names intact: the newick copy replaces characters such as '(' and ')' with
+    '_', so species like 'Guillardia theta (strain CCMP2712)' did not match
+    their genes and the taxa index.
+    """
+    root = hog.genome.taxon
+    nodes = list(root.traverse())
+
+    # map node with related hogs/genes
+    level_groups = {node.name: [] for node in nodes}
+
+    # add all of subhog to the related level
+    for subhog in hog.get_all_descendant_hogs():
+        if subhog.genome.name in level_groups:
+            level_groups[subhog.genome.name].append(subhog)
+
+    # add empty extant genomes
+    for leaf in root.iter_leaves():
+        level_groups[leaf.name] = []
+
+    # add genes to related extant genome
+    if genes_by_species is None:
+        genes_by_species = hog.get_all_descendant_genes_clustered_by_species()
+    for species, genes in genes_by_species.items():
+        level_groups[species.name] = genes
+
+    profile = []
+    for lvl in nodes:
+        if lvl is not root:
+            cpt_dupl = 0
+            cpt_ident = 0
+            set_dup_parent = set()
+            for h in level_groups[lvl.name]:
+                if h.arose_by_duplication != False:
+                    cpt_dupl += 1
+                    set_dup_parent.add(h.parent)
+                else:
+                    cpt_ident += 1
+
+            cpt_lost = 0
+            for h_up in level_groups[lvl.up.name]:
+                if len(h_up.children) != 0:
+                    found = False
+                    for child in h_up.children:
+                        if child.genome.taxon.name == lvl.name:
+                            found = True
+                    if found is False:
+                        cpt_lost += 1
+                else:
+                    cpt_lost += 1
+
+            cpt_duplication = max(0, cpt_dupl - len(set_dup_parent))
+            nbr_ev = cpt_lost + cpt_duplication
+        else:
+            cpt_dupl = cpt_ident = cpt_lost = cpt_duplication = nbr_ev = None
+
+        profile.append(ProfileNode(
+            lvl.name, len(level_groups[lvl.name]), cpt_dupl, cpt_lost,
+            cpt_ident, cpt_duplication, nbr_ev))
+
+    return TreeProfile(root.name, profile)
 
 
 def get_orthoxml_oma(fam, db_obj):
@@ -98,7 +273,7 @@ def _root_treemap(ham, root_hog, *, dataset_nodes, limit_events, **kwargs):
     if dataset_nodes is not None and root_hog.genome.name not in dataset_nodes:
         return None
 
-    treemap = ham.create_tree_profile(hog=root_hog).treemap
+    treemap = tree_profile(root_hog)
     return treemap if _has_min_events(treemap, limit_events) else None
 
 
@@ -157,10 +332,11 @@ def _iter_subhog_treemaps(ham, root_hog, *, family, limit_species,
             continue
 
         # check the minimal number of represented species
-        if len(hog.get_all_descendant_genes_clustered_by_species()) < limit_species:
+        genes_by_species = hog.get_all_descendant_genes_clustered_by_species()
+        if len(genes_by_species) < limit_species:
             continue
 
-        treemap = ham.create_tree_profile(hog=hog).treemap
+        treemap = tree_profile(hog, genes_by_species)
 
         # check the minimal number of events
         if _has_min_events(treemap, limit_events):
@@ -218,11 +394,12 @@ def get_ham_treemap_from_row(row, tree_string,
         orthoxml = switch_name_ncbi_id(orthoxml)
         orthoXML_as_string = True
 
-    ham = pyham.Ham(tree_string, orthoxml,
-                    type_hog_file="orthoxml",
-                    tree_format="newick_string",
-                    use_internal_name=use_internal_name,
-                    orthoXML_as_string=orthoXML_as_string)
+    with _use_cached_taxonomy():
+        ham = pyham.Ham(tree_string, orthoxml,
+                        type_hog_file="orthoxml",
+                        tree_format="newick_string",
+                        use_internal_name=use_internal_name,
+                        orthoXML_as_string=orthoXML_as_string)
 
     roots = ham.get_list_top_level_hogs()
     if len(roots) != 1:
