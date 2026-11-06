@@ -13,6 +13,14 @@ class OrthoXMLBuilder:
         self.NS = "http://orthoXML.org/2011/"
         ET.register_namespace('', self.NS)  # Register default namespace
 
+    @staticmethod
+    def _has_level_id(group: ET.Element) -> bool:
+        """True if the group id is already in the '<HOG id>_<taxonId>' form"""
+        group_id, taxon_id = group.get('id'), group.get('taxonId')
+        if not group_id:
+            return False
+        return taxon_id is None or group_id.endswith(f"_{taxon_id}")
+
     def add_loft_ids(self, orthoxml: str | ET.Element) -> str:
         """Annotate XML text or an already parsed root, modifying it in place."""
 
@@ -50,6 +58,11 @@ class OrthoXMLBuilder:
         xml = ET.fromstring(orthoxml) if isinstance(orthoxml, str) else orthoxml
         doc = ET.ElementTree(xml)
         for i, el in enumerate(xml.findall(".//groups/orthologGroup", {"": self.NS})):
+            # Newer OMA releases (e.g. All.May2026) already give every subHOG
+            # its id, in the same "<HOG id>_<taxonId>" form. Keep those:
+            # annotating again would turn them into ids OMA does not know
+            if all(self._has_level_id(group) for group in el.iter(f"{{{self.NS}}}orthologGroup")):
+                continue
             og = el.get('id', f"HOG:{i+1:08d}")
             dups = collections.defaultdict(int)
             rec_annotate(el, og)
