@@ -314,7 +314,6 @@ class LSHBuilder:
         if self.h5OMA:
             self.groups  = self.h5OMA.root.OrthoXML.Index
             buffer = self.h5OMA.root.OrthoXML.Buffer
-            oxml_builder = oxml.OrthoXMLBuilder()
             self.rows = len(self.groups)
 
             unique_hog_id = 0
@@ -325,21 +324,19 @@ class LSHBuilder:
                 total=self.rows,
             )):
                 if i > start:
-                    # The current index row already locates the unaugmented XML
+                    # The current index row already locates the unaugmented XML.
+                    # Parsing and annotating it is left to the workers: for large
+                    # families it is slow enough to make this loop the bottleneck
                     offset = int(row['HogBufferOffset'])
                     stop = offset + int(row['HogBufferLength'])
-                    xml = ET.fromstring(buffer[offset:stop].tobytes().decode())
+                    raw_xml = buffer[offset:stop].tobytes().decode()
 
                     # filtering by HOG size in the # of species
-                    hog_size = oxml.count_species(xml)
+                    hog_size = raw_xml.count('<species ')
                     if self._hog_size_ok(hog_size):
-                        ortho_fam = oxml_builder.add_loft_ids(self._rename_species(xml))
-                        families[unique_hog_id] = {
-                            'ortho': ortho_fam,
-                            'hog_id': oxml.get_root_hog_id(xml),
-                        }
+                        families[unique_hog_id] = {'ortho': raw_xml, 'hog_id': None}
                         unique_hog_id += 1
-                        batch_bytes += len(ortho_fam)
+                        batch_bytes += len(raw_xml)
 
                     if families and (len(families) >= size or batch_bytes >= max_batch_bytes):
                         pd_dataframe = pd.DataFrame.from_dict(families, orient='index')
@@ -379,13 +376,26 @@ class LSHBuilder:
     def _extract_hog_name(self, orthoxml_file: Path) -> str:
         return Path(orthoxml_file).name.split(".", 1)[0]
 
+    def _prepare_oma_xml(self, raw_xml):
+        """Parse a family's OMA OrthoXML; return the annotated XML and the root HOG id"""
+        xml = ET.fromstring(raw_xml)
+        # add_loft_ids annotates xml in place; the id is read after it, as before
+        ortho = self._oxml_builder.add_loft_ids(self._rename_species(xml))
+        return ortho, oxml.get_root_hog_id(xml)
+
     def worker(self, i, work_queue, result_queue):
         logger.debug('Starting worker #%d', i)
+        self._oxml_builder = oxml.OrthoXMLBuilder()
         while True:
             df = work_queue.get()
             if df is None:
                 logger.debug("Worker #%d done", i)
                 break
+
+            if self.h5OMA:
+                prepared = [self._prepare_oma_xml(raw) for raw in df["ortho"]]
+                df["ortho"] = [ortho for ortho, _ in prepared]
+                df["hog_id"] = [hog_id for _, hog_id in prepared]
                 
             if self.slicesubhogs:
                 # Hash every subHOG profile as soon as it is made and drop it:
