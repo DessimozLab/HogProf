@@ -375,28 +375,26 @@ class LSHBuilder:
                 break
                 
             if self.slicesubhogs:
-                tree_dicts = []
-                for index, row in df[["hog_key", "ortho"]].iterrows():
-                    result = self.HAM_PIPELINE(row)
-                    tree_dicts.append(result)
-
-                # Assign the results back to the DataFrame
-                df["tree_dicts"] = tree_dicts
-                df["hash_dicts"] = df[["hog_key", "tree_dicts"]].apply(
-                    self.HASH_PIPELINE, axis=1
-                )
-
-                # Filter out rows with empty hash_dicts to save time
-                df = df[df["hash_dicts"].apply(bool)]
-                if df.empty:
-                    continue
-
+                # Hash every subHOG profile as soon as it's made and drop it.
+                # Minimizes peak RAM consumption
                 rows = []
                 for _, row in df.iterrows():
                     fam_id = self._extract_hog_name(row["ortho"]) if self.fileglob else str(row["hog_id"])
-                    for subhog in row["hash_dicts"]:
-                        level = row["tree_dicts"][subhog].name
-                        hashed = row["hash_dicts"][subhog][1]
+                    tree_maps = self.HAM_PIPELINE(
+                        (row["hog_key"], row["ortho"]), lazy=True
+                    )
+                    for subhog, tree_map in tree_maps:
+                        level = tree_map.name
+                        _, hashed = hashutils.hash_tree(
+                            tree_map,
+                            self.taxaIndex,
+                            self.treeweights,
+                            self.wmg,
+                            lossonly=self.lossonly,
+                            duplonly=self.duplonly,
+                        )
+                        if hashed is None:
+                            continue
 
                         rows.append(
                             {
@@ -411,8 +409,8 @@ class LSHBuilder:
                                 "source": str(row["ortho"]) if self.fileglob else "",
                             }
                         )
-
-                result_queue.put(pl.DataFrame(rows))
+                if rows:
+                    result_queue.put(pl.DataFrame(rows))
             else:
                 df["tree"] = df[["hog_key", "ortho"]].apply(self.HAM_PIPELINE, axis=1)
                 df[["hash", "rows"]] = df[["hog_key", "tree"]].apply(self.HASH_PIPELINE, axis=1)
