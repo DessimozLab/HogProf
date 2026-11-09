@@ -32,14 +32,9 @@ logger = logging.getLogger(__name__)
 
 class LSHBuilder:
     """
-    This class contains the stuff you need to make 
-    a phylogenetic profiling 
-    database with input orthxml files and a taxonomic tree
-    You must either input an OMA hdf5 file or an ensembl tarfile 
-    containing orthoxml file with orthologous groups.
-
-    You can provide a species tree or use the ncbi taxonomy 
-    with a list of taxonomic codes for all the species in your db
+    Makes a phylogenetic profiling database from input orthoxml files
+    a taxonomic tree. Takes an OMA hdf5 file or a glob expression
+    containing orthoxml file with orthologous groups as input.
     """
 
     def __init__(self, 
@@ -115,6 +110,11 @@ class LSHBuilder:
         IndexManifest.remove(self.output_dir)
 
         species = self._get_species_names()
+        self.species_rename = {}
+        if masterTree is not None and self.h5OMA and not self.swap2taxcode:
+            self.species_rename = self._oma_species_rename(masterTree)
+            species = {self.species_rename.get(name, name) for name in species}
+
         if masterTree is None:
             if not h5_oma:
                 raise TypeError('Please specify either a database or a tree')
@@ -242,6 +242,41 @@ class LSHBuilder:
                         
             return names
 
+    def _oma_species_rename(self, tree):
+        """
+        Some OMA species trees (e.g. All.Jul2024) uses scientific
+        names of the species in both a leaf and an internal node.
+        Map those internal nodes to their Uniprot codes
+        """
+        tree = phylo.from_file(tree)
+        leaves = set(tree.get_leaf_names())
+        internal = {node.name for node in tree.traverse() if not node.is_leaf()}
+        genomes = self.h5OMA.root.Genome.read()
+
+        rename = {}
+        for name, code in zip(genomes["SciName"], genomes["UniProtSpeciesCode"]):
+            name, code = name.decode(), code.decode()
+            if name in internal and code in leaves:
+                rename[name] = code
+
+        if rename:
+            logger.warning(
+                "Using UniProt codes for %d species whose names "
+                "are internal tree nodes: %s",
+                len(rename),
+                ", ".join(f"{k} -> {v}" for k, v in sorted(rename.items())),
+            )
+        return rename
+
+    def _rename_species(self, xml):
+        """Apply species_rename to the <species> elements of a parsed OrthoXML"""
+        if self.species_rename:
+            for node in xml.findall("{http://orthoXML.org/2011/}species"):
+                name = node.get("name")
+                if name in self.species_rename:
+                    node.set("name", self.species_rename[name])
+        return xml
+
     def load_one(self, fam):
         #test function to try out the pipeline on one orthoxml
         ortho_fam = self.READ_ORTHO(fam)
@@ -287,7 +322,7 @@ class LSHBuilder:
                     # filtering by HOG size in the # of species
                     hog_size = oxml.count_species(xml)
                     if self._hog_size_ok(hog_size):
-                        ortho_fam = oxml_builder.add_loft_ids(xml)
+                        ortho_fam = oxml_builder.add_loft_ids(self._rename_species(xml))
                         families[unique_hog_id] = {
                             'ortho': ortho_fam,
                             'hog_id': oxml.get_root_hog_id(xml),

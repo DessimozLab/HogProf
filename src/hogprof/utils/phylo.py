@@ -200,7 +200,6 @@ class TreeValidator:
         tree = from_file(self.filename)
 
         self._fix_tree_root(tree)
-        self._fix_internal_species(tree)
 
         # we fixed the root if it didn't have a name;
         # other nodes are expected to be named
@@ -250,56 +249,6 @@ class TreeValidator:
         root = tree.get_tree_root()
         if not root.name:
             root.name = "root"
-
-    def _fix_internal_species(self, tree):
-        """
-        Pyham raises the following error
-        `TypeError: species name 'XXX' maps to an ancestral name, not a leaf of the taxonomy`
-        if an internal node is marked as species. Repair the input tree for these cases
-        """
-        if not self.species_names:
-            return
-
-        nodes_by_name = {}
-        for node in tree.traverse():
-            if node.name in self.species_names:
-                nodes_by_name.setdefault(node.name, []).append(node)
-
-        self._check_missing_duplicated_species(tree, nodes_by_name)
-
-        repaired = []
-        # Postorder also handles the unlikely case of nested species nodes
-        for node in tree.traverse("postorder"):
-            if node.name not in self.species_names or node.is_leaf():
-                continue
-            if node.is_root():
-                raise ValueError(
-                    f"Species {node.name!r} maps to the root of a non-trivial tree"
-                )
-
-            parent = node.up
-            for child in list(node.get_children()):
-                child.detach()
-                parent.add_child(child)
-            repaired.append(node.name)
-
-        if repaired:
-            logger.warning(
-                "Converted %d internal species nodes to leaves: %s",
-                len(repaired),
-                ", ".join(sorted(repaired)),
-            )
-
-        invalid = [
-            name
-            for name, nodes in nodes_by_name.items()
-            if len(nodes) != 1 or not nodes[0].is_leaf()
-        ]
-        if invalid:
-            raise ValueError(
-                "Species did not resolve to leaves after tree repair: "
-                + ", ".join(sorted(invalid))
-            )
 
     @staticmethod
     def _promote_single_leaves(tree: ete3.Tree) -> ete3.Tree:
