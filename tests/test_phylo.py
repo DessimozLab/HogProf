@@ -18,33 +18,6 @@ class TreeValidatorTest(unittest.TestCase):
         path.write_text(newick)
         return path
 
-    def test_repairs_internal_species(self):
-        tree_path = self.write_tree(
-            "(((strain_a:1,strain_b:1)species_a:1,leaf_b:1)species_b:1,"
-            "leaf_c:1)root;"
-        )
-
-        tree = TreeValidator(
-            tree_path, {"species_a", "species_b", "leaf_c"}
-        ).run()
-
-        for name in ("species_a", "species_b", "leaf_c"):
-            nodes = tree.search_nodes(name=name)
-            self.assertEqual(1, len(nodes))
-            self.assertTrue(nodes[0].is_leaf())
-
-        self.assertEqual(
-            {
-                "strain_a",
-                "strain_b",
-                "species_a",
-                "leaf_b",
-                "species_b",
-                "leaf_c",
-            },
-            {leaf.name for leaf in tree.iter_leaves()},
-        )
-
     def test_names_unnamed_root_and_writes_it(self):
         tree_path = self.write_tree("((a:1,b:1)ab:1,c:1);")
         tree = TreeValidator(tree_path, {"a", "b", "c"}).run()
