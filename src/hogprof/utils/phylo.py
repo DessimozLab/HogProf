@@ -201,6 +201,8 @@ class TreeValidator:
 
         self._fix_tree_root(tree)
 
+        self._check_missing_duplicated_species(tree)
+
         # we fixed the root if it didn't have a name;
         # other nodes are expected to be named
         for node in tree.traverse():
@@ -209,6 +211,7 @@ class TreeValidator:
                 raise ValueError("All non-root tree nodes must have names")
 
         leaf_names_before = tree.get_leaf_names()
+
         new_tree = self._promote_single_leaves(tree.copy())
 
         # repaired tree check: kept every leaf
@@ -224,9 +227,14 @@ class TreeValidator:
         if not valid:
             raise ValueError("Input tree must be in the newick format")
 
-    def _check_missing_duplicated_species(self, tree, nodes_by_name):
+    def _check_missing_duplicated_species(self, tree):
         if not self.species_names:
             return
+
+        nodes_by_name = {}
+        for node in tree.traverse():
+            if node.name in self.species_names:
+                nodes_by_name.setdefault(node.name, []).append(node)
 
         # check if species list has the names not existing in the tree
         missing = self.species_names - nodes_by_name.keys()
