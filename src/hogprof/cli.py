@@ -1,6 +1,7 @@
 """User-facing console I/O for command-line tools"""
 
 from __future__ import annotations
+from abc import ABC, abstractmethod
 
 import argparse
 import sys
@@ -283,182 +284,312 @@ class RichArgumentParser(argparse.ArgumentParser):
                 text, end="", soft_wrap=True
             )
 
-def _validate_args(parser, parsed_args):
-    import glob
-    from pathlib import Path
+class ParserBuilder(ABC):
+    """Base parser and arg validator for a CLI command"""
+    def __init__(self, parser: argparse.ArgumentParser):
+        self.parser = parser
+        self.parsed_args = []
 
-    if parsed_args.reformat_names:
-        parser.error('--reformat-names is not supported in this version')
+    def parse(self, argv):
+        self.parsed_args = self.parser.parse_args(argv if argv else ["-h"])
 
-    if parsed_args.orthoxml_tar is not None:
-        parser.error('--orthoxml-tar is not supported in this version; '
-                     'extract the archive and use --orthoxml-glob')
-
-    # check inputs
-    for option, path in (('--oma', parsed_args.oma), ('--species-tree', parsed_args.tree)):
-        if path is not None and not path.is_file():
-            parser.error(f'{option}: input file does not exist or is not a file: {path}')
-
-    # check Glob if provided
-    if parsed_args.orthoxml_glob is not None:
-        matches = glob.glob(parsed_args.orthoxml_glob)
-        if not matches:
-            parser.error('--orthoxml-glob: pattern does not match any input files')
-
-        if any(not Path(path).is_file() for path in matches):
-            parser.error('--orthoxml-glob: pattern must match only input files')
+    @abstractmethod
+    def validate(self):
+        pass
 
 
-    if parsed_args.tax_weights is not None:
-        for suffix in ('.json', '.h5'):
-            path = Path(parsed_args.tax_weights + suffix)
-            if not path.is_file():
-                parser.error(f'--tax-weights: model file does not exist or is not a file: {path}')
+class EmptyParserBuilder(ParserBuilder):
+    def __init(self, parser: argparse.ArgumentParser):
+        super().__init__(parser)
 
-    if parsed_args.output_dir.exists() and not parsed_args.output_dir.is_dir():
-        parser.error(f'--output-dir: path is not a directory: {parsed_args.output_dir}')
+    def validate(self):
+        pass
 
-    for option, value in (('--jobs', parsed_args.njobs),
-                          ('--num-permutations', parsed_args.num_permutations)):
-        if value < 1:
-            parser.error(f'{option} must be greater than zero')
+class BuildParserBuilder(ParserBuilder):
+    def __init__(self, parser: argparse.ArgumentParser):
+        super().__init__(parser)
+        self._add_args()
 
-    if parsed_args.min_species < 0:
-        parser.error('--min-species must be nonnegative')
+    def _add_args(self):
+        from pathlib import Path
+        parser = self.parser
 
-    if parsed_args.min_events < 0:
-        parser.error('--min-events must be nonnegative')
+        # Input files
+        # - 'source' is one of three options: OMA DB, tarfile with .orthoxml, or glob
+        source = parser.add_mutually_exclusive_group(required=True)
+        source.add_argument(
+            "--oma",
+            "--OMA",  # compatibility option name; to remove
+            dest="oma",
+            help="Path to the OMA database file",
+            type=Path,
+        )
+        source.add_argument(
+            "--orthoxml-glob",
+            "--OrthoGlob",  # compatibility option name; to remove
+            dest="orthoxml_glob",
+            type=str,
+            help="A glob expression for orthoxml files",
+        )
+        source.add_argument(
+            "--orthoxml-tar",
+            "--tarfile",  # compatibility option name; to remove
+            dest="orthoxml_tar",
+            type=Path,
+            help=argparse.SUPPRESS,
+        )
 
-def add_build_arguments(parser):
-    from pathlib import Path
+        # - species tree
+        parser.add_argument(
+            "--species-tree",
+            "--tree",
+            "--mastertree",  # compatibility option name; to remove
+            dest="tree",
+            help="Newick species tree with node names matching the OrthoXML",
+            type=Path,
+            required=True,
+        )
 
-    # Input files
-    # - 'source' is one of three options: OMA DB, tarfile with .orthoxml, or glob
-    source = parser.add_mutually_exclusive_group(required=True)
-    source.add_argument('--oma',
-                        '--OMA', # compatibility option name; to remove
-                        dest='oma',
-                        help='Path to the OMA database file', type=Path)
-    source.add_argument('--orthoxml-glob',
-                        '--OrthoGlob', # compatibility option name; to remove
-                        dest='orthoxml_glob',
-                        type=str,
-                        help='A glob expression for orthoxml files')
-    source.add_argument('--orthoxml-tar',
-                        '--tarfile', # compatibility option name; to remove
-                        dest='orthoxml_tar',
-                        type=Path,
-                        help=argparse.SUPPRESS)
+        # Output
+        parser.add_argument(
+            "--output-dir",
+            "--output",
+            "--outpath",  # compatibility option name; to remove
+            "-o",
+            dest="output_dir",
+            help="Output directory path",
+            type=Path,
+            required=True,
+        )
 
-    # - species tree
-    parser.add_argument('--species-tree', '--tree',
-                        '--mastertree',  # compatibility option name; to remove
-                        dest='tree',
-                        help='Newick species tree with node names matching the OrthoXML',
-                        type=Path, required=True)
+        # Configuration options
+        parser.add_argument(
+            "--tax-weights",
+            "--taxweights",  # compatibility option name; to remove
+            dest="tax_weights",
+            help=argparse.SUPPRESS,
+            type=str,
+        )
+        parser.add_argument(
+            "--taxon-mask",
+            "--taxmask",  # compatibility option name; to remove
+            dest="taxon_mask",
+            help="Keep only this clade, identified by its tree node name (e.g. Sauria)",
+            type=str,
+        )
+        parser.add_argument(
+            "--exclude-taxa",
+            "--taxfilter",  # compatibility option name; to remove
+            dest="exclude_taxa",
+            help="Tree node names of clades to exclude",
+            type=str,
+            nargs="+",
+        )
+        parser.add_argument(
+            "--min-species",
+            "--specieslim",  # compatibility option name; to remove
+            dest="min_species",
+            help="Species threshold: root HOGs must exceed it; subHOGs must meet it (default:10)",
+            type=int,
+            default=10,
+        )
+        parser.add_argument(
+            "--min-events",
+            "--eventslim",  # compatibility option name; to remove
+            dest="min_events",
+            help="Minimum number of events (losses + duplications) a profile "
+            "must have to be kept; 0 keeps all (default:0)",
+            type=int,
+            default=0,
+        )
+        parser.add_argument(
+            "--db-type",
+            "--dbtype",  # compatibility option name; to remove
+            dest="db_type",
+            help="Taxonomic range preset; --taxon-mask and --exclude-taxa override it",
+            choices=DB_PRESETS,
+        )
+        parser.add_argument(
+            "--num-permutations",
+            "--nperm",  # compatibility option name; to remove
+            dest="num_permutations",
+            help="Number of hash functions used to construct each profile (default:256)",
+            type=int,
+            default=256,
+        )
+        parser.add_argument(
+            "--seed",
+            type=int,
+            default=None,
+            help="Random seed for reproducibility (default: random)",
+        )
 
-    # Output
-    parser.add_argument('--output-dir', '--output',
-                        '--outpath',  # compatibility option name; to remove
-                        '-o',
-                        dest='output_dir',
-                        help='Output directory path', type=Path, required=True)
+        # Flags
+        events = parser.add_mutually_exclusive_group()
+        events.add_argument(
+            "--loss-only",
+            "--lossonly",  # compatibility option name; to remove
+            dest="loss_only",
+            help="Only compile loss events",
+            action="store_true",
+        )
+        events.add_argument(
+            "--duplication-only",
+            "--duplonly",  # compatibility option name; to remove
+            dest="duplication_only",
+            help="Only compile duplication events",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--use-tax-ids",
+            "--taxcodes",  # compatibility option name; to remove
+            dest="use_tax_ids",
+            help="Match species to tree nodes by NCBI taxon ID instead of species name",
+            action="store_true",
+        )
+        parser.add_argument(
+            "--slice-subhogs",
+            "--slicesubhogs",  # compatibility option name; to remove
+            dest="slice_subhogs",
+            help="Make profiles for subHOGs",
+            action="store_true",
+        )
 
-    # Configuration options
-    parser.add_argument('--tax-weights',
-                        '--taxweights',  # compatibility option name; to remove
-                        dest='tax_weights',
-                        help=argparse.SUPPRESS,
-                        type=str
-                        )
-    parser.add_argument('--taxon-mask',
-                        '--taxmask',  # compatibility option name; to remove
-                        dest='taxon_mask',
-                        help='Keep only this clade, identified by its tree node name (e.g. Sauria)',
-                        type=str)
-    parser.add_argument('--exclude-taxa',
-                        '--taxfilter',  # compatibility option name; to remove
-                        dest='exclude_taxa',
-                        help='Tree node names of clades to exclude',
-                        type=str, nargs='+')
-    parser.add_argument('--min-species',
-                        '--specieslim',  # compatibility option name; to remove
-                        dest='min_species',
-                        help='Species threshold: root HOGs must exceed it; subHOGs must meet it (default:10)',
-                        type=int, default=10)
-    parser.add_argument('--min-events',
-                        '--eventslim',  # compatibility option name; to remove
-                        dest='min_events',
-                        help='Minimum number of events (losses + duplications) a profile '
-                             'must have to be kept; 0 keeps all (default:0)',
-                        type=int, default=0)
-    parser.add_argument('--db-type',
-                        '--dbtype',  # compatibility option name; to remove
-                        dest='db_type',
-                        help='Taxonomic range preset; --taxon-mask and --exclude-taxa override it',
-                        choices=DB_PRESETS)
-    parser.add_argument('--num-permutations',
-                        '--nperm',  # compatibility option name; to remove
-                        dest='num_permutations',
-                        help='Number of hash functions used to construct each profile (default:256)',
-                        type=int, default=256)
-    parser.add_argument('--seed',
-                        type=int, default=None,
-                        help="Random seed for reproducibility (default: random)")
+        # Retain unsupported legacy options only to give an actionable CLI error.
+        parser.add_argument(
+            "--reformat-names",
+            "--reformat_names",
+            dest="reformat_names",
+            help=argparse.SUPPRESS,
+            action="store_true",
+        )
 
-    # Flags
-    events = parser.add_mutually_exclusive_group()
-    events.add_argument('--loss-only',
-                        '--lossonly',  # compatibility option name; to remove
-                        dest='loss_only',
-                        help='Only compile loss events', action='store_true')
-    events.add_argument('--duplication-only',
-                        '--duplonly', # compatibility option name; to remove
-                        dest='duplication_only',
-                        help='Only compile duplication events', action='store_true')
-    parser.add_argument('--use-tax-ids',
-                        '--taxcodes',  # compatibility option name; to remove
-                        dest='use_tax_ids',
-                        help='Match species to tree nodes by NCBI taxon ID instead of species name',
-                        action='store_true')
-    parser.add_argument('--slice-subhogs',
-                        '--slicesubhogs',  # compatibility option name; to remove
-                        dest='slice_subhogs',
-                        help='Make profiles for subHOGs', action='store_true')
+        # Other options
+        parser.add_argument(
+            "--jobs",
+            "--njobs",
+            "-j",
+            "--nthreads",  # compatibility option name; to remove
+            dest="njobs",
+            help="Number of worker processes (default:1)",
+            type=int,
+            default=1,
+        )
 
-    # Retain unsupported legacy options only to give an actionable CLI error.
-    parser.add_argument('--reformat-names',
-                        '--reformat_names',
-                        dest='reformat_names',
-                        help=argparse.SUPPRESS,
-                        action='store_true')
+        parser.add_argument(
+            "--verbose", "-v", help="Print verbose output", action="store_true"
+        )
+        parser.set_defaults(func=run_build)
 
-    # Other options
-    parser.add_argument('--jobs', '--njobs', '-j',
-                        '--nthreads',  # compatibility option name; to remove
-                        dest="njobs",
-                        help="Number of worker processes (default:1)", type=int, default=1)
+    def validate(self):
+        import glob
+        from pathlib import Path
+        parser = self.parser
+        parsed_args = self.parsed_args
 
-    parser.add_argument('--verbose', '-v', help='Print verbose output', action='store_true')
-    return parser
+        if parsed_args.reformat_names:
+            parser.error('--reformat-names is not supported in this version')
+
+        if parsed_args.orthoxml_tar is not None:
+            parser.error('--orthoxml-tar is not supported in this version; '
+                         'extract the archive and use --orthoxml-glob')
+
+        # check inputs
+        for option, path in (('--oma', parsed_args.oma), ('--species-tree', parsed_args.tree)):
+            if path is not None and not path.is_file():
+                parser.error(f'{option}: input file does not exist or is not a file: {path}')
+
+        # check Glob if provided
+        if parsed_args.orthoxml_glob is not None:
+            matches = glob.glob(parsed_args.orthoxml_glob)
+            if not matches:
+                parser.error('--orthoxml-glob: pattern does not match any input files')
+
+            if any(not Path(path).is_file() for path in matches):
+                parser.error('--orthoxml-glob: pattern must match only input files')
 
 
-def add_search_arguments(parser):
-    parser.add_argument("hog_id",
-                        help="HOG ID for similarity search",
-                        type=str),
-    parser.add_argument("--k", "-k",
-                        help="Number of nearest neighbors to consider (default:10)",
-                        type=int, default=10)
-    parser.add_argument("--level",
-                        help="Taxonomic level at which the query is defined."
-                             "Used for ambiguous HOG names defined at"
-                             "multiple levels.",
-                        type=str)
-    parser.add_argument("--index-dir",
-                        help="Directory containing HogProf index files. "
-                             "Produced by `build`", type=str, required=True)
-    return parser
+        if parsed_args.tax_weights is not None:
+            for suffix in ('.json', '.h5'):
+                path = Path(parsed_args.tax_weights + suffix)
+                if not path.is_file():
+                    parser.error(f'--tax-weights: model file does not exist or is not a file: {path}')
+
+        if parsed_args.output_dir.exists() and not parsed_args.output_dir.is_dir():
+            parser.error(f'--output-dir: path is not a directory: {parsed_args.output_dir}')
+
+        for option, value in (('--jobs', parsed_args.njobs),
+                              ('--num-permutations', parsed_args.num_permutations)):
+            if value < 1:
+                parser.error(f'{option} must be greater than zero')
+
+        if parsed_args.min_species < 0:
+            parser.error('--min-species must be nonnegative')
+
+        if parsed_args.min_events < 0:
+            parser.error('--min-events must be nonnegative')
+
+
+class SearchParserBuilder(ParserBuilder):
+    def __init__(self, parser: argparse.ArgumentParser):
+        super().__init__(parser)
+        self._add_args()
+
+    def _add_args(self):
+        parser = self.parser
+        parser.add_argument("hog_id",
+                            help="HOG ID for similarity search",
+                            type=str),
+        parser.add_argument("--k", "-k",
+                            help="Number of nearest neighbors to consider (default:10)",
+                            type=int, default=10)
+        parser.add_argument("--level",
+                            help="Taxonomic level at which the query is defined."
+                                 "Used for ambiguous HOG names defined at"
+                                 "multiple levels.",
+                            type=str)
+        parser.add_argument("--index-dir",
+                            help="Directory containing HogProf index files. "
+                                 "Produced by `build`", type=str, required=True)
+        parser.set_defaults(func=run_search)
+
+    def validate(self):
+        pass
+
+
+class CalibrateParserBuilder(ParserBuilder):
+    def __init__(self, parser: argparse.ArgumentParser):
+        super().__init__(parser)
+        self._add_args()
+
+    def _add_args(self):
+        from pathlib import Path
+        from hogprof.presets import DEFAULT_ALPHAS
+
+        parser = self.parser
+
+        defaults = ", ".join(str(a) for a in DEFAULT_ALPHAS)
+        parser.add_argument("--index-dir",
+                            help="Directory containing HogProf index files. "
+                                 "Produced by `build --slice-subhogs`",
+                            type=Path, required=True)
+        parser.add_argument("--threshold", "-t",
+                            help=f"Significance levels to calibrate, in addition to {defaults}",
+                            type=float, nargs="+", default=[])
+        parser.add_argument("--sample-size",
+                            help="Maximum number of subHOGs sampled per level (default:500)",
+                            type=int, default=500)
+        parser.add_argument("--seed",
+                            type=int, default=None,
+                            help="Random seed for reproducibility (default: random)")
+        parser.set_defaults(func=run_calibrate)
+
+    def validate(self):
+        parsed_args = self.parsed_args
+        if parsed_args.sample_size < 2:
+            self.parser.error("--sample-size must be at least 2")
+        if any(not 0 < t < 1 for t in parsed_args.threshold):
+            self.parser.error("--threshold values must be in (0, 1)")
 
 
 def run_build(parsed_args):
@@ -474,7 +605,6 @@ def run_build(parsed_args):
     build_args = vars(parsed_args).copy()
     del build_args['reformat_names']
     del build_args['orthoxml_tar']
-    del build_args['command']
     del build_args['func']
 
     # import and run as late as possible to not stagger CLI
@@ -486,12 +616,21 @@ def run_search(parsed_args):
     setup_cli(verbose=False)
 
     search_args = vars(parsed_args).copy()
-    del search_args["command"]
     del search_args["func"]
 
     from hogprof.profiler import run_search
     results = run_search(**search_args)
     print_search_result(results)
+
+
+def run_calibrate(parsed_args):
+    setup_cli()
+
+    calibrate_args = vars(parsed_args).copy()
+    del calibrate_args["func"]
+
+    from hogprof.background import run_calibrate
+    run_calibrate(**calibrate_args)
 
 
 def main(argv=None):
@@ -506,25 +645,30 @@ def main(argv=None):
         version=f"%(prog)s {__version__}",
     )
 
-    # set up the 'build' command
+    # set up subparsers
     subparsers = parser.add_subparsers(dest="command", required=True)
     builder_parser = subparsers.add_parser("build", help="Build a searchable LSH index")
-    if argv and argv[0] == "build":
-        add_build_arguments(builder_parser)
-    builder_parser.set_defaults(func=run_build)
-
-    # set up the `search` command
     search_parser = subparsers.add_parser("search", help="Query an LSH index")
-    if argv and argv[0] == "search":
-        add_search_arguments(search_parser)
-    search_parser.set_defaults(func=run_search)
+    calibrate_parser = subparsers.add_parser("calibrate",
+                                             help="Calibrate per-level significance thresholds for `search --threshold`")
 
-    # parse and go
-    args = parser.parse_args(argv if argv else ["-h"])
-    if args.command == "build":
-        _validate_args(builder_parser, args)
+    builder = EmptyParserBuilder(builder_parser)
+    if argv:
+        if argv[0] == "build":
+            builder = BuildParserBuilder(builder_parser)
+        elif argv[0] == "search":
+            builder = SearchParserBuilder(search_parser)
+        elif argv[0] == "calibrate":
+            builder = CalibrateParserBuilder(calibrate_parser)
+
+    # parse and validate
+    #args = parser.parse_args(argv if argv else ["-h"])
+    builder.parse(argv[1:] if argv else ["-h"])
+    builder.validate()
+
+    # run
+    args = builder.parsed_args
     args.func(args)
-
     return 0
 
 

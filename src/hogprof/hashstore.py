@@ -2,10 +2,10 @@
 Bulk access to the profile hashes stored in `hashes.h5`.
 
 Each indexed profile is a datasketch WeightedMinHash: `num_permutations`
-pairs (k, t). `build` stores a profile as one row of 2 * num_permutations
-int32 values: k0, t0, k1, t1, ...
+pairs (value, weight). `build` stores a profile as one row of
+2 * num_permutations int32 values: v0, w0, v1, w1, ...
 
-Here every (k, t) pair is packed into a single int64 by reinterpreting the
+Here every (v, w) pair is packed into a single int64 by reinterpreting the
 two adjacent int32 values. Two hashes agree on a permutation exactly when
 their packed values are equal, so the Jaccard estimate becomes a plain
 integer comparison over (n, num_permutations) arrays:
@@ -13,7 +13,7 @@ integer comparison over (n, num_permutations) arrays:
     J(a, b) = mean(a == b)
 
 which is the same estimate as `WeightedMinHash.jaccard` (the fraction of
-permutations where both k and t are equal).
+permutations where both v and w are equal).
 """
 
 from __future__ import annotations
@@ -33,8 +33,8 @@ STORED_DTYPE = np.int32
 
 def pack(rows: np.ndarray) -> np.ndarray:
     """
-    Pack stored rows of shape (..., 2 * nperm) into (..., nperm) int64,
-    one value per (k, t) pair
+    Pack stored rows of shape (..., 2 * nperm)
+    into (..., nperm) int64, one value per (v, w) pair
     """
     rows = np.ascontiguousarray(rows, dtype=STORED_DTYPE)
     if rows.shape[-1] % 2:

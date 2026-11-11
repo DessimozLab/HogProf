@@ -19,3 +19,5 @@ DB_PRESETS = {
     #'metazoa': {'exclude_taxa': None, 'taxon_mask': '33208'},
     #'vertebrates': {'exclude_taxa': None, 'taxon_mask': '7742'},
 }
+
+DEFAULT_ALPHAS = [0.1, 0.05, 0.01]
