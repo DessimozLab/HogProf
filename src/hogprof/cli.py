@@ -285,25 +285,21 @@ class RichArgumentParser(argparse.ArgumentParser):
             )
 
 class ParserBuilder(ABC):
-    """Base parser and arg validator for a CLI command"""
+    """
+    Arguments and validation for one CLI command.
+    """
     def __init__(self, parser: argparse.ArgumentParser):
         self.parser = parser
-        self.parsed_args = []
+        self.parsed_args: argparse.Namespace | None = None
 
-    def parse(self, argv):
-        self.parsed_args = self.parser.parse_args(argv if argv else ["-h"])
+    def parse(self, root_parser: argparse.ArgumentParser, argv: list[str]) -> argparse.Namespace:
+        self.parsed_args = root_parser.parse_args(argv)
+        return self.parsed_args
 
     @abstractmethod
-    def validate(self):
+    def validate(self) -> None:
         pass
 
-
-class EmptyParserBuilder(ParserBuilder):
-    def __init(self, parser: argparse.ArgumentParser):
-        super().__init__(parser)
-
-    def validate(self):
-        pass
 
 class BuildParserBuilder(ParserBuilder):
     def __init__(self, parser: argparse.ArgumentParser):
@@ -539,13 +535,13 @@ class SearchParserBuilder(ParserBuilder):
         parser = self.parser
         parser.add_argument("hog_id",
                             help="HOG ID for similarity search",
-                            type=str),
+                            type=str)
         parser.add_argument("--k", "-k",
                             help="Number of nearest neighbors to consider (default:10)",
                             type=int, default=10)
         parser.add_argument("--level",
-                            help="Taxonomic level at which the query is defined."
-                                 "Used for ambiguous HOG names defined at"
+                            help="Taxonomic level at which the query is defined. "
+                                 "Used for ambiguous HOG names defined at "
                                  "multiple levels.",
                             type=str)
         parser.add_argument("--index-dir",
@@ -605,6 +601,7 @@ def run_build(parsed_args):
     build_args = vars(parsed_args).copy()
     del build_args['reformat_names']
     del build_args['orthoxml_tar']
+    del build_args['command']
     del build_args['func']
 
     # import and run as late as possible to not stagger CLI
@@ -616,6 +613,7 @@ def run_search(parsed_args):
     setup_cli(verbose=False)
 
     search_args = vars(parsed_args).copy()
+    del search_args["command"]
     del search_args["func"]
 
     from hogprof.profiler import run_search
@@ -627,6 +625,7 @@ def run_calibrate(parsed_args):
     setup_cli()
 
     calibrate_args = vars(parsed_args).copy()
+    del calibrate_args["command"]
     del calibrate_args["func"]
 
     from hogprof.background import run_calibrate
@@ -652,22 +651,30 @@ def main(argv=None):
     calibrate_parser = subparsers.add_parser("calibrate",
                                              help="Calibrate per-level significance thresholds for `search --threshold`")
 
-    builder = EmptyParserBuilder(builder_parser)
-    if argv:
-        if argv[0] == "build":
-            builder = BuildParserBuilder(builder_parser)
-        elif argv[0] == "search":
-            builder = SearchParserBuilder(search_parser)
-        elif argv[0] == "calibrate":
-            builder = CalibrateParserBuilder(calibrate_parser)
+    # Add arguments only for the requested command, to keep startup fast.
+    # Anything else (no args, -h, --version, unknown command) is handled
+    # by the top-level parser, which exits before validation.
+    commands = {
+        "build": (BuildParserBuilder, builder_parser),
+        "search": (SearchParserBuilder, search_parser),
+        "calibrate": (CalibrateParserBuilder, calibrate_parser),
+    }
+    if not argv:
+        argv = ["-h"]
+    elif argv == [argv[0]] and argv[0] in commands:
+        # a bare command shows its help
+        argv = [argv[0], "-h"]
 
-    # parse and validate
-    #args = parser.parse_args(argv if argv else ["-h"])
-    builder.parse(argv[1:] if argv else ["-h"])
+    builder_class, command_parser = commands.get(argv[0], (None, None))
+    if builder_class is None:
+        parser.parse_args(argv)
+        # unreachable: the subcommand is required, so argparse exits above
+        return 2
+
+    # parse, validate and run
+    builder = builder_class(command_parser)
+    args = builder.parse(parser, argv)
     builder.validate()
-
-    # run
-    args = builder.parsed_args
     args.func(args)
     return 0
 
