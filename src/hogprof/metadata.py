@@ -124,3 +124,11 @@ class HogEntryIndex:
 
     def search_by_level(self, level: str) -> list[HogEntry]:
         return [self._entry_at(i) for i in self._by_level.get(level, ())]
+
+    def levels(self) -> list[str]:
+        """Taxonomic levels that have at least one HOG"""
+        return sorted(self._by_level)
+
+    def get_level(self, level: str) -> pl.DataFrame:
+        """Metadata rows of all HOGs defined at `level`, in file order"""
+        return self._df[self._by_level.get(level, [])]

@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import MISSING, asdict, dataclass, field, fields
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-MANIFEST_NAME = "manifest.json"
+from hogprof.artifacts import MANIFEST
 
 # Bump when the index layout changes in a way readers must know about
 FORMAT_VERSION = 1
@@ -47,10 +47,10 @@ class IndexManifest:
     format_version: int = FORMAT_VERSION
 
     def write(self, index_dir: Path) -> Path:
-        path = Path(index_dir) / MANIFEST_NAME
+        path = Path(index_dir) / MANIFEST
         data = asdict(self)
         if not data["created"]:
-            data["created"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            data["created"] = datetime.now(UTC).isoformat(timespec="seconds")
         if not data["hogprof_version"]:
             from hogprof import __version__
             data["hogprof_version"] = __version__
@@ -63,10 +63,10 @@ class IndexManifest:
 
     @classmethod
     def read(cls, index_dir: Path) -> IndexManifest:
-        path = Path(index_dir) / MANIFEST_NAME
+        path = Path(index_dir) / MANIFEST
         if not path.is_file():
             raise FileNotFoundError(
-                f"No {MANIFEST_NAME} in {index_dir}. The index is incomplete or "
+                f"No {MANIFEST} in {index_dir}. The index is incomplete or "
                 f"was built by an older HogProf version; rebuild it with `hogprof build`"
             )
 
@@ -90,5 +90,5 @@ class IndexManifest:
     @staticmethod
     def remove(index_dir: Path) -> None:
         """Remove a stale manifest before rebuilding into the same directory"""
-        (Path(index_dir) / MANIFEST_NAME).unlink(missing_ok=True)
+        (Path(index_dir) / MANIFEST).unlink(missing_ok=True)
 

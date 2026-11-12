@@ -584,6 +584,7 @@ class CalibrateParserBuilder(ParserBuilder):
         parsed_args = self.parsed_args
         if parsed_args.sample_size < 2:
             self.parser.error("--sample-size must be at least 2")
+
         if any(not 0 < t < 1 for t in parsed_args.threshold):
             self.parser.error("--threshold values must be in (0, 1)")
 
