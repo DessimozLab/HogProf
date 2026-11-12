@@ -577,7 +577,7 @@ class CalibrateParserBuilder(ParserBuilder):
                             type=int, default=500)
         parser.add_argument("--seed",
                             type=int, default=None,
-                            help="Random seed for reproducibility (default: random)")
+                            help="Random seed for reproducibility (default: read from the index)")
         parser.set_defaults(func=run_calibrate)
 
     def validate(self):

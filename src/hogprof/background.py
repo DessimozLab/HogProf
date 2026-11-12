@@ -163,7 +163,8 @@ def calibrate(index_dir: Path,
     _validate_index(manifest)
 
     alphas = sorted({float(a) for a in alphas})
-    seed = seed if seed else manifest.hash_seed
+    if seed is None:
+        seed = manifest.hash_seed
     rng = np.random.default_rng(seed)
     nperm = manifest.num_permutations
 

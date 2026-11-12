@@ -172,128 +172,15 @@ class Profiler:
         return HogQueryResult.from_hits(rows)
 
 
-    def query_fam(self, fam_id: str, k=10):
+    def query_hog_significant(self,
+                              hog_name: str,
+                              level : str | None = None,
+                              threshold: float = 0.05,
+                              max_candidates: int = 100) -> HogQueryResult:
         """
-        Query HOGs of a given family.
-
-        Default mode: only the rootHOG will be queried, and
-        `fam_id` MUST be a valid forest key. O
-
-        In the --slicesubhogs mode: all subHOGs of the given
-        family are queried.
-
-        Returns a dict of type
-        {
-            HOG_id : [ list of closest neibhbor IDs ]
-        }
+        Find all significantly close HOGs to the one with `hog_id`.
         """
         raise NotImplementedError()
-
-        if self.slice_subhogs:
-            # resolve fam_id -> list of forest key for every subHOG
-            subhog_keys = self.get_subhogs_of_fam(fam_id)
-
-            # get subHOG hashes
-            query_hashes_dict = {
-                key: hashutils.fam2hash_hdf5(key, self.hashes_h5, nsamples=self.nsamples)
-                for key in subhog_keys
-            }
-        else:
-            query_hashes_dict = {fam_id: hashutils.fam2hash_hdf5(fam_id, self.hashes_h5, nsamples=self.nsamples)}
-
-        # query every subHOG
-        return {
-            forest_key: self.forest.query(hash, k)
-            for forest_key, hash in query_hashes_dict.items()
-        }
-
-    def hog_query(self, *,
-                  hog_id: int | None = None,
-                  fam_id: int | None = None,
-                  k=10):
-        """
-        Given a hog_id or a fam_id as a query, returns a dictionary containing the results of the LSH.
-        :param hog_id: query hog id
-        :param fam_id: query fam id
-        :return: list containing the results of the LSH for the given query
-        """
-        logger.warning("`hog_query` is deprecated, use `query_hog` or `query_fam` instead")
-
-        if hog_id:
-            return self.query_hog(hog_id, k=k)
-        elif fam_id:
-            return self.query_fam(fam_id, k=k)
-        else:
-            raise ValueError("Provide either hog_id or fam_id")
-
-
-    def pull_hashes(self, hoglist, fam2orthoxmlpath = None):
-        """
-        Given a list of hog_ids , returns a dictionary containing their hashes.
-        This uses the hdf5 file to get the hashvalues
-        :param hog_id: query hog id
-        :param fam_id: query fam id
-        :return: a dict containing the hash values of the hogs in hoglist
-        """
-        raise NotImplementedError()
-        #print('pulling hashes')
-        ### hogid2fam returns the index of the family in the h5 file for normal cases
-        ### for sliced subhogs, it returns the list of indices of the subhogs in the h5 file
-        ### returns indices, subhog_dict
-        if not self.slice_subhogs:
-            return { entry: hashutils.fam2hash_hdf5( self.hogid2fam(entry), self.hashes_h5 , nsamples=  self.nsamples) for entry in hoglist}
-        else:
-            result_dict = {}
-            for entry in hoglist:
-                indices, subhog_dict = self.hogid2fam(entry)
-                result_dict[entry] = [hashutils.fam2hash_hdf5(idx, self.hashes_h5, nsamples=self.nsamples) for idx in indices][0]
-            return result_dict
-
-
-    @staticmethod
-    def sort_hashes(query_hash, hashes):
-        """
-        Given a dict of hogs:hashes, returns a sorted array of hogs and jaccard distances relative to query hog.
-        :param query hash: weighted minhash of the query
-        :param hashes: a dict of hogs:hashes
-        :return: sortedhogs, jaccard
-        """
-        # sort the hashes by their jaccard relative to query hash
-        jaccard = [query_hash.jaccard(hashes[hog]) for hog in hashes]
-        index = np.argsort(jaccard)
-        sorted_hogs = np.asarray(list(hashes.keys()))[index]
-        jaccard = jaccard[index]
-        return sorted_hogs, jaccard
-
-
-    @staticmethod
-    def allvall_hashes(hashes):
-        """
-        Given a dict of hogs:hashes, returns generate an all v all jaccard distance matrix.
-        :param hashes: a dict of hogs:hashes
-        :return: hashmat
-        """
-        #generate an all v all jaccard distance matrix
-        hashmat = np.zeros((len(hashes),len(hashes)))
-        for i , hog1 in enumerate(hashes):
-            for j, hog2 in enumerate(hashes):
-                if i < j :
-                    hashmat[i,j]= hashes[hog1].jaccard(hashes[hog2])
-        hashmat = hashmat+hashmat.T
-        np.fill_diagonal(hashmat, 1)
-        return hashmat
-
-    def hog_v_hog(self, hogs):
-        """
-        give two hogs returns jaccard distance.
-        :param hog1 , hog2: str hog id
-        :return: jaccard score
-        """
-        hog1,hog2 = hogs
-        #generate an all v all jaccard distance matrix
-        hashes = self.pull_hashes([hog1,hog2])
-        hashes = list(hashes.values())
-        return hashes[0].jaccard(hashes[1])
 
 
 def run_search(index_dir: Path,

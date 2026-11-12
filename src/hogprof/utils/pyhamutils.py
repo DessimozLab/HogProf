@@ -11,13 +11,6 @@ def get_orthoxml_oma(fam, db_obj):
     orthoxml = db_obj.get_orthoxml(fam).decode()    
     return orthoxml
 
-def get_orthoxml_tar(fam, tar):
-    f = tar.extractfile(fam)
-    if f is not None:
-        return f.read()
-    else:
-        raise Exception( member + ' : not found in tarfile ')
-    return orthoxml
 
 def get_species_from_orthoxml(orthoxml):
     NCBI_taxid2name = {}
@@ -264,6 +257,7 @@ def yield_families(h5file, start_fam):
     for row in h5file.root.OrthoXML.Index:
         if row[0] > start_fam:
             yield row[0]
+
 def get_one_family(i, h5file):
     '''
     get one family from database
