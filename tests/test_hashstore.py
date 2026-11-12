@@ -48,7 +48,7 @@ class HashStoreTest(unittest.TestCase):
         packed = self.store.get(self.keys)
         for (i, a), (j, b) in itertools.combinations(enumerate(self.minhashes), 2):
             expected = a.jaccard(b)
-            self.assertEqual(expected, hashstore.jaccard(packed[i], packed[j:j + 1])[0])
+            self.assertEqual(expected, hashstore.batch_jaccard(packed[i], packed[j:j + 1])[0])
 
         matrix = hashstore.jaccard_matrix(packed)
         expected = np.array([[a.jaccard(b) for b in self.minhashes] for a in self.minhashes])

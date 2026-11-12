@@ -67,7 +67,7 @@ def from_minhash(minhash: WeightedMinHash) -> np.ndarray:
     return pack(stored.ravel())
 
 
-def jaccard(query: np.ndarray, hashes: np.ndarray) -> np.ndarray:
+def batch_jaccard(query: np.ndarray, hashes: np.ndarray) -> np.ndarray:
     """
     Jaccard estimates of one packed hash (nperm,) against
     packed hashes (n, nperm). Returns (n,) float64
@@ -215,9 +215,9 @@ class HashStore:
         """The hash of one HOG as a datasketch WeightedMinHash (e.g. for LSH queries)"""
         return to_minhash(self.get_one(key), seed=self.seed)
 
-    def jaccard(self, query_key: int, keys) -> np.ndarray:
+    def batch_jaccard(self, query_key: int, keys) -> np.ndarray:
         """Jaccard estimates between one HOG and many, shape (len(keys),)"""
-        return jaccard(self.get_one(query_key), self.get(keys))
+        return batch_jaccard(self.get_one(query_key), self.get(keys))
 
     def close(self) -> None:
         self._file.close()

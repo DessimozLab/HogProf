@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os.path
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -81,17 +82,20 @@ class Calibration:
         return path
 
     @classmethod
-    def read(cls, index_dir: Path) -> Calibration:
-        path = Path(index_dir) / CALIBRATION
+    def read(cls, path: Path) -> Calibration:
+        path = Path(path)
+        index_dir = path.parent
         if not path.is_file():
             raise FileNotFoundError(
                 f"No {CALIBRATION} in {index_dir}. "
                 f"Run `hogprof calibrate --index-dir {index_dir}` first"
             )
+
         data = json.loads(path.read_text())
         if data.get("format_version") != FORMAT_VERSION:
             raise ValueError(f"{path}: unsupported calibration format version "
                              f"{data.get('format_version')!r}; rerun `hogprof calibrate`")
+
         data["levels"] = {name: LevelBackground(**level)
                           for name, level in data["levels"].items()}
         return cls(**data)

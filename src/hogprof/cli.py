@@ -547,6 +547,10 @@ class SearchParserBuilder(ParserBuilder):
         parser.add_argument("--index-dir",
                             help="Directory containing HogProf index files. "
                                  "Produced by `build`", type=str, required=True)
+        parser.add_argument("--threshold", "-t",
+                           help="Minimal significance level",
+                           type=float,
+                           default=None)
         parser.set_defaults(func=run_search)
 
     def validate(self):

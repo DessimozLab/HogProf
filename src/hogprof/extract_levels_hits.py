@@ -189,7 +189,7 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
         scores = {}
         for hashid in candidate_hashids: ### candidate_hashids are the closest but they are not ordered
             sig = candidate_hashes[hashid]
-            this_score = sig.jaccard(query_sig)
+            this_score = sig.batch_jaccard(query_sig)
             if this_score >= level_threshold:
                 scores[hashid] = this_score
         return scores
@@ -328,7 +328,7 @@ def compare_all_vs_all(taxa_hsig_dict, outputfile):
         ids = list(network_id_to_hsig.keys())
         sigs = [network_id_to_hsig[i] for i in ids]
         jkern = np.array([
-            [sig1.jaccard(sig2) if i != j else 0
+            [sig1.batch_jaccard(sig2) if i != j else 0
             for j, sig2 in enumerate(sigs)]
             for i, sig1 in enumerate(sigs)
         ])
@@ -350,7 +350,7 @@ def compare_all_vs_all(taxa_hsig_dict, outputfile):
 
 '''original idea to get the matrix'''
 def jaccard_similarity_matrix(sigs):
-    return np.array([[sig1.jaccard(sig2) for sig2 in sigs]
+    return np.array([[sig1.batch_jaccard(sig2) for sig2 in sigs]
             for sig1 in sigs])
 
 '''faster way to get the matrix'''

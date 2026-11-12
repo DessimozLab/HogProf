@@ -7,8 +7,9 @@ from pathlib import Path
 
 import numpy as np
 
+from hogprof import artifacts
 from hogprof import hashstore
-from hogprof.artifacts import FOREST, HASHSTORE, MAPPING
+from hogprof.background import Calibration
 from hogprof.hashstore import HashStore
 from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntry, HogEntryIndex, HogQueryHit, HogQueryResult
@@ -24,8 +25,7 @@ class Profiler:
     A profiler object allows the user to query the LSH with HOGs and get a list of result HOGs back
     """
     def __init__(self,
-                 lshforestpath=None,
-                 hashes_h5=None,
+                 index_dir: Path,
                  nsamples=256,
                  slicesubhogs=False,
                  hash_seed=hashutils.HASH_SEED,
@@ -37,25 +37,28 @@ class Profiler:
         Prefer `Profiler.from_index_dir`, which reads these parameters
         from the index manifest.
 
-        lshforestpath (str, optional): Path to the pickled LSH forest object.
-        hashes_h5 (Path): hashes.h5 of the index.
+
         nsamples (int, optional): Number of permutations of the index. Defaults to 256.
         slicesubhogs (bool): Whether the index has subHOG profiles.
         hash_seed (int): Seed of the hash generator used to build the index.
         hashes_dataset (str, optional): Dataset name in `hashes_h5`; the first one if None.
         """
         logger.debug('Loading LSH')
-        with open(lshforestpath, 'rb') as lshpickle:
+        forest_path = os.path.join(index_dir, artifacts.FOREST)
+        with open(forest_path, 'rb') as lshpickle:
             self.forest = pickle.loads(lshpickle.read())
-            logger.debug('Indexing LSH')
 
+        hashes_h5 = os.path.join(index_dir, artifacts.HASHSTORE)
         self.hashes = HashStore(hashes_h5, num_permutations=nsamples,
                                 dataset=hashes_dataset, seed=hash_seed)
         self.slice_subhogs = slicesubhogs
 
-        self.fam2orthoxmlpath = os.path.join(os.path.dirname(lshforestpath), MAPPING)
+        mapping_path = os.path.join(index_dir, artifacts.MAPPING)
+        self.hog_index = HogEntryIndex(Path(mapping_path))
 
-        self.hog_index = HogEntryIndex(Path(self.fam2orthoxmlpath))
+        calibration_path = os.path.join(index_dir, artifacts.CALIBRATION)
+        if os.path.exists(calibration_path):
+            self.calibration = Calibration.read(Path(calibration_path))
 
         logger.debug("Hashes: %s, dataset %s", self.hashes.path, self.hashes.dataset_name)
         self.nsamples = nsamples
@@ -67,14 +70,11 @@ class Profiler:
         """Open an index built by `hogprof build`, configured from its manifest"""
         index_dir = Path(index_dir)
         manifest = IndexManifest.read(index_dir)
-        return cls(
-            lshforestpath=index_dir / FOREST,
-            hashes_h5=index_dir / HASHSTORE,
-            nsamples=manifest.num_permutations,
-            slicesubhogs=manifest.slice_subhogs,
-            hash_seed=manifest.hash_seed,
-            hashes_dataset=manifest.hashes_dataset,
-        )
+        return cls(index_dir,
+                   nsamples=manifest.num_permutations,
+                   slicesubhogs=manifest.slice_subhogs,
+                   hash_seed=manifest.hash_seed,
+                   hashes_dataset=manifest.hashes_dataset)
 
     def close(self) -> None:
         self.hashes.close()
@@ -111,10 +111,11 @@ class Profiler:
 
         raise ValueError(f"Cannot find the HOG at level {level}")
 
-
-    def query_hog(self, hog_name: str, level=None, k: int = 10) -> HogQueryResult:
+    def _resolve_hog(self, hog_name: str, level: str | None) -> HogEntry:
         """
-        Query the LSH index directly. `hog_id` MUST be a forest key
+        Returns the indexed HOG named `hog_name`.
+        If the HOG of that name exists at multiple levels,
+        returns the one of level=`level`
         """
         if not isinstance(hog_name, str) or not hog_name.startswith('HOG:'):
             raise TypeError("`hog_name` must be a string of format 'HOG:{number}'")
@@ -128,10 +129,14 @@ class Profiler:
                 levels = [h.level for h in hogs]
                 raise ValueError(f"{hog_name} exists at different levels: {levels}. Please indicate a level")
 
-            hog = self._get_hog_of_level(hogs, level)
-        else:
-            hog = hogs[0]
+            return self._get_hog_of_level(hogs, level)
+        return hogs[0]
 
+    def query_hog(self, hog_name: str, level=None, k: int = 10) -> HogQueryResult:
+        """
+        Query the LSH index directly. `hog_id` MUST be a forest key
+        """
+        hog = self._resolve_hog(hog_name, level)
         query_packed = self.hashes.get_one(hog.hog_key)
         query_hash = hashstore.to_minhash(query_packed, seed=self.hashes.seed)
 
@@ -158,7 +163,7 @@ class Profiler:
                 break
 
         # one bulk read and comparison for all hits
-        jaccards = hashstore.jaccard(query_packed, self.hashes.get([h.hog_key for h in hits]))
+        jaccards = hashstore.batch_jaccard(query_packed, self.hashes.get([h.hog_key for h in hits]))
 
         rows = [
             HogQueryHit(
@@ -175,18 +180,73 @@ class Profiler:
     def query_hog_significant(self,
                               hog_name: str,
                               level : str | None = None,
-                              threshold: float = 0.05,
+                              alpha: float = 0.05,
                               max_candidates: int = 100) -> HogQueryResult:
         """
-        Find all significantly close HOGs to the one with `hog_id`.
+        Find HOGs similar to the one with (`hog_name`, `level`) at
+        the significance threshold `alpha`.
         """
-        raise NotImplementedError()
+        if not self.slice_subhogs:
+            raise ValueError("Significance search is only supported with --slice-subhogs")
+
+        hog = self._resolve_hog(hog_name, level)
+
+        threshold = self.calibration.threshold(hog.level, alpha)
+        if threshold is None:
+            logger.warning("No hit can be significant at alpha=%s at level %s "
+                           "(see `hogprof calibrate` warnings)", alpha, hog.level)
+            return HogQueryResult.from_hits([], with_p_values=True)
+
+        hit_keys, jaccards = self._exact_level_search(hog, threshold, max_candidates)
+        hits = [self.hog_index.get_hog_by_key(int(hit_key)) for hit_key in hit_keys]
+        p_values = self.calibration.p_values(hog.level, np.array([j for j in jaccards]))
+
+        rows = [
+            HogQueryHit(
+                query_hog_id=hog_name,
+                hit_hog_id=hit.hog_id,
+                hit_level=hit.level,
+                jaccard=j,
+                p_value=float(p),
+            )
+            for hit, j, p in zip(hits, jaccards, p_values)
+        ]
+        return HogQueryResult.from_hits(rows, with_p_values=True)
+
+
+    def _exact_level_search(self,
+                            query: HogEntry,
+                            min_jaccard: float,
+                            max_candidates: int) -> tuple[np.ndarray, np.ndarray]:
+        """
+        For `hog` defined at a certain level, returns the HOGs within radius=`min_jaccard`
+        at the same level. Brute forces through the index/MAPPING file (not the forest),
+        therefore returns the exact result.
+        """
+
+        # batch query the whole level
+        level_hogs = self.hog_index.search_by_level(query.level)
+        candidate_keys = np.asarray([candidate.hog_key for candidate in level_hogs])
+        jaccards = self.hashes.batch_jaccard(query.hog_key, candidate_keys)
+
+        # select result
+        mask = jaccards >= min_jaccard
+        keys, scores = candidate_keys[mask], jaccards[mask]
+
+        # sort by Jaccard descending, keep at most max_candidates
+        order = np.argsort(scores)[::-1][:max_candidates]
+        return keys[order], scores[order]
 
 
 def run_search(index_dir: Path,
                hog_id: str,
                level: str = None,
                k: int = 10,
+               threshold: float | None = None,
                ):
-    p = Profiler.from_index_dir(index_dir)
-    return p.query_hog(hog_id, level=level, k=k).hits
+    with Profiler.from_index_dir(index_dir) as p:
+        if threshold:
+            result = p.query_hog_significant(hog_id, level=level, alpha=threshold)
+        else:
+            result = p.query_hog(hog_id, level=level, k=k)
+        return result.hits

@@ -14,6 +14,10 @@ class HogQueryHit:
     hit_level: str
     jaccard: float
 
+    # Empirical p-value of `jaccard` at the hit level;
+    # used for significance search only
+    p_value: float | None = None
+
 
 @dataclass(frozen=True, slots=True)
 class HogQueryResult:
@@ -22,7 +26,7 @@ class HogQueryResult:
     hits: pl.DataFrame
 
     @classmethod
-    def from_hits(cls, hits: list[HogQueryHit]) -> "HogQueryResult":
+    def from_hits(cls, hits: list[HogQueryHit], with_p_values: bool = False) -> "HogQueryResult":
         df = pl.DataFrame(
             [asdict(hit) for hit in hits],
             schema={
@@ -30,8 +34,11 @@ class HogQueryResult:
                 "hit_hog_id": pl.String,
                 "hit_level": pl.String,
                 "jaccard": pl.Float64,
+                "p_value": pl.Float64,
             },
         )
+        if not with_p_values:
+            df = df.drop("p_value")
         return cls(df.sort("jaccard", descending=True))
 
     def __len__(self) -> int:
