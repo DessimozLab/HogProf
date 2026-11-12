@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 
 from hogprof import hashstore
-from hogprof.artifacts import CALIBRATION
+from hogprof.artifacts import CALIBRATION, MAPPING
 from hogprof.hashstore import HashStore
 from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntryIndex
@@ -167,7 +167,7 @@ def calibrate(index_dir: Path,
     rng = np.random.default_rng(seed)
     nperm = manifest.num_permutations
 
-    hog_index = HogEntryIndex(index_dir / "fam2orthoxml.csv")
+    hog_index = HogEntryIndex(index_dir / MAPPING)
     levels = {}
     with HashStore.from_index_dir(index_dir, manifest=manifest) as hashes:
         for level in track_progress(hog_index.levels(), description="Calibrating levels"):

@@ -21,6 +21,15 @@ import polars as pl
 from datasketch import WeightedMinHash
 from ete3 import Tree
 
+from hogprof.artifacts import (
+    FOREST,
+    HASHSTORE,
+    MANIFEST,
+    MAPPING,
+    MINHASH_GENERATOR,
+    TAXA_INDEX,
+    TREE,
+)
 from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntryIndex
 from hogprof.profiler import Profiler
@@ -29,13 +38,13 @@ DATA = Path(__file__).resolve().parent / "data" / "micro_birds"
 NS = {"o": "http://orthoXML.org/2011/"}
 NPERM = 32
 OUTPUT_FILES = {
-    "master_tree.corrected.nwk",
-    "taxaIndex.pkl",
-    "wmg.pkl",
-    "hashes.h5",
-    "newlshforest.pkl",
-    "fam2orthoxml.csv",
-    "manifest.json",
+    TREE,
+    TAXA_INDEX,
+    MINHASH_GENERATOR,
+    HASHSTORE,
+    FOREST,
+    MAPPING,
+    MANIFEST,
 }
 
 
@@ -137,7 +146,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
                 self.assertGreater(path.stat().st_size, 0, f"Empty {path}")
 
         ############ Check outputs ############
-        with (output / "fam2orthoxml.csv").open(newline="") as source:
+        with (output / MAPPING).open(newline="") as source:
             reader = csv.DictReader(source)
             self.assertEqual(list(HogEntryIndex.COLUMNS), reader.fieldnames)
             rows = list(reader)
@@ -163,7 +172,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
                 self.assertEqual(fam, row["hog_id"])
 
         self.assertEqual(expected_families, set(families))
-        index = HogEntryIndex(output / "fam2orthoxml.csv")
+        index = HogEntryIndex(output / MAPPING)
         self.assertEqual(len(rows), len(index))
 
         # HOGs at the tree root get the root's name as their level
@@ -180,24 +189,24 @@ class LshbuilderIntegrationTest(unittest.TestCase):
             self.assertGreater(len(rows), len(inputs))
             self.assertEqual(list(range(len(rows))), [int(row["hog_key"]) for row in rows])
 
-        with (output / "taxaIndex.pkl").open("rb") as source:
+        with (output / TAXA_INDEX).open("rb") as source:
             taxa = pickle.load(source)
 
         tree = Tree(
-            str(output / "master_tree.corrected.nwk"),
+            str(output / TREE),
             format=1, quoted_node_names=True,
         )
         self.assertEqual({node.name for node in tree.traverse()}, set(taxa))
         self.assertEqual(len(taxa), len(set(taxa.values())))
 
-        with (output / "wmg.pkl").open("rb") as source:
+        with (output / MINHASH_GENERATOR).open("rb") as source:
             generator = pickle.load(source)
 
         self.assertEqual(NPERM, generator.sample_size)
         self.assertEqual(generator.seed, manifest.hash_seed)
         self.assertEqual(3 * (max(taxa.values()) + 1), generator.dim)
 
-        with (output / "newlshforest.pkl").open("rb") as source:
+        with (output / FOREST).open("rb") as source:
             forest = pickle.load(source)
 
         keys = [row["hog_key"] for row in rows]
@@ -205,7 +214,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         self.assertEqual(set(keys), set(forest.keys))
         self.assertFalse(forest.is_empty())
 
-        with h5py.File(output / "hashes.h5", "r") as hashes:
+        with h5py.File(output / HASHSTORE, "r") as hashes:
             self.assertEqual(["NoFilterNoMask"], list(hashes))
             dataset = hashes["NoFilterNoMask"]
             self.assertEqual(2 * NPERM, dataset.shape[1])

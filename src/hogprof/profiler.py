@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from hogprof import hashstore
+from hogprof.artifacts import FOREST, HASHSTORE, MAPPING
 from hogprof.hashstore import HashStore
 from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntry, HogEntryIndex, HogQueryHit, HogQueryResult
@@ -52,7 +53,7 @@ class Profiler:
                                 dataset=hashes_dataset, seed=hash_seed)
         self.slice_subhogs = slicesubhogs
 
-        self.fam2orthoxmlpath = f"{os.path.dirname(lshforestpath)}/fam2orthoxml.csv"
+        self.fam2orthoxmlpath = os.path.join(os.path.dirname(lshforestpath), MAPPING)
 
         self.hog_index = HogEntryIndex(Path(self.fam2orthoxmlpath))
 
@@ -67,8 +68,8 @@ class Profiler:
         index_dir = Path(index_dir)
         manifest = IndexManifest.read(index_dir)
         return cls(
-            lshforestpath=index_dir / "newlshforest.pkl",
-            hashes_h5=index_dir / "hashes.h5",
+            lshforestpath=index_dir / FOREST,
+            hashes_h5=index_dir / HASHSTORE,
             nsamples=manifest.num_permutations,
             slicesubhogs=manifest.slice_subhogs,
             hash_seed=manifest.hash_seed,

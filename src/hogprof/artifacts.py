@@ -6,7 +6,7 @@ Defines the files produced by HogProf
 CALIBRATION = "calibration.json"
 
 # LSH forest, answers "hog_key -> hog_keys with close signatures"
-FOREST = "newlshforest.h5"
+FOREST = "newlshforest.pkl"
 
 # Hash signature storage, answers "hog_key -> minhash signature"
 # Required to compute Jaccard, as LSH doesn't store signatures

@@ -5,7 +5,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from hogprof.manifest import FORMAT_VERSION, MANIFEST_NAME, IndexManifest
+from hogprof.artifacts import MANIFEST
+from hogprof.manifest import FORMAT_VERSION, IndexManifest
 
 
 class IndexManifestTest(unittest.TestCase):
@@ -26,7 +27,7 @@ class IndexManifestTest(unittest.TestCase):
         self.assertEqual({"min_events": 0}, read.build)
         self.assertTrue(read.created)
         self.assertTrue(read.hogprof_version)
-        self.assertFalse((self.dir / (MANIFEST_NAME + ".tmp")).exists())
+        self.assertFalse((self.dir / (MANIFEST + ".tmp")).exists())
 
     def test_missing_manifest(self):
         with self.assertRaisesRegex(FileNotFoundError, "rebuild"):
@@ -34,7 +35,7 @@ class IndexManifestTest(unittest.TestCase):
 
     def test_rejects_other_format_versions(self):
         self.manifest.write(self.dir)
-        path = self.dir / MANIFEST_NAME
+        path = self.dir / MANIFEST
         data = json.loads(path.read_text())
         data["format_version"] = FORMAT_VERSION + 1
         path.write_text(json.dumps(data))
@@ -43,7 +44,7 @@ class IndexManifestTest(unittest.TestCase):
 
     def test_rejects_missing_fields_and_ignores_unknown(self):
         self.manifest.write(self.dir)
-        path = self.dir / MANIFEST_NAME
+        path = self.dir / MANIFEST
         data = json.loads(path.read_text())
         data["future_field"] = "ignored"
         path.write_text(json.dumps(data))
@@ -58,7 +59,7 @@ class IndexManifestTest(unittest.TestCase):
         IndexManifest.remove(self.dir)  # no manifest: no error
         self.manifest.write(self.dir)
         IndexManifest.remove(self.dir)
-        self.assertFalse((self.dir / MANIFEST_NAME).exists())
+        self.assertFalse((self.dir / MANIFEST).exists())
 
 
 if __name__ == "__main__":

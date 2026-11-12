@@ -24,6 +24,7 @@ import h5py
 import numpy as np
 from datasketch import WeightedMinHash
 
+from hogprof.artifacts import HASHSTORE
 from hogprof.manifest import IndexManifest
 from hogprof.utils.hashutils import HASH_SEED
 
@@ -163,7 +164,7 @@ class HashStore:
         index_dir = Path(index_dir)
         if manifest is None:
             manifest = IndexManifest.read(index_dir)
-        return cls(index_dir / "hashes.h5",
+        return cls(index_dir / HASHSTORE,
                    num_permutations=manifest.num_permutations,
                    dataset=manifest.hashes_dataset,
                    seed=manifest.hash_seed,

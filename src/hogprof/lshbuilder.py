@@ -20,6 +20,7 @@ from datasketch import MinHashLSHForest, WeightedMinHash, WeightedMinHashGenerat
 from pyoma.browser import db
 from tables import open_file
 
+from hogprof.artifacts import FOREST, HASHSTORE, MAPPING, MINHASH_GENERATOR, TAXA_INDEX, TREE
 from hogprof.cli import track_progress
 from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntry, HogEntryIndex
@@ -125,12 +126,12 @@ class LSHBuilder:
             self.tree = phylo.TreeValidator(masterTree, species).run()
 
             # save the corrected tree
-            phylo.to_file(self.tree, self.output_dir / 'master_tree.corrected.nwk')
+            phylo.to_file(self.tree, self.output_dir / TREE)
             self.tree_string = phylo.to_string(self.tree)
 
         self.taxaIndex, self.reverse = phylo.generate_taxa_index(self.tree, self.tax_filter, self.tax_mask)
         
-        with open(self.output_dir / 'taxaIndex.pkl', 'wb') as taxout:
+        with open(self.output_dir / TAXA_INDEX, 'wb') as taxout:
             taxout.write( pickle.dumps(self.taxaIndex))
 
         self.numperm = numperm
@@ -144,7 +145,7 @@ class LSHBuilder:
         tax_max = max(self.taxaIndex.values())+1
         wmg = WeightedMinHashGenerator(3*tax_max , sample_size = numperm , seed=hashutils.HASH_SEED)
 
-        with open(self.output_dir / 'wmg.pkl', 'wb') as wmgout:
+        with open(self.output_dir / MINHASH_GENERATOR, 'wb') as wmgout:
             wmgout.write( pickle.dumps(wmg))
 
         self.wmg = wmg
@@ -216,9 +217,9 @@ class LSHBuilder:
         else:
             raise RuntimeError('please specify an input file' )
         
-        self.hashes_path = self.output_dir / 'hashes.h5'
+        self.hashes_path = self.output_dir / HASHSTORE
         self.lshpath = self.output_dir / 'newlsh.pkl'
-        self.lshforestpath = self.output_dir / 'newlshforest.pkl'
+        self.lshforestpath = self.output_dir / FOREST
         self.mat_path = self.output_dir / 'hogmat.h5'
         self.columns = len(self.taxaIndex)
         self.verbose = verbose
@@ -450,7 +451,7 @@ class LSHBuilder:
 
     def _save_metadata(self, entries):
         df = pd.DataFrame(entries, columns=HogEntryIndex.COLUMNS)
-        df.to_csv(self.output_dir / 'fam2orthoxml.csv', index=False)
+        df.to_csv(self.output_dir / MAPPING, index=False)
 
 
     def saver(self, result_queue):
@@ -668,7 +669,7 @@ class LSHBuilder:
 
     def _save_manifest(self):
         num_hogs = (
-            pl.scan_csv(self.output_dir / 'fam2orthoxml.csv')
+            pl.scan_csv(self.output_dir / MAPPING)
             .select(pl.len()).collect().item()
         )
         manifest = IndexManifest(

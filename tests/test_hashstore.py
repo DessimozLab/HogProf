@@ -10,6 +10,7 @@ import numpy as np
 from datasketch import WeightedMinHashGenerator
 
 from hogprof import hashstore
+from hogprof.artifacts import HASHSTORE
 from hogprof.hashstore import HashStore
 from hogprof.manifest import IndexManifest
 
@@ -35,12 +36,12 @@ class HashStoreTest(unittest.TestCase):
         # Store like the saver: int32, raveled (k, t) pairs, with
         # unused zero rows (row 3 is a gap, plus trailing chunk padding)
         self.keys = [0, 1, 2, *range(4, 4 + len(self.minhashes) - 3)]
-        with h5py.File(self.dir / "hashes.h5", "w") as h5:
+        with h5py.File(self.dir / HASHSTORE, "w") as h5:
             ds = h5.create_dataset(DATASET, (max(self.keys) + 10, 2 * NPERM), dtype="int32")
             for key, mh in zip(self.keys, self.minhashes):
                 ds[key, :] = mh.hashvalues.ravel()
 
-        self.store = HashStore(self.dir / "hashes.h5", num_permutations=NPERM)
+        self.store = HashStore(self.dir / HASHSTORE, num_permutations=NPERM)
         self.addCleanup(self.store.close)
 
     def test_jaccard_matches_datasketch(self):
@@ -79,7 +80,7 @@ class HashStoreTest(unittest.TestCase):
         self.assertEqual((0, NPERM), self.store.get([]).shape)
 
     def test_preload_is_equivalent(self):
-        with HashStore(self.dir / "hashes.h5", num_permutations=NPERM, preload=True) as loaded:
+        with HashStore(self.dir / HASHSTORE, num_permutations=NPERM, preload=True) as loaded:
             self.assertTrue(loaded.preloaded)
             keys = self.keys[::-1]
             np.testing.assert_array_equal(self.store.get(keys), loaded.get(keys))
@@ -93,9 +94,9 @@ class HashStoreTest(unittest.TestCase):
 
     def test_rejects_wrong_layout(self):
         with self.assertRaisesRegex(ValueError, "expected 256"):
-            HashStore(self.dir / "hashes.h5", num_permutations=128)
+            HashStore(self.dir / HASHSTORE, num_permutations=128)
         with self.assertRaisesRegex(ValueError, "no dataset"):
-            HashStore(self.dir / "hashes.h5", num_permutations=NPERM, dataset="missing")
+            HashStore(self.dir / HASHSTORE, num_permutations=NPERM, dataset="missing")
 
     def test_from_index_dir(self):
         IndexManifest(num_permutations=NPERM, hash_seed=1, hashes_dataset=DATASET,
