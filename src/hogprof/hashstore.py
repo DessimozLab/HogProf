@@ -22,10 +22,12 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import polars as pl
 from datasketch import WeightedMinHash
 
 from hogprof.artifacts import HASHSTORE
 from hogprof.manifest import IndexManifest
+from hogprof.metadata import HogEntryIndex
 from hogprof.utils.hashutils import HASH_SEED
 
 # dtype of the values in hashes.h5
@@ -106,14 +108,58 @@ def jaccard_matrix(a: np.ndarray, b: np.ndarray | None = None,
     return out
 
 
+def reorder_by_level(hashes_path: Path, mapping_path: Path, dataset: str) -> None:
+    """
+    Rewrite a subHOG index so that every level is contiguous.
+
+    `build` computes hashes family by family, so the subHOGs of one level
+    are scattered over the whole of `hashes_path`, and reading a level means
+    reading rows from everywhere. This sorts the index by (level, hog_key) and
+    renumbers hog_key to the new row order, rewriting both `hashes_path`
+    (dataset `dataset`) and `mapping_path` (fam2orthoxml.csv). Afterwards:
+      - hog_key is still the row in `hashes_path`, keys are 0..n-1
+      - the HOGs of each level have consecutive keys
+      - within a level, HOGs keep their original (family) order
+
+    Anything keyed by the old hog_keys (e.g. the LSH forest) must be built
+    after this. Reads the whole dataset into memory (8 bytes per permutation
+    per HOG): reading it sequentially is far faster than scattered row reads.
+    """
+    hashes_path, mapping_path = Path(hashes_path), Path(mapping_path)
+    mapping = pl.read_csv(mapping_path, schema_overrides=HogEntryIndex.SCHEMA)
+    mapping = mapping.select(HogEntryIndex.COLUMNS).sort(["level", "hog_key"])
+    old_keys = mapping["hog_key"].to_numpy()
+    mapping = mapping.with_columns(pl.int_range(0, mapping.height, dtype=pl.Int64).alias("hog_key"))
+
+    hashes_tmp = hashes_path.with_name(hashes_path.name + ".tmp")
+    with h5py.File(hashes_path, "r") as source:
+        stored = source[dataset][:]
+    if old_keys.size and old_keys.max() >= stored.shape[0]:
+        raise ValueError(f"{mapping_path} has hog_keys beyond the {stored.shape[0]} rows of {hashes_path}")
+
+    with h5py.File(hashes_tmp, "w", libver="latest") as target:
+        # not resizable: a contiguous (unchunked) layout is fastest for slice reads
+        target.create_dataset(dataset, data=stored[old_keys])
+    del stored
+
+    mapping_tmp = mapping_path.with_name(mapping_path.name + ".tmp")
+    mapping.write_csv(mapping_tmp)
+
+    hashes_tmp.replace(hashes_path)
+    mapping_tmp.replace(mapping_path)
+
+
 class HashStore:
     """
     Read-only access to the hashes of an index, addressed by `hog_key`
     (the same key as in fam2orthoxml.csv and the LSH forest).
 
-    Note that hashes.h5 has unused zero rows: it grows in chunks, and in the
-    rootHOG mode keys of skipped families are never written. Use keys from
+    Note that hashes.h5 of the rootHOG mode has unused zero rows: it grows in
+    chunks, and keys of skipped families are never written. Use keys from
     the HOG metadata, not row numbers.
+
+    In the subHOG mode, `build` orders the index by level (see
+    `reorder_by_level`), so a whole level is read with one sequential read.
     """
 
     def __init__(self, path: Path, *,
@@ -205,6 +251,14 @@ class HashStore:
 
         # h5py fancy indexing needs unique increasing indices
         unique, inverse = np.unique(keys, return_inverse=True)
+
+        # Dense keys (e.g. a whole level of a level-ordered index):
+        # one sequential read of the span is much faster than fancy indexing
+        first, last = int(unique[0]), int(unique[-1])
+        if last - first + 1 <= 2 * unique.size:
+            rows = self._dataset[first:last + 1]
+            return pack(rows[unique - first])[inverse]
+
         return pack(self._dataset[unique, :])[inverse]
 
     def get_one(self, key: int) -> np.ndarray:

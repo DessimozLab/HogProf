@@ -85,14 +85,14 @@ class HogEntryIndex:
     """Indexed access to HOG metadata."""
 
     COLUMNS = ("hog_key", "fam_id", "hog_id", "level", "source")
+    SCHEMA = {
+        "hog_key": pl.Int64, "fam_id": pl.String, "hog_id": pl.String,
+        "level": pl.String, "source": pl.String
+    }
 
     def __init__(self, csv_path: Path):
-        schema = {
-            "hog_key": pl.Int64, "fam_id": pl.String, "hog_id": pl.String,
-            "level": pl.String, "source": pl.String
-        }
         # read fam2orthoxml
-        self._df = pl.read_csv(csv_path, schema_overrides=schema).select(self.COLUMNS)
+        self._df = pl.read_csv(csv_path, schema_overrides=self.SCHEMA).select(self.COLUMNS)
 
         # check format
         if tuple(self._df.columns) != self.COLUMNS:

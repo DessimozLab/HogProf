@@ -186,6 +186,9 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         if levels:
             self.assertGreater(len(rows), len(inputs))
             self.assertEqual(list(range(len(rows))), [int(row["hog_key"]) for row in rows])
+            # the index is ordered by level: each level is one block of keys
+            levels = [row["level"] for row in rows]
+            self.assertEqual(sorted(levels), levels)
 
         with (output / TAXA_INDEX).open("rb") as source:
             taxa = pickle.load(source)

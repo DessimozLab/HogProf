@@ -7,12 +7,14 @@ from tempfile import TemporaryDirectory
 
 import h5py
 import numpy as np
+import polars as pl
 from datasketch import WeightedMinHashGenerator
 
 from hogprof import hashstore
-from hogprof.artifacts import HASHSTORE
+from hogprof.artifacts import HASHSTORE, MAPPING
 from hogprof.hashstore import HashStore
 from hogprof.manifest import IndexManifest
+from hogprof.metadata import HogEntryIndex
 
 NPERM = 64
 DATASET = "NoFilterNoMask"
@@ -79,6 +81,13 @@ class HashStoreTest(unittest.TestCase):
             np.testing.assert_array_equal(self.store.get_one(key), row)
         self.assertEqual((0, NPERM), self.store.get([]).shape)
 
+    def test_sparse_and_dense_reads_agree(self):
+        # dense keys are read as one slice, sparse ones by fancy indexing
+        with HashStore(self.dir / HASHSTORE, num_permutations=NPERM, preload=True) as loaded:
+            for keys in ([self.keys[0], self.keys[-1]], self.keys[2:7], self.keys[::-1]):
+                with self.subTest(keys=keys):
+                    np.testing.assert_array_equal(loaded.get(keys), self.store.get(keys))
+
     def test_preload_is_equivalent(self):
         with HashStore(self.dir / HASHSTORE, num_permutations=NPERM, preload=True) as loaded:
             self.assertTrue(loaded.preloaded)
@@ -104,6 +113,62 @@ class HashStoreTest(unittest.TestCase):
         with HashStore.from_index_dir(self.dir) as store:
             self.assertEqual(DATASET, store.dataset_name)
             np.testing.assert_array_equal(self.store.get(self.keys), store.get(self.keys))
+
+
+class ReorderByLevelTest(unittest.TestCase):
+    def setUp(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.dir = Path(directory.name)
+        self.hashes = self.dir / HASHSTORE
+        self.mapping = self.dir / MAPPING
+
+        # Like the saver: levels interleaved family by family, keys 0..n-1,
+        # plus unused trailing rows. Each row's values encode its hog_id.
+        self.levels = ["root", "Aves", "Neognathae", "Aves", "root", "Neognathae", "Aves", "root"]
+        self.rows = [
+            {"hog_key": key, "fam_id": f"HOG:{key // 3}", "hog_id": f"HOG:{key // 3}.{key}",
+             "level": level, "source": ""}
+            for key, level in enumerate(self.levels)
+        ]
+        self.values = {row["hog_id"]: np.full(2 * NPERM, 100 + row["hog_key"], dtype=np.int32)
+                       for row in self.rows}
+        with h5py.File(self.hashes, "w") as h5:
+            ds = h5.create_dataset(DATASET, (len(self.rows) + 5, 2 * NPERM),
+                                   maxshape=(None, 2 * NPERM), dtype="int32")
+            for row in self.rows:
+                ds[row["hog_key"]] = self.values[row["hog_id"]]
+        pl.DataFrame(self.rows).write_csv(self.mapping)
+
+    def test_levels_are_contiguous(self):
+        hashstore.reorder_by_level(self.hashes, self.mapping, DATASET)
+
+        index = HogEntryIndex(self.mapping)
+        mapping = pl.read_csv(self.mapping, schema_overrides=HogEntryIndex.SCHEMA)
+        self.assertEqual(list(range(len(self.rows))), mapping["hog_key"].to_list())
+        self.assertEqual(sorted(self.levels), mapping["level"].to_list())
+
+        # same HOGs, and every HOG still points to its own hash
+        self.assertEqual({r["hog_id"] for r in self.rows}, set(mapping["hog_id"]))
+        with h5py.File(self.hashes, "r") as h5:
+            ds = h5[DATASET]
+            self.assertEqual((len(self.rows), 2 * NPERM), ds.shape)
+            self.assertIsNone(ds.chunks)
+            for key, hog_id in zip(mapping["hog_key"], mapping["hog_id"]):
+                np.testing.assert_array_equal(self.values[hog_id], ds[key])
+
+        for level in set(self.levels):
+            keys = [h.hog_key for h in index.search_by_level(level)]
+            self.assertEqual(list(range(keys[0], keys[0] + len(keys))), keys)
+            # within a level, the original (family) order is kept
+            original = [r["hog_id"] for r in self.rows if r["level"] == level]
+            self.assertEqual(original, [h.hog_id for h in index.search_by_level(level)])
+
+    def test_rejects_keys_beyond_hashes(self):
+        rows = [*self.rows, {**self.rows[0], "hog_key": 100, "hog_id": "HOG:x"}]
+        pl.DataFrame(rows).write_csv(self.mapping)
+        with self.assertRaisesRegex(ValueError, "beyond"):
+            hashstore.reorder_by_level(self.hashes, self.mapping, DATASET)
 
 
 if __name__ == "__main__":

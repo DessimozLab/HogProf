@@ -21,7 +21,9 @@ from pyoma.browser import db
 from tables import open_file
 
 from hogprof.artifacts import FOREST, HASHSTORE, MAPPING, MINHASH_GENERATOR, TAXA_INDEX, TREE
+from hogprof import hashstore
 from hogprof.cli import track_progress
+from hogprof.hashstore import HashStore
 from hogprof.manifest import IndexManifest
 from hogprof.metadata import HogEntry, HogEntryIndex
 from hogprof.presets import DB_PRESETS
@@ -441,13 +443,24 @@ class LSHBuilder:
         return taxstr
 
     def _save_forest(self, forest):
-        logger.debug("Saving forest at: %.2f", t.time() - self.start_time)
+        logger.debug("Saving forest")
 
         forest.index()
         with open(self.lshforestpath, "wb") as forest_out:
             forest_out.write(pickle.dumps(forest, -1))
 
-        logger.debug("Save done at: %.2f", t.time() - self.start_time)
+        logger.debug("Forest saved")
+
+    def _forest_from_hashes(self, block_size=65536):
+        """Build the LSH forest from the saved hashes, keyed by their rows"""
+        forest = MinHashLSHForest(num_perm=self.numperm)
+        with HashStore(self.hashes_path, num_permutations=self.numperm,
+                       dataset=self._make_tax_str(), seed=self.wmg.seed) as store:
+            for start in range(0, store.num_rows, block_size):
+                block = store.get(np.arange(start, min(start + block_size, store.num_rows)))
+                for offset, packed in enumerate(block):
+                    forest.add(str(start + offset), hashstore.to_minhash(packed, seed=store.seed))
+        return forest
 
     def _save_metadata(self, entries):
         df = pd.DataFrame(entries, columns=HogEntryIndex.COLUMNS)
@@ -460,7 +473,10 @@ class LSHBuilder:
 
         chunk_size = 100
         count = 0
-        forest = MinHashLSHForest(num_perm=self.numperm)
+        # With --slicesubhogs, the index is reordered by level after all
+        # hashes are saved, which changes hog_keys: the forest is built
+        # from the final hashes then (see `run_pipeline`).
+        forest = None if self.slicesubhogs else MinHashLSHForest(num_perm=self.numperm)
         metadata_entries = []
         taxstr = self._make_tax_str()
 
@@ -517,7 +533,8 @@ class LSHBuilder:
                     dataset[key, :] = hashed.hashvalues.ravel()
 
                     # index the hash
-                    forest.add(str(key), hashed)
+                    if forest is not None:
+                        forest.add(str(key), hashed)
 
                     metadata_row = HogEntry(
                         hog_key=key, fam_id=row["fam_id"], hog_id=row["hog_id"],
@@ -528,7 +545,8 @@ class LSHBuilder:
                     count += 1
 
             logger.info('Wrapping up the run')
-            self._save_forest(forest)
+            if forest is not None:
+                self._save_forest(forest)
             h5hashes.flush()
             self._save_metadata(metadata_entries)
             logger.info('Saver wrote %d hashes', count)
@@ -698,6 +716,17 @@ class LSHBuilder:
         # Levels mode counts represented species on each parsed HOG
         data_generator = self.generate_dataframes(size=100)
         self._run_parallel(threads=threads, data_generator=data_generator)
+
+        if self.slicesubhogs:
+            # Hashes were computed family by family, so every level is
+            # scattered over the whole file. Make levels contiguous, so that
+            # level-wide searches read one block.
+            logger.info('Reordering the index by level')
+            hashstore.reorder_by_level(self.hashes_path, self.output_dir / MAPPING,
+                                       dataset=self._make_tax_str())
+            logger.info('Building the LSH forest')
+            self._save_forest(self._forest_from_hashes())
+
         # written last: its presence marks a complete index
         self._save_manifest()
         return self.hashes_path, self.lshforestpath, self.mat_path
