@@ -7,8 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from hogprof import artifacts
-from hogprof import hashstore
+from hogprof import artifacts, hashstore
 from hogprof.background import Calibration
 from hogprof.hashstore import HashStore
 from hogprof.manifest import IndexManifest
@@ -26,8 +25,9 @@ class Profiler:
     """
     def __init__(self,
                  index_dir: Path,
-                 nsamples=256,
-                 slicesubhogs=False,
+                 nsamples: int,
+                 slice_subhogs: bool,
+                 load_forest: bool = True,
                  hash_seed=hashutils.HASH_SEED,
                  hashes_dataset=None):
         """
@@ -37,21 +37,21 @@ class Profiler:
         Prefer `Profiler.from_index_dir`, which reads these parameters
         from the index manifest.
 
-
         nsamples (int, optional): Number of permutations of the index. Defaults to 256.
         slicesubhogs (bool): Whether the index has subHOG profiles.
         hash_seed (int): Seed of the hash generator used to build the index.
         hashes_dataset (str, optional): Dataset name in `hashes_h5`; the first one if None.
         """
-        logger.debug('Loading LSH')
-        forest_path = os.path.join(index_dir, artifacts.FOREST)
-        with open(forest_path, 'rb') as lshpickle:
-            self.forest = pickle.loads(lshpickle.read())
+        if load_forest:
+            logger.debug('Loading LSH forest')
+            forest_path = os.path.join(index_dir, artifacts.FOREST)
+            with open(forest_path, 'rb') as lshpickle:
+                self.forest = pickle.loads(lshpickle.read())
 
         hashes_h5 = os.path.join(index_dir, artifacts.HASHSTORE)
         self.hashes = HashStore(hashes_h5, num_permutations=nsamples,
                                 dataset=hashes_dataset, seed=hash_seed)
-        self.slice_subhogs = slicesubhogs
+        self.slice_subhogs = slice_subhogs
 
         mapping_path = os.path.join(index_dir, artifacts.MAPPING)
         self.hog_index = HogEntryIndex(Path(mapping_path))
@@ -66,13 +66,14 @@ class Profiler:
         logger.debug('Profiler init over')
 
     @classmethod
-    def from_index_dir(cls, index_dir) -> "Profiler":
+    def from_index_dir(cls, index_dir, load_forest: bool = True) -> "Profiler":
         """Open an index built by `hogprof build`, configured from its manifest"""
         index_dir = Path(index_dir)
         manifest = IndexManifest.read(index_dir)
         return cls(index_dir,
                    nsamples=manifest.num_permutations,
-                   slicesubhogs=manifest.slice_subhogs,
+                   slice_subhogs=manifest.slice_subhogs,
+                   load_forest=load_forest,
                    hash_seed=manifest.hash_seed,
                    hashes_dataset=manifest.hashes_dataset)
 
@@ -244,9 +245,11 @@ def run_search(index_dir: Path,
                k: int = 10,
                threshold: float | None = None,
                ):
-    with Profiler.from_index_dir(index_dir) as p:
-        if threshold:
-            result = p.query_hog_significant(hog_id, level=level, alpha=threshold)
-        else:
-            result = p.query_hog(hog_id, level=level, k=k)
-        return result.hits
+    if threshold:
+        p = Profiler.from_index_dir(index_dir, load_forest=False)
+        result = p.query_hog_significant(hog_id, level=level, alpha=threshold)
+    else:
+        p = Profiler.from_index_dir(index_dir, load_forest=True)
+        result = p.query_hog(hog_id, level=level, k=k)
+
+    return result.hits

@@ -138,13 +138,13 @@ def extract_hits_from_hashes(lshforestpath, hashes_h5, treepath, outputfile, pro
         raise ValueError("Some subHOGs do not have hashid. Please check the queries file.")
     hashid_to_subhog = {v: k for k, v in subhog_to_hashid.items()}
     print("\nBuilding the profiler")
-    p = profiler.Profiler(lshforestpath = lshforestpath, 
-                        hashes_h5= hashes_h5, 
-                        oma = False , 
-                        nsamples = 256 ,
-                        mastertree = treepath,
-                        slicesubhogs = True
-                        )
+    p = profiler.Profiler(lshforestpath = lshforestpath,
+                          hashes_h5= hashes_h5,
+                          oma = False,
+                          nsamples = 256,
+                          mastertree = treepath,
+                          slice_subhogs= True
+                          )
     p.slice_subhogs = False ### setting as False to use original hogid2fam function in profiler.py
     # the reason for this is using family IDS vs hashids for querying. the original function used hashids,
     # sometimes in levels we want to query everything within a family though.

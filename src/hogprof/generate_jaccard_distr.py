@@ -121,14 +121,14 @@ def get_hog_to_hog_jaccards(subhogs_sampled_pairs_df, lshforestfile, hashes_h5, 
         return hashmat
 
     ### read lshforest
-    p = profiler.Profiler(lshforestpath = lshforestfile, 
-                            hashes_h5= hashes_h5, 
-                            #mat_path= fam2orthoxmlfile ,
-                            oma = False , 
-                            nsamples = 256 ,
-                            mastertree = treefile,
-                            slicesubhogs = True
-                            )
+    p = profiler.Profiler(lshforestpath = lshforestfile,
+                          hashes_h5= hashes_h5,
+                          #mat_path= fam2orthoxmlfile ,
+                          oma = False,
+                          nsamples = 256,
+                          mastertree = treefile,
+                          slice_subhogs= True
+                          )
 
     if not allvsall:
         ### get jaccard similarity for each pair using hog_v_hog(self, hogs)
@@ -197,14 +197,14 @@ def get_bins_jaccards_pairwise(samples_info_df, bin_name, bin_dict, subhogs_samp
     import profiler
     bin_counter = 1
     ### read lshforest
-    p = profiler.Profiler(lshforestpath = lshforestfile, 
-                            hashes_h5= hashes_h5, 
-                            #mat_path= fam2orthoxmlfile ,
-                            oma = False , 
-                            nsamples = 256 ,
-                            mastertree = treefile,
-                            slicesubhogs = True
-                            )
+    p = profiler.Profiler(lshforestpath = lshforestfile,
+                          hashes_h5= hashes_h5,
+                          #mat_path= fam2orthoxmlfile ,
+                          oma = False,
+                          nsamples = 256,
+                          mastertree = treefile,
+                          slice_subhogs= True
+                          )
 
     ### ensure Profiler has fam_dict
     if not hasattr(p, 'fam_dict') or p.fam_dict is None:
