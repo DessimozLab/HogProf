@@ -68,9 +68,7 @@ class LshbuilderIntegrationTest(unittest.TestCase):
         self.assertEqual(len(result), 3)
 
         self.assertTrue(result.hits.select((pl.col("hit_hog_id") == "HOG:0016019_4").any()).item())
-        self.assertFalse(
-            result.hits.select((pl.col("hit_hog_id") == "HOG:0015853_1").any()).item()
-        )
+        self.assertTrue(result.hits.select((pl.col("hit_hog_id") == "HOG:0015853_1").any()).item())
 
     def test_subhog_families(self):
         self.build_and_check(levels=True)

@@ -137,38 +137,37 @@ class Profiler:
         """
         Query the LSH index directly. `hog_id` MUST be a forest key
         """
-        hog = self._resolve_hog(hog_name, level)
-        query_packed = self.hashes.get_one(hog.hog_key)
+        query = self._resolve_hog(hog_name, level)
+        query_packed = self.hashes.get_one(query.hog_key)
         query_hash = hashstore.to_minhash(query_packed, seed=self.hashes.seed)
 
-        # FIXME: there must be a better way of doing
-        # this, e.g. with splitting the forest into sets
-        # of forests, one per level, and querying exactly k
-        # in the required level-defined forest.
-        # Current solution: for levels, let's query twice more
-        # hits, since they might be filtered out further
-        # if they are from a wrong level.
-        queried_k = 2 * k if level else k
-
         hits = []
-        for hit_key in self.forest.query(query_hash, queried_k):
-            hit = self.hog_index.get_hog_by_key(int(hit_key))
+        if level:
+            # For Levels, brute force the entire level to get the exact closest-k answer
+            hit_keys, jaccards = self._exact_level_search(query, 0.0, k)
+            hits = [self.hog_index.get_hog_by_key(int(hit_key)) for hit_key in hit_keys]
+        else:
+            # For Root mode, query the probabilistic forest. Answer is inexact
+            queried_k = k + 1
 
-            # ignore the self-hit
-            if hit.hog_id == hog.hog_id:
-                continue
+            for hit_key in self.forest.query(query_hash, queried_k):
+                hit = self.hog_index.get_hog_by_key(int(hit_key))
 
-            # If --level is provided, we need to make sure that
-            # neighbors are defined at the same level as the query.
-            if level and level != hit.level:
-                continue
+                # ignore the self-hit
+                if hit.hog_id == query.hog_id:
+                    continue
 
-            hits.append(hit)
-            if len(hits) >= k:
-                break
+                # If --level is provided, we need to make sure that
+                # neighbors are defined at the same level as the query.
+                if level and level != hit.level:
+                    continue
 
-        # one bulk read and comparison for all hits
-        jaccards = hashstore.batch_jaccard(query_packed, self.hashes.get([h.hog_key for h in hits]))
+                hits.append(hit)
+                if len(hits) >= k:
+                    break
+
+            hits = hits[:k]
+            jaccards = self.hashes.batch_jaccard(query.hog_key, [h.hog_key for h in hits])
 
         rows = [
             HogQueryHit(
