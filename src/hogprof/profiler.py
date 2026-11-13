@@ -154,6 +154,10 @@ class Profiler:
         for hit_key in self.forest.query(query_hash, queried_k):
             hit = self.hog_index.get_hog_by_key(int(hit_key))
 
+            # ignore the self-hit
+            if hit.hog_id == hog.hog_id:
+                continue
+
             # If --level is provided, we need to make sure that
             # neighbors are defined at the same level as the query.
             if level and level != hit.level:
@@ -227,7 +231,7 @@ class Profiler:
 
         # batch query the whole level
         level_hogs = self.hog_index.search_by_level(query.level)
-        candidate_keys = np.asarray([candidate.hog_key for candidate in level_hogs])
+        candidate_keys = np.asarray([candidate.hog_key for candidate in level_hogs if candidate.hog_key != query.hog_key])
         jaccards = self.hashes.batch_jaccard(query.hog_key, candidate_keys)
 
         # select result
