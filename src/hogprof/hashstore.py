@@ -110,23 +110,17 @@ def jaccard_matrix(a: np.ndarray, b: np.ndarray | None = None,
 
 def reorder_by_level(hashes_path: Path, mapping_path: Path, dataset: str) -> None:
     """
-    Rewrite a subHOG index so that every level is contiguous.
+    Rewrite a complete subHOG index so that every level is contiguous.
 
-    `build` computes hashes family by family, so the subHOGs of one level
-    are scattered over the whole of `hashes_path`, and reading a level means
-    reading rows from everywhere. This sorts the index by (level, hog_key) and
-    renumbers hog_key to the new row order, rewriting both `hashes_path`
-    (dataset `dataset`) and `mapping_path` (fam2orthoxml.csv). Afterwards:
-      - hog_key is still the row in `hashes_path`, keys are 0..n-1
-      - the HOGs of each level have consecutive keys
-      - within a level, HOGs keep their original (family) order
-
-    Anything keyed by the old hog_keys (e.g. the LSH forest) must be built
-    after this. Reads the whole dataset into memory (8 bytes per permutation
-    per HOG): reading it sequentially is far faster than scattered row reads.
+    Since `build` computes hashes family by family, the subHOGs of the
+    same level are scattered across the whole hdf5 file. It slows down search;
+    this function reorders hashes (and changes hog_key of HogEntries)
+    to make every level contiguous.
     """
     hashes_path, mapping_path = Path(hashes_path), Path(mapping_path)
     mapping = pl.read_csv(mapping_path, schema_overrides=HogEntryIndex.SCHEMA)
+
+    # Sort keys by level; within a level by old key (= by old HOG order)
     mapping = mapping.select(HogEntryIndex.COLUMNS).sort(["level", "hog_key"])
     old_keys = mapping["hog_key"].to_numpy()
     mapping = mapping.with_columns(pl.int_range(0, mapping.height, dtype=pl.Int64).alias("hog_key"))
@@ -134,11 +128,13 @@ def reorder_by_level(hashes_path: Path, mapping_path: Path, dataset: str) -> Non
     hashes_tmp = hashes_path.with_name(hashes_path.name + ".tmp")
     with h5py.File(hashes_path, "r") as source:
         stored = source[dataset][:]
+
     if old_keys.size and old_keys.max() >= stored.shape[0]:
         raise ValueError(f"{mapping_path} has hog_keys beyond the {stored.shape[0]} rows of {hashes_path}")
 
+    # Rewrite as not resizable dataset. A contiguous (unchunked)
+    # layout is fastest for slice reads
     with h5py.File(hashes_tmp, "w", libver="latest") as target:
-        # not resizable: a contiguous (unchunked) layout is fastest for slice reads
         target.create_dataset(dataset, data=stored[old_keys])
     del stored
 
@@ -232,8 +228,8 @@ class HashStore:
 
     def get(self, keys) -> np.ndarray:
         """
-        Packed hashes for `keys` (any order, duplicates allowed),
-        shape (len(keys), nperm) int64
+        Returns packed hash signatures for `keys` (any order, duplicates allowed),
+        shape (len(keys), nperm) int64.
         """
         keys = np.asarray(keys)
         if keys.ndim != 1:
@@ -249,16 +245,20 @@ class HashStore:
         if keys.size == 0:
             return np.empty((0, self.num_permutations), dtype=np.int64)
 
-        # h5py fancy indexing needs unique increasing indices
+        # For h5py fancy indexing, we need unique increasing indices.
+        # unique = sorted keys, no duplicates
+        # inverse = positions of the original keys in `unique`
         unique, inverse = np.unique(keys, return_inverse=True)
 
-        # Dense keys (e.g. a whole level of a level-ordered index):
-        # one sequential read of the span is much faster than fancy indexing
+        # Check if keys are dense (e.g. a whole level of a level-ordered index).
         first, last = int(unique[0]), int(unique[-1])
         if last - first + 1 <= 2 * unique.size:
+            # Read the whole span and filter with `inverse`.
+            # One sequential read of the span is much faster than fancy indexing
             rows = self._dataset[first:last + 1]
             return pack(rows[unique - first])[inverse]
 
+        # Otherwise, make the old h5 fancy indexing call -- slower on disk
         return pack(self._dataset[unique, :])[inverse]
 
     def get_one(self, key: int) -> np.ndarray:

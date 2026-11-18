@@ -713,14 +713,16 @@ class LSHBuilder:
 
     def run_pipeline(self , threads):
         logger.info('Running with %d threads', threads)
+
         # Levels mode counts represented species on each parsed HOG
         data_generator = self.generate_dataframes(size=100)
         self._run_parallel(threads=threads, data_generator=data_generator)
 
         if self.slicesubhogs:
             # Hashes were computed family by family, so every level is
-            # scattered over the whole file. Make levels contiguous, so that
-            # level-wide searches read one block.
+            # scattered over the whole file on disk. Reorder hashes to make
+            # levels contiguous: this speeds up level-wide signature
+            # reading, which is later needed in `search`
             logger.info('Reordering the index by level')
             hashstore.reorder_by_level(self.hashes_path, self.output_dir / MAPPING,
                                        dataset=self._make_tax_str())
