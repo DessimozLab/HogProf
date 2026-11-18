@@ -108,6 +108,52 @@ def _has_min_events(treemap, limit_events):
     return limit_events <= 0 or count_events(treemap) >= limit_events
 
 
+def merge_split_hogs(root_hog) -> int:
+    """
+    Merge HOGs that pyham splits at one level. Returns the number of merged HOGs.
+
+    The orthoxml only has groups at levels where something changes. When a
+    duplication happened below the level of its parent HOG, pyham inserts the
+    pre-duplication gene at the level of the duplication ("MRCA HOG", with the
+    parent's id), once per duplication. Two duplications at the same level thus
+    give two HOGs with the same id at that level, each with a part of the genes,
+    while there was one ancestral gene there: e.g. HOG:F0412788 (OMA May2026),
+    duplicated separately in Metschnikowiaceae and in Debaryomycetaceae, is split
+    into a 4-gene and a 22-gene HOG at CUG-Ser1 clade.
+
+    HOGs with one parent at the same level that did not arise by duplication are
+    one gene: they are merged into one HOG holding all their children and
+    duplications. Done top-down, so merged HOGs' children are merged in turn.
+    """
+    merged = 0
+    stack = [root_hog]
+    while stack:
+        hog = stack.pop()
+        kept = {}
+        for child in list(hog.children):
+            if not isinstance(child, pyham.abstractgene.HOG) or child.arose_by_duplication:
+                continue
+            keep = kept.setdefault(child.genome, child)
+            if keep is child:
+                continue
+
+            for grandchild in list(child.children):
+                # keeps grandchild.arose_by_duplication
+                child.remove_child(grandchild)
+                keep.add_child(grandchild)
+            for duplication in child.duplications:
+                duplication.parent = keep
+                keep.duplications.append(duplication)
+            child.duplications = []
+
+            hog.remove_child(child)
+            child.genome.genes.remove(child)
+            merged += 1
+
+        stack.extend(c for c in hog.children if isinstance(c, pyham.abstractgene.HOG))
+    return merged
+
+
 def _subhog_keys(hogs, family):
     """Generate keys for subhogs in family"""
     bases = [
@@ -218,6 +264,11 @@ def get_ham_treemap_from_row(row, tree_string,
     roots = ham.get_list_top_level_hogs()
     if len(roots) != 1:
         raise ValueError(f"Family {family}: expected one top-level HOG, found {len(roots)}")
+
+    # one gene per (parent, level): undo pyham's split of duplication parents
+    merged = merge_split_hogs(roots[0])
+    if merged and verbose:
+        logger.debug("Family %s: merged %d split HOGs", family, merged)
 
     # pick the profiling strategy
     if slicesubhogs:
