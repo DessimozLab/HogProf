@@ -1,7 +1,7 @@
-from collections import defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 
 
@@ -98,44 +98,68 @@ class HogEntryIndex:
         if tuple(self._df.columns) != self.COLUMNS:
             raise ValueError(f"Invalid format for {csv_path}: expected {self.COLUMNS}, got {self._df.columns}")
 
-        # make O(1) search indexes
-        self._by_key: dict[int, int] = {}
-        self._by_hog_id: dict[str, list[int]] = defaultdict(list)
-        self._by_level: dict[str, list[int]] = defaultdict(list)
+        # Lookups are vectorized
+        keys = self._df["hog_key"].to_numpy()
 
-        for i, (key, _, hog_id, level, _) in enumerate(self._df.iter_rows()):
-            if key in self._by_key:
-                raise ValueError(f"Duplicate hog_key: {key}")
-            self._by_key[key] = i
+        # In subHOG indexes, hog_key is the row number (keys 0..n-1 in file
+        # order): a key is looked up in O(1), and cannot be duplicated
+        self._key_is_row = bool(np.array_equal(keys, np.arange(len(keys))))
 
-            self._by_hog_id[hog_id].append(i)
-            self._by_level[level].append(i)
+        # Otherwise (e.g. rootHOG indexes), binary search over the sorted keys
+        self._key_order = None
+        self._sorted_keys = None
+        if not self._key_is_row:
+            self._key_order = np.argsort(keys, kind="stable")
+            self._sorted_keys = keys[self._key_order]
+            self._check_duplicated_keys()
+
+    def _check_duplicated_keys(self):
+        duplicated = self._sorted_keys[1:][np.diff(self._sorted_keys) == 0]
+        if duplicated.size:
+            raise ValueError(f"Error while loading index: duplicate hog_key {int(duplicated[0])}")
 
     def __len__(self) -> int:
         return self._df.height
 
     def _entry_at(self, i: int) -> HogEntry:
-        return HogEntry(*self._df.row(i))
+        return HogEntry(*self._df.row(int(i)))
+
+    def _rows_where(self, column: str, value: str) -> np.ndarray:
+        """Row numbers where `column` == `value`, in file order"""
+        return np.flatnonzero((self._df[column] == value).to_numpy())
 
     def get_hog_by_key(self, key: int) -> HogEntry:
+        """
+        HogEntry by hog_key: O(1) if hog_key is the row number,
+        binary search otherwise
+        """
         if not isinstance(key, int):
             raise TypeError(f"key must be an integer, got {type(key)}")
 
-        i = self._by_key.get(key)
-        if i is None:
+        if self._key_is_row:
+            if not 0 <= key < len(self):
+                raise ValueError(f"Invalid HOG key: {key}")
+            return self._entry_at(key)
+
+        pos = int(np.searchsorted(self._sorted_keys, key))
+        if pos == len(self._sorted_keys) or self._sorted_keys[pos] != key:
             raise ValueError(f"Invalid HOG key: {key}")
-        return self._entry_at(i)
+        return self._entry_at(self._key_order[pos])
 
     def get_hog_by_hog_id(self, hog_id: str) -> list[HogEntry]:
-        return [self._entry_at(i) for i in self._by_hog_id.get(hog_id, ())]
+        return [self._entry_at(i) for i in self._rows_where("hog_id", hog_id)]
 
     def search_by_level(self, level: str) -> list[HogEntry]:
-        return [self._entry_at(i) for i in self._by_level.get(level, ())]
+        return [self._entry_at(i) for i in self._rows_where("level", level)]
+
+    def keys_at_level(self, level: str) -> np.ndarray:
+        """hog_keys of all HOGs defined at `level`, in file order"""
+        return self._df["hog_key"].to_numpy()[self._rows_where("level", level)]
 
     def levels(self) -> list[str]:
         """Taxonomic levels that have at least one HOG"""
-        return sorted(self._by_level)
+        return self._df["level"].unique().sort().to_list()
 
     def get_level(self, level: str) -> pl.DataFrame:
         """Metadata rows of all HOGs defined at `level`, in file order"""
-        return self._df[self._by_level.get(level, [])]
+        return self._df.filter(pl.col("level") == level)

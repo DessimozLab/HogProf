@@ -237,8 +237,8 @@ class Profiler:
         """
 
         # batch query the whole level
-        level_hogs = self.hog_index.search_by_level(query.level)
-        candidate_keys = np.asarray([candidate.hog_key for candidate in level_hogs if candidate.hog_key != query.hog_key])
+        level_keys = self.hog_index.keys_at_level(query.level)
+        candidate_keys = level_keys[level_keys != query.hog_key]
         jaccards = self.hashes.batch_jaccard(query.hog_key, candidate_keys)
 
         # select result
