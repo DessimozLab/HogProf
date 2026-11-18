@@ -112,18 +112,19 @@ def merge_split_hogs(root_hog) -> int:
     """
     Merge HOGs that pyham splits at one level. Returns the number of merged HOGs.
 
-    The orthoxml only has groups at levels where something changes. When a
-    duplication happened below the level of its parent HOG, pyham inserts the
-    pre-duplication gene at the level of the duplication ("MRCA HOG", with the
-    parent's id), once per duplication. Two duplications at the same level thus
-    give two HOGs with the same id at that level, each with a part of the genes,
-    while there was one ancestral gene there: e.g. HOG:F0412788 (OMA May2026),
-    duplicated separately in Metschnikowiaceae and in Debaryomycetaceae, is split
-    into a 4-gene and a 22-gene HOG at CUG-Ser1 clade.
+    If the parent HOG contains children:
+        - defined at the same level
+        - that *did NOT arise by duplication*
 
-    HOGs with one parent at the same level that did not arise by duplication are
-    one gene: they are merged into one HOG holding all their children and
-    duplications. Done top-down, so merged HOGs' children are merged in turn.
+    we need to merge them. This happens when a HOG at this level was only
+    implied by the orthoxml hierarchy, and more than one duplication
+    happened independently (2a, 2b... 3a, 3b...). In this case, pyHAM
+    -- as of the latest v1.2.0 -- creates a HOG *per duplication event*
+    (one parent for all 2x, one parent for all 3x, etc).
+
+    Every of those new HOGs will have the genes of their copy and not
+    the others, which pyHAM marks as losses. That leads to incorrect
+    profiles at that level. This function merges those cases into one HOG.
     """
     merged = 0
     stack = [root_hog]
