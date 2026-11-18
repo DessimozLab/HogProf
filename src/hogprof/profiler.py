@@ -27,7 +27,6 @@ class Profiler:
                  index_dir: Path,
                  nsamples: int,
                  slice_subhogs: bool,
-                 load_forest: bool = True,
                  hash_seed=hashutils.HASH_SEED,
                  hashes_dataset=None):
         """
@@ -42,11 +41,8 @@ class Profiler:
         hash_seed (int): Seed of the hash generator used to build the index.
         hashes_dataset (str, optional): Dataset name in `hashes_h5`; the first one if None.
         """
-        if load_forest:
-            logger.debug('Loading LSH forest')
-            forest_path = os.path.join(index_dir, artifacts.FOREST)
-            with open(forest_path, 'rb') as lshpickle:
-                self.forest = pickle.loads(lshpickle.read())
+        self._forest_path = os.path.join(index_dir, artifacts.FOREST)
+        self._forest = None
 
         hashes_h5 = os.path.join(index_dir, artifacts.HASHSTORE)
         self.hashes = HashStore(hashes_h5, num_permutations=nsamples,
@@ -65,15 +61,27 @@ class Profiler:
 
         logger.debug('Profiler init over')
 
+    @property
+    def forest(self):
+        """
+        The LSH forest of the index, loaded on first access.
+        It's too large to be loaded upfront, and not used
+        with --level anyway
+        """
+        if self._forest is None:
+            logger.debug('Loading LSH forest')
+            with open(self._forest_path, 'rb') as lshpickle:
+                self._forest = pickle.load(lshpickle)
+        return self._forest
+
     @classmethod
-    def from_index_dir(cls, index_dir, load_forest: bool = True) -> "Profiler":
+    def from_index_dir(cls, index_dir) -> "Profiler":
         """Open an index built by `hogprof build`, configured from its manifest"""
         index_dir = Path(index_dir)
         manifest = IndexManifest.read(index_dir)
         return cls(index_dir,
                    nsamples=manifest.num_permutations,
                    slice_subhogs=manifest.slice_subhogs,
-                   load_forest=load_forest,
                    hash_seed=manifest.hash_seed,
                    hashes_dataset=manifest.hashes_dataset)
 
@@ -248,11 +256,10 @@ def run_search(index_dir: Path,
                k: int = 10,
                threshold: float | None = None,
                ):
-    if threshold:
-        p = Profiler.from_index_dir(index_dir, load_forest=False)
-        result = p.query_hog_significant(hog_id, level=level, alpha=threshold)
-    else:
-        p = Profiler.from_index_dir(index_dir, load_forest=True)
-        result = p.query_hog(hog_id, level=level, k=k)
+    with Profiler.from_index_dir(index_dir) as p:
+        if threshold:
+            result = p.query_hog_significant(hog_id, level=level, alpha=threshold)
+        else:
+            result = p.query_hog(hog_id, level=level, k=k)
 
     return result.hits
