@@ -62,13 +62,18 @@ class HogEntry:
     # Family ID in string format:
     #   - its HOG ID for the main mode
     #   - its rootHOG's ID for --slicesubhogs
-    # Example: "HOG:0015853_1"
+    # With --oma, the OMA name without the taxon suffix of OMA's orthoxml ids:
+    #   "HOG:F0783479" (orthoxml id "HOG:F0783479_117571")
+    # With orthoxml input, the file name (FastOMA: "HOG:0015853_1")
     fam_id: str
 
     # HOG ID in string format:
     #   - the same as fam_id for the main mode.
     #   - subHOG ID for --slicesubhogs
-    # Example: "HOG:0015853.1aa_4"
+    # With --oma, the OMA name: "HOG:F0783479.1a" (orthoxml id "HOG:F0783479.1a_32524").
+    # A name is defined at every level of its lineage between two duplications,
+    # so (hog_id, level) is the unique pair. With orthoxml input, the subHOG's
+    # orthoxml id (FastOMA: "HOG:0015853.1aa_4").
     hog_id: str
 
     # Taxonomic level at which the HOG is defined.

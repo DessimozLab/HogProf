@@ -325,10 +325,16 @@ class LSHBuilder:
                     # filtering by HOG size in the # of species
                     hog_size = oxml.count_species(xml)
                     if self._hog_size_ok(hog_size):
+                        # modifies xml in place
                         ortho_fam = oxml_builder.add_loft_ids(self._rename_species(xml))
+
+                        # OMA HOG names, without the `_<taxonId>` of orthologGroup ids
+                        names = oxml.hog_names(xml)
+                        root_id = oxml.get_root_hog_id(xml)
                         families[unique_hog_id] = {
                             'ortho': ortho_fam,
-                            'hog_id': oxml.get_root_hog_id(xml),
+                            'hog_id': names.get(root_id, root_id),
+                            'hog_names': names,
                         }
                         unique_hog_id += 1
 
@@ -366,6 +372,17 @@ class LSHBuilder:
                 pd_dataframe['hog_key'] = pd_dataframe.index
                 yield pd_dataframe
 
+    @staticmethod
+    def _subhog_name(hog_id: str, names: dict[str, str]) -> str:
+        """
+        Name of a subHOG with the pyham id `hog_id`: its OMA name (see
+        `orthoxml.hog_names`) if known, the id itself otherwise (orthoxml
+        input, or names of inferred levels). Keeps a `__N` suffix, which
+        `pyhamutils` adds to tell apart HOGs with the same id at a level.
+        """
+        base, sep, suffix = hog_id.partition("__")
+        return names.get(base, base) + sep + suffix
+
     def _extract_hog_name(self, orthoxml_file: Path) -> str:
         return Path(orthoxml_file).name.split(".", 1)[0]
 
@@ -383,6 +400,7 @@ class LSHBuilder:
                 rows = []
                 for _, row in df.iterrows():
                     fam_id = self._extract_hog_name(row["ortho"]) if self.fileglob else str(row["hog_id"])
+                    names = {} if self.fileglob else row["hog_names"]
                     tree_maps = self.HAM_PIPELINE(
                         (row["hog_key"], row["ortho"]), lazy=True
                     )
@@ -403,7 +421,7 @@ class LSHBuilder:
                             {
                                 "hog_key": row["hog_key"],
                                 "fam_id": fam_id,
-                                "hog_id": subhog.removeprefix(f"{level}_"),
+                                "hog_id": self._subhog_name(subhog.removeprefix(f"{level}_"), names),
                                 "level": level,
                                 # Polars Object columns cannot be pickled by mp.Queue.
                                 # Send native values and reconstruct the hash in saver

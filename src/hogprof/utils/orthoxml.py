@@ -3,10 +3,22 @@ import xml.etree.ElementTree as ET
 from io import StringIO
 
 
+def strip_taxon_suffix(hog_id: str | None, taxon_id: str | None) -> str | None:
+    """`HOG:F0783479.1a_32524` (taxonId 32524) -> `HOG:F0783479.1a`; other ids unchanged"""
+    if hog_id and taxon_id and hog_id.endswith(f"_{taxon_id}"):
+        return hog_id[:-len(taxon_id) - 1]
+    return hog_id
+
+
 class OrthoXMLBuilder:
     """
-    This is a function for adding subHOG IDs to the OMA orthoxml files (from Adrian).
-    Will become redundant with the next version of OMA
+    Adds OMA-style subHOG IDs to OMA orthoxml (from Adrian): every
+    orthologGroup gets `<hog name>_<taxonId>`, e.g. `HOG:F0783479.1a_32524`,
+    and every geneRef the name of its HOG as `LOFT` (pyham names the levels
+    it infers above a gene after it).
+
+    Recent OMA releases ship these orthologGroup ids already: they are kept
+    as they are, and the names are derived without their `_<taxonId>`.
     """
 
     def __init__(self):
@@ -31,11 +43,13 @@ class OrthoXMLBuilder:
         def rec_annotate(node, og, idx=0):
             if node.tag == f"{{{self.NS}}}orthologGroup":
                 taxon_id = node.get('taxonId')
-                if taxon_id is not None:
-                    node.set('id', og + "_" + taxon_id)
-                else:
+                # keep ids shipped by OMA, which use the same scheme
+                if taxon_id is None:
                     # If no taxonId, just set the id to the og
-                    node.set('id', og )
+                    if node.get('id') is None:
+                        node.set('id', og)
+                elif strip_taxon_suffix(node.get('id'), taxon_id) == node.get('id'):
+                    node.set('id', og + "_" + taxon_id)
                 for child in list(node):
                     rec_annotate(child, og, idx)
             elif node.tag == f"{{{self.NS}}}paralogGroup":
@@ -50,7 +64,8 @@ class OrthoXMLBuilder:
         xml = ET.fromstring(orthoxml) if isinstance(orthoxml, str) else orthoxml
         doc = ET.ElementTree(xml)
         for i, el in enumerate(xml.findall(".//groups/orthologGroup", {"": self.NS})):
-            og = el.get('id', f"HOG:{i+1:08d}")
+            # the root HOG's name, without the suffix if ids are already there
+            og = strip_taxon_suffix(el.get('id'), el.get('taxonId')) or f"HOG:{i+1:08d}"
             dups = collections.defaultdict(int)
             rec_annotate(el, og)
         tree_str = StringIO()
@@ -58,6 +73,21 @@ class OrthoXMLBuilder:
         tree_str.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         doc.write(tree_str, encoding='unicode')
         return tree_str.getvalue()
+
+
+def hog_names(orthoxml: str | ET.Element) -> dict[str, str]:
+    """
+    orthologGroup id -> HOG name, i.e. the id without its `_<taxonId>` suffix:
+    `HOG:F0783479_117571` -> `HOG:F0783479`, `HOG:F0783479.1a_32524` -> `HOG:F0783479.1a`.
+    The same name can be defined at several levels; (name, level) is unique.
+    """
+    xml = ET.fromstring(orthoxml) if isinstance(orthoxml, str) else orthoxml
+    names = {}
+    for group in xml.iter('{http://orthoXML.org/2011/}orthologGroup'):
+        hog_id = group.get('id')
+        if hog_id is not None:
+            names[hog_id] = strip_taxon_suffix(hog_id, group.get('taxonId'))
+    return names
 
 
 def get_root_hog_id(orthoxml: str | ET.Element) -> str:
